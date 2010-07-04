@@ -22,3 +22,5 @@ do
 
 sync
 loop
+
+get split word$
