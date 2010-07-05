@@ -2,4 +2,53 @@ REM *** Include File: modules\terrainClient.dba ***
 REM Created: 7/4/2010 11:06:30 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+skyboxClientSetup:
+
+   global idSkybox as integer
+   #constant SKYBOX_PATH "media/skybox/"
+
+   idSkybox = 1
+   rem termporary
+
+return
+
+
+
+function skyboxLoad(skyboxID)
+
+   if skyboxID = 0 then exitfunction -1
+   meshName$ = "skybox"+str$(skyboxID)+".x"
+
+   `if idSkybox = 0 then idSkybox = dataSharedObjectFindFree()
+   `dataObject(idSkybox).rpgid=1
+   `dataObject(idSkybox).class = DATA_CLASS_SKYBOX
+   rem not yet
+
+   filename$ = SKYBOX_PATH + meshName$
+
+   if file exist(filename$)
+
+      load object filename$, idSkybox
+      set object light idSkybox, 0
+      set object texture idSkybox, 3, 1
+      position object idSkybox, 1000, 2000, 4000
+      scale object idSkybox, 30000, 30000, 30000
+
+   else
+
+      `debugWrite(DEBUGWARN,"Skybox not found: " + filename$)
+      rem not yet
+
+   endif
+
+endfunction 0
+
+function skyboxUnload()
+   if idSkybox = 0 then exitfunction -1
+   if object exist(idSkybox) = 0 then exitfunction -2
+
+   delete object idSkybox
+endfunction 0
+
