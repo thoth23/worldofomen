@@ -2,4 +2,78 @@ REM *** Include File: modules\collisionClient.dba ***
 REM Created: 7/4/2010 11:03:07 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+terrainClientSetup:
+
+   #constant TERRAIN_PATH "media/terrain/"
+
+   global idTerrain as integer
+   global idTerrainTex as integer
+   global idTerrainDet as integer
+
+   idTerrain=2
+   idTerrainTex=3
+   idTerrainDet=4
+   rem temporary
+
+return
+
+function terrainLoad(terrainID, detailID)
+
+   `if idTerrainTex = 0 then idTerrainTex = systemFreeImage()
+   `if idTerrainDet = 0 then idTerrainDet = systemFreeImage()
+   `if idTerrain = 0 then idTerrain = dataSharedObjectFindFree()
+   `dataObject(idTerrain).rpgid=1
+   `dataObject(idTerrain).class=DATA_CLASS_TERRAIN
+   rem not yet
+
+
+   texFileName$ = TERRAIN_PATH + str$(terrainID) + "_TX.jpg"
+   mapFileName$ = TERRAIN_PATH + str$(terrainID) + "_HF.bmp"
+   detFileName$ = TERRAIN_PATH + str$(detailID) + "_DT.tga"
+
+   load image texFileName$, idTerrainTex
+   load image detFileName$, idTerrainDet
+
+   make object terrain idTerrain
+   set terrain heightmap idTerrain, mapFileName$
+   set terrain scale idTerrain, 3, 0.6, 3
+   set terrain split idTerrain, 4
+   set terrain tiling idTerrain, 4
+   set terrain light idTerrain, 1, -0.25, 0, 1, 1, 0.78, 0.5
+   set terrain texture idTerrain, idTerrainTex, idTerrainDet
+   build terrain idTerrain
+
+
+endfunction
+
+function terrainUnload()
+
+
+   if idTerrainTex > 0
+      if image exist(idTerrainTex)
+         delete image idTerrainTex
+      endif
+   endif
+
+   if idTerrainDet > 0
+      if image exist(idTerrainDet)
+         delete image idTerrainDet
+      endif
+   endif
+
+   if idTerrain > 0
+      if object exist(idTerrain)
+         `collisionDelete(idTerrain)
+         rem not yet
+         destroy terrain idTerrain
+      endif
+   endif
+
+   `systemGameModeRemove(SYSTEM_MODE_AREA_TERRAIN)
+   rem not yet
+
+endfunction
+
+
