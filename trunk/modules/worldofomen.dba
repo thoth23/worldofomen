@@ -5,6 +5,8 @@ Rem ***** Main Source File *****
 
 sync on : sync rate 60
 
+gosub cameraClientSetup
+
 gosub skyboxClientSetup
 skyboxLoad(2)
 
@@ -19,7 +21,7 @@ make object cylinder 5,2
 do
 
 
-   control camera using arrowkeys 0,0.1,1
+   control camera using arrowkeys 0,1,1
    position object 5, camera position x(0), camera position y(0), camera position z(0)
    rotate object 5, 0, camera angle y(0), 0
    move object 5, 4

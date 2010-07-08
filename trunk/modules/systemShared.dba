@@ -2,4 +2,39 @@ REM *** Include File: modules\systemShared.dba ***
 REM Created: 7/4/2010 10:45:51 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+systemSharedSetup:
+
+    global systemNextFileID as integer
+
+    REM RESERVED FILE ID MANAGEMENT
+    global SYSTEM_FILE_DATA_SERVERID as integer
+    SYSTEM_FILE_DATA_SERVERID = systemGetFreeFileID()
+    global SYSTEM_FILE_DATA_GUID as integer
+    SYSTEM_FILE_DATA_GUID = systemGetFreeFileID()
+
+return
+
+function systemGetFreeFileID()
+   inc systemNextFileID
+endfunction systemNextFileID
+
+function systemGetRealDateTime(dsep$,dtsep$,tsep$)
+
+   date$ = get date$()
+   time$ = get time$()
+
+   month$ = left$(date$,2)
+   day$ = mid$(date$,4) + mid$(date$,5)
+   year$ = "20" + right$(date$,2)
+   date$ = year$+dsep$+month$+dsep$+day$
+
+   hour$ = left$(time$,2)
+   minutes$ = mid$(time$,4) + mid$(time$,5)
+   seconds$ = right$(time$,2)
+   time$ = hour$+tsep$+minutes$+tsep$+seconds$
+
+   datetime$=date$+dtsep$+time$
+
+endfunction datetime$

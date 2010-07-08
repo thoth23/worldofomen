@@ -45,6 +45,8 @@ function terrainLoad(terrainID, detailID)
    set terrain texture idTerrain, idTerrainTex, idTerrainDet
    build terrain idTerrain
 
+   position object idTerrain,0,-5,0
+   rem temporary
 
 endfunction
 
