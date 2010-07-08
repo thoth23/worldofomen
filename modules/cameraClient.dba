@@ -2,4 +2,12 @@ REM *** Include File: modules\cameraClient.dba ***
 REM Created: 7/4/2010 10:45:41 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+cameraClientSetup:
+
+   autocam off
+   set camera range 0.5, 30000
+
+return
+

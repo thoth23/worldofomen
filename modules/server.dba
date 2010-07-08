@@ -2,3 +2,20 @@ Rem Project: server
 Rem Created: Saturday, July 03, 2010
 
 Rem ***** Main Source File *****
+
+
+sync on : sync rate 30
+
+gosub systemSharedSetup
+gosub debugSharedSetup
+gosub debugServerSetup
+gosub dataServerSetup
+
+
+do
+
+   sync
+
+loop
+
+

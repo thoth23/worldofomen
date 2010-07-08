@@ -2,4 +2,41 @@ REM *** Include File: modules\debugShared.dba ***
 REM Created: 7/4/2010 10:50:46 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+debugSharedSetup:
+
+   global debugMode as boolean
+   REM 0=DO NOT PRINT TO SCREEN, 1=PRINT TO SCREEN
+
+   `debugfilename$ = remove$(appName$(),".exe") + systemGetRealDateTime("_","_","_") + ".log"
+   debugfilename$ = remove$(appName$(),".exe") + ".log"
+   if file exist(debugfilename$)
+      delete file debugfilename$
+   endif
+
+   OPEN LOG debugfilename$, 1
+   SET LOG TAG 0, "[SYSTEM] INFO  ", ""
+   SET LOG TAG 1, "[SYSTEM] WARN  ", ""
+   SET LOG TAG 2, "[SYSTEM] ERROR ", ""
+   SET LOG TAG 3, "[SYSTEM] HACK  ", ""
+   SET LOG TAG 4, "[SYSTEM] CHAT  ", ""
+   #constant DEBUGINFO 0
+   #constant DEBUGWARN 1
+   #constant DEBUGERROR 2
+   #constant DEBUGHACK 3
+   #constant DEBUGCHAT 4
+
+return
+
+function debugShutdown()
+
+   CLOSE LOG
+
+endfunction
+
+function debugWrite(level as integer, msg$ as string)
+   tstamp$ = systemGetRealDateTime("/"," ",":")
+   WRITELN LOG level, "%s :: %s" , tstamp$, msg$
+   if debugMode = 1 then print tstamp$, " :: ", msg$
+endfunction

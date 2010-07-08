@@ -2,4 +2,112 @@ REM *** Include File: modules\dataServer.dba ***
 REM Created: 7/4/2010 10:52:18 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+dataServerSetup:
+
+   #constant DATA_PATH "server/data/"
+   #constant DATA_ID_PATH "server/data/id/"
+   #constant DATA_ACCOUNT_PATH "server/data/account/"
+   #constant DATA_AVATAR_PATH "server/data/avatar/"
+
+   REM CALCULATE OUR CRITICAL FILE PATHS
+   global dataguidfilename as string
+   global dataserveridfilename as string
+   dataguidfilename = DATA_ID_PATH + "guid.txt"
+   dataserveridfilename = DATA_ID_PATH + "serverid.txt"
+
+   REM DOMAIN 0: Client Temp IDs
+   REM DOMAIN 1 through 127: Game Server Instance Temp IDs
+   REM DOMAIN 128: Master Player Account IDs
+   REM DOMAIN 129 - 255:  Game/Architecture specific domains
+
+   REM PARTITION OUR BITS
+   #constant DATA_GUID_BITS_TOTAL 30
+   #constant DATA_GUID_BITS_SERVERS 8
+   #constant DATA_GUID_BITS_OBJECTS 22
+
+   global dataServerID as integer
+   global dataNextGUID as integer
+   global dataMaxGUID as integer
+   global dataNextRPGID as integer
+
+
+   dataServerID = 1
+   dataMaxGUID = (2^DATA_GUID_BITS_OBJECTS)-1
+   dataNextGUID = 1
+
+   REM GET OUR SERVER ID
+   dataServerID = dataServerLoadServerID()
+   debugWrite(DEBUGINFO,"SERVER ID FOUND : " + str$(dataServerID))
+
+   REM GET OUR REAL NEXT GUID
+   dataNextGUID = dataServerLoadNextGUID()
+   debugWrite(DEBUGINFO, "NEXT GUID FOUND : " + str$(dataNextGUID))
+
+return
+
+function dataServerLoadServerID()
+   local retval as integer
+   retval = dataServerID
+
+   if file exist(dataserveridfilename) = 0
+      debugWrite(DEBUGWARN, "NO SERVER ID FILE FOUND, CREATING NEW")
+      open to write SYSTEM_FILE_DATA_SERVERID, dataserveridfilename
+      write string SYSTEM_FILE_DATA_SERVERID, str$(dataServerID)
+      close file SYSTEM_FILE_DATA_SERVERID
+   else
+      open to read SYSTEM_FILE_DATA_SERVERID, dataserveridfilename
+      read string SYSTEM_FILE_DATA_SERVERID, dat$
+      retval = intval(dat$)
+      close file SYSTEM_FILE_DATA_SERVERID
+   endif
+
+endfunction retval
+
+function dataServerLoadNextGUID()
+   local retval as integer
+   retval = dataNextGUID
+
+   if file exist(dataguidfilename) = 0
+      debugWrite(DEBUGWARN, "NO GUID FILE FOUND, CREATING NEW")
+      open to write SYSTEM_FILE_DATA_GUID, dataguidfilename
+      write string SYSTEM_FILE_DATA_GUID, str$(dataNextGUID)
+      close file SYSTEM_FILE_DATA_GUID
+   else
+      open to read SYSTEM_FILE_DATA_GUID, dataguidfilename
+      read string SYSTEM_FILE_DATA_GUID, dat$
+      retval = intval(dat$)
+      close file SYSTEM_FILE_DATA_GUID
+   endif
+
+   if retval > dataMaxGUID
+      debugWrite(DEBUGERROR, "MAX GUID REACHED, INCREASE DATA_GUID_BITS_OBJECTS, STOPPING")
+      `systemGameModeAdd(SYSTEM_MODE_QUITTING)
+   endif
+
+endfunction retval
+
+function dataServerSaveNextGUID()
+
+     if file exist(dataguidfilename) = 1
+        delete file dataguidfilename
+      open to write SYSTEM_FILE_DATA_GUID, dataguidfilename
+      write string SYSTEM_FILE_DATA_GUID, str$(dataNextGUID)
+      close file SYSTEM_FILE_DATA_GUID
+   else
+      debugWrite(DEBUGERROR, "GUID FILE DELETED AFTER STARTUP, STOPPING")
+      `systemGameModeAdd(SYSTEM_MODE_QUITTING)
+   endif
+
+endfunction
+
+function dataServerGetNextRPGID()
+
+   inc dataNextGUID
+   dataServerSaveNextGUID()
+   dataNextRPGID = (dataServerID << DATA_GUID_BITS_OBJECTS) + dataNextGUID
+
+endfunction dataNextRPGID
+
+

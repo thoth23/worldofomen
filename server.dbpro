@@ -27,7 +27,7 @@ include16=modules\goalShared.dba
 final source=_Temp.dbsource
 
 ; The editor will replace any references to %temp in the EXE path/filename
-executable=Application.exe
+executable=server.exe
 
 ; **** Executable Information  ***
 ; build types: exe, media, installer,alone
