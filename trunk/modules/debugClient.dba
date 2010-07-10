@@ -2,4 +2,11 @@ REM *** Include File: modules\debugClient.dba ***
 REM Created: 7/4/2010 10:57:02 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+debugClientSetup:
+
+   debugMode = 0
+
+return
+

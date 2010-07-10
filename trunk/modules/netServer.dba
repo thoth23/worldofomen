@@ -2,4 +2,153 @@ REM *** Include File: modules\netServer.dba ***
 REM Created: 7/4/2010 10:55:29 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+netServerSetup:
+
+
+   REM ALL OF THE HARD-CODED VALUES YOU SEE HERE
+   REM WILL BE REPLACED BY SERVER NETWORK OPTIONS
+   REM ONCE WE HAVE THE DATA SYSTEM MODULES
+   REM IN PLACE - HARD CODING ALL THESE
+   REM VALUES FOR NOW TO KEEP THINGS AS CLEAR
+   REM AS POSSIBLE
+
+   global netServerPlayerCount as integer
+
+   global NET_CLIENTS_PER_INSTANCE as integer
+   NET_CLIENTS_PER_INSTANCE = 50
+
+   global dim netSession(NET_CLIENTS_PER_INSTANCE) as dataObjectType
+
+   REM NET_MAX_OPERATIONS IS THE TOTAL DIFFERENT KINDS OF UDP
+   REM MESSAGES TO PROCESS.  SINCE WE'RE ONLY DOING
+   REM MOVEMENT AND JUMPING VIA UDP FOR NOW, 2 IS ENOUGH
+   global NET_MAX_OPERATIONS as integer
+   NET_MAX_OPERATIONS = 2
+
+   REM WE WILL PUT IN A SYSTEM LATER TO DYNAMICALLY
+   REM GET THIS VALUE OR GET IT FROM AN ASSIGNED
+   REM OPTION, BUT AGAIN, HARD CODING FOR CLARITY
+   NET_SERVER_NAME = "192.168.1.4"
+
+   REM TURN OF DARKNET DEBUG ON SERVER SO WE DON'T
+   REM SEE POPUP WINDOWS FOR WARNINGS
+   mn Disable Debug
+
+
+return
+
+function netServerStart()
+
+
+   mn start NET_INSTANCES, NET_THREADS
+
+   for i = 0 to (NET_INSTANCES - 1 )
+      mn Set Local i, NET_SERVER_NAME,NET_SERVER_PORT,NET_SERVER_NAME,NET_SERVER_PORT
+      retval = mn Start Server(i, NET_CLIENTS_PER_INSTANCE,NET_MAX_OPERATIONS,NET_UDP_MODE)
+      if retval = 0
+         debugWrite(DEBUGINFO,NET_SERVER_NAME + " listening on port " + str$(NET_SERVER_PORT) + " as instance " + str$(i))
+         debugWrite(DEBUGINFO,"Clients/Instance set to " + str$(NET_CLIENTS_PER_INSTANCE))
+         debugWrite(DEBUGINFO,"UDP Max Operations set to " + str$(NET_MAX_OPERATIONS))
+         debugWrite(DEBUGINFO,"UDP Mode set to " + str$(NET_UDP_MODE))
+         debugWrite(DEBUGINFO,"Press spacebar to quit.")
+      else
+         debugWrite(DEBUGERROR,"Server network start error " + str$(retval))
+         `systemGameModeAdd(SYSTEM_MODE_QUITTING)
+         rem not yet
+      endif
+   next i
+
+endfunction
+
+function netServerStop()
+
+   mn Finish -1
+
+endfunction
+
+function netServerSessionReset(client as integer)
+
+   if client < 1 or client > NET_CLIENTS_PER_INSTANCE
+      debugWrite(DEBUGWARN,"Attempted to reset session out of range " + str$(client))
+      exitfunction
+   endif
+
+   REM SETTING THE SESSION KEY TO THE INVALID VALUE
+   REM GUARANTEES THAT NO MORE DATA CAN BE RECEIVED
+   REM ON THIS CIRCUIT UNTIL IT IS REBUILT
+   netSession(client).key=""
+
+endfunction
+
+
+function netServerMaintain()
+
+   local instance as integer
+   local client as integer
+   local joinID as integer
+   local leftID as integer
+   local temp$ as string
+   local temp as integer
+   local TCPPackets as integer
+   local UDPPackets as integer
+   local operationID as integer
+
+   for instance = 0 to (NET_INSTANCES - 1 )
+
+
+      REM TAKE CARE OF CLIENT JOINS
+
+      joinID = mn Client Joined(instance)
+      if joinID > 0
+
+         temp$ = mn Get Client IP TCP(instance, joinID)
+         temp = mn Get Client Port TCP(instance, joinID)
+
+         REM INITIAL CONNECTS ARE "INFORMATIONLESS" AND SO WE
+         REM DO NOT YET HAVE ANY INFORMATION TO SHARE WITH OTHERS
+         REM UNTIL LOGON IS COMPLETED - AT WHICH POINT, A PLAYER
+         REM JOIN ANNOUNCEMENT WILL BE SENT
+
+         debugWrite(DEBUGINFO,"Connection detected from " + temp$ + " on port " + str$(temp))
+
+         netServerSessionReset(joinID)
+
+      endif
+
+      REM TAKE CARE OF CLIENT DISCONNECTS
+
+     leftID = mn Client Left(instance)
+     if leftID > 0
+
+        if leftID <= NET_CLIENTS_PER_INSTANCE
+           `netServerDropObject(instance, leftID, leftID)
+           `netServerChatBroadcast(instance, "SYSTEM", dataObject(leftID).avatarname + " has left.", leftID)
+           rem not yet
+        endif
+
+      netServerSessionReset(leftID)
+
+     endif
+
+     REM TAKE CARE OF UDP AND TCP MESSAGES
+     for client = 1 to NET_CLIENTS_PER_INSTANCE
+         TCPPackets = mn Recv TCP(instance,RecvPacket,client)
+         if TCPPackets > 0
+            `netServerParseTCP(instance, client)
+            rem not yet
+         endif
+         for operationID = 0 to (NET_MAX_OPERATIONS - 1)
+            UDPPackets = mn Recv UDP(instance,RecvPacket,client,operationID)
+            if UDPPackets > 0
+               `netServerParseUDP(instance, client, operationID)
+               rem not yet
+            endif
+         next operationID
+     next client
+   next instance
+
+endfunction
+
+

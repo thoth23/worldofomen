@@ -2,4 +2,49 @@ REM *** Include File: modules\netShared.dba ***
 REM Created: 7/4/2010 10:55:08 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+netSharedSetup:
+
+   #constant NET_SERVER_NAME_DEFAULT "127.0.0.1"
+   global NET_SERVER_NAME as string
+
+   global NET_SERVER_PORT as integer
+   NET_SERVER_PORT = 9669
+
+   global NET_INSTANCES as integer
+   NET_INSTANCES = 1
+
+   global NET_THREADS as integer
+   NET_THREADS = 0
+   REM SETTING THREADS TO ZERO WILL CAUSE SERVER
+   REM TO START 1 THREAD PER PHYSICAL CPU
+
+   global NET_UDP_MODE as integer
+   NET_UDP_MODE = 2
+
+   global NET_TIMEOUT_SECONDS as integer
+   NET_TIMEOUT_SECONDS = 10
+
+   global NET_UDP_UPDATE_INTERVAL as integer
+   NET_UDP_UPDATE_INTERVAL = 250
+
+   global NET_UDP_HEARTBEAT_INTERVAL as integer
+   NET_UDP_HEARTBEAT_INTERVAL = 5000
+
+   global NET_TCP_RECONNECT_INTERVAL as integer
+   NET_TCP_RECONNECT_INTERVAL = 5000 + rnd(2000)
+
+   global SendPacket as dword
+   global RecvPacket as dword
+
+   SendPacket = mn create packet()
+   RecvPacket = mn create packet()
+   mn set memory size SendPacket,1024
+   rem RecVPacket size is set automatically on receive
+
+
+   REM CLIENT TCP OPERATIONS
+   #constant NETC_TEST_MESSAGE            1
+
+return
