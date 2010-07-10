@@ -1,5 +1,63 @@
 REM *** Include File: modules\netClient.dba ***
 REM Created: 7/4/2010 10:55:22 AM
-REM 
+REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+netClientSetup:
+
+   global netClientConnected as boolean
+   NET_SERVER_NAME = "192.168.1.4"
+
+return
+
+
+function netClientStart()
+
+   mn start 1, 0
+   mn Disable Message Boxes
+
+endfunction
+
+function netClientStop()
+
+   mn Finish -1
+
+endfunction
+
+function netClientConnectStart()
+
+   mn Connect 0,NET_SERVER_NAME,NET_SERVER_PORT,NET_SERVER_NAME,NET_SERVER_PORT,NET_TIMEOUT_SECONDS,0
+
+endfunction
+
+function netClientConnectStop()
+
+   mn Stop Connect 0
+   if (systemMode && SYSTEM_MODE_NET_TCP)
+      debugWrite(DEBUGERROR,"Net Connect timeout or error connecting to server.")
+   endif
+   `systemGameModeRemove(SYSTEM_MODE_NET_TCP)
+   rem not yet
+
+   msg$ = "Lost connection to server... attempting to reconnect.  Press Cancel to stop."
+
+endfunction
+
+function netClientMaintain()
+
+   if netClientConnected = 0
+      pollStatus = mn poll connect(0)
+      if pollStatus = 1
+         REM SUCCESSFUL
+         `systemGameModeAdd(SYSTEM_MODE_NET_TCP)
+         rem not yet
+         debugWrite(DEBUGINFO,"Net Connect Successful.  Mode TCP Added.")
+         netMaxUDPClients = mn Get Max Clients(0)
+         debugWrite(DEBUGINFO,"Net Max UDP Clients set to " + str$(netMaxUDPClients))
+         netMaxUDPOperations = mn Get Max Operations(0)
+         debugWrite(DEBUGINFO,"Net Max UDP Operations set to " + str$(netMaxUDPOperations))
+      endif
+   endif
+
+endfunction

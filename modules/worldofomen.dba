@@ -3,7 +3,17 @@ Rem Created: Saturday, July 03, 2010
 
 Rem ***** Main Source File *****
 
-sync on : sync rate 60
+sync on : sync rate 0
+
+gosub systemSharedSetup
+gosub debugSharedSetup
+gosub debugClientSetup
+gosub netSharedSetup
+gosub netClientSetup
+
+netClientStart()
+netClientConnectStart()
+
 
 gosub cameraClientSetup
 
