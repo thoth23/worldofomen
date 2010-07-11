@@ -32,6 +32,7 @@ include23=modules\inventoryShared.dba
 include24=modules\goalShared.dba
 include25=modules\effectClient.dba
 include26=modules\soundClient.dba
+include27=modules\mediatorClient.dba
 ; The compiler only needs to read the final source from this entry - the editor
 ; handles include files, concatenation, etc.
 final source=_Temp.dbsource

@@ -1,0 +1,31 @@
+REM *** Include File: modules\mediatorClient.dba ***
+REM Created: 7/11/2010 12:55:35 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
+REM
+
+mediatorClientSetup:
+   #constant MEDIATOR_KEYBOARD      1
+   #constant MEDIATOR_NETWORK       2
+return
+
+function mediatorClient(fromClass as integer,toClass as integer,msgID as integer)
+
+   select fromClass
+      REM KEYBOARD MEDIATOR USES KEYBOARD INPUT
+      REM INPUT MAPPINGS AS THE MESSAGE ID
+      case MEDIATOR_KEYBOARD
+         select toClass
+            case MEDIATOR_NETWORK
+               if msgID = KEYBOARD_KEY_SEND_TEST
+                  netClientSendTestMessage()
+               endif
+            endcase
+         endselect
+      endcase
+
+      REM ADD ADDITIONAL MEDIATOR CONTROLLERS HERE
+
+   endselect
+
+endfunction
