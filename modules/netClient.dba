@@ -61,3 +61,17 @@ function netClientMaintain()
    endif
 
 endfunction
+
+function netClientSendTestMessage()
+
+   REM FOR THE TEST MESSAGE, WE WILL SEND
+   REM THE CLIENT LOCATION AS TWO FLOATS
+   netSharedAddHeader(NETC_TEST_MESSAGE,20)
+   x# = object position x(5)
+   z# = object position z(5)
+   mn Add Float SendPacket, x#
+   mn Add Float SendPacket, z#
+   mn Send TCP 0,SendPacket,0,0,1
+   debugWrite(DEBUGINFO,"Sent NETC_TEST_MESSAGE with data " + str$(x#) + "," + str$(z#))
+
+endfunction

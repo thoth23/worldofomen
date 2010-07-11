@@ -35,6 +35,7 @@ netServerSetup:
    REM TURN OF DARKNET DEBUG ON SERVER SO WE DON'T
    REM SEE POPUP WINDOWS FOR WARNINGS
    mn Disable Debug
+   mn Disable Message Boxes
 
 
 return
@@ -111,7 +112,7 @@ function netServerMaintain()
          REM UNTIL LOGON IS COMPLETED - AT WHICH POINT, A PLAYER
          REM JOIN ANNOUNCEMENT WILL BE SENT
 
-         debugWrite(DEBUGINFO,"Connection detected from " + temp$ + " on port " + str$(temp))
+         debugWrite(DEBUGINFO,"Connection from " + temp$ + " on port " + str$(temp) + " as sessionID " + str$(joinID))
 
          netServerSessionReset(joinID)
 
@@ -123,6 +124,7 @@ function netServerMaintain()
      if leftID > 0
 
         if leftID <= NET_CLIENTS_PER_INSTANCE
+           debugWrite(DEBUGINFO,"Connection dropped from sessionID " + str$(leftID))
            `netServerDropObject(instance, leftID, leftID)
            `netServerChatBroadcast(instance, "SYSTEM", dataObject(leftID).avatarname + " has left.", leftID)
            rem not yet
@@ -136,8 +138,7 @@ function netServerMaintain()
      for client = 1 to NET_CLIENTS_PER_INSTANCE
          TCPPackets = mn Recv TCP(instance,RecvPacket,client)
          if TCPPackets > 0
-            `netServerParseTCP(instance, client)
-            rem not yet
+            netServerParseTCP(instance, client)
          endif
          for operationID = 0 to (NET_MAX_OPERATIONS - 1)
             UDPPackets = mn Recv UDP(instance,RecvPacket,client,operationID)
@@ -148,6 +149,35 @@ function netServerMaintain()
          next operationID
      next client
    next instance
+
+endfunction
+
+function netServerParseTCP(instance, client)
+
+   local result as integer
+   result = 0
+   local temp$ as string
+   local temp as integer
+
+   if client < 1 or client > NET_CLIENTS_PER_INSTANCE then exitfunction
+
+   msgDeclaredLen = mn Get Int(RecvPacket)
+   msgTstmp = mn Get Int(RecvPacket)
+   msgID = mn Get Int(RecvPacket)
+   msgActualLen = mn Get Used Size(RecvPacket)
+
+   REM HERE WE NEED TO DO SOME SANITY CHECKS, WE'LL COME
+   REM BACK TO THESE SOON ENOUGH
+
+   select msgID
+
+     case NETC_TEST_MESSAGE
+         x# = mn Get Float(RecvPacket)
+         z# = mn Get Float(RecvPacket)
+         debugWrite(DEBUGINFO,"Message " + str$(msgID) + " recevied from client " + str$(client) + ": loc: " + str$(x#)+","+str$(z#))
+     endcase
+
+   endselect
 
 endfunction
 
