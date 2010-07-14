@@ -5,17 +5,18 @@ Rem ***** Main Source File *****
 
 REM SYSTEM SETUP
 gosub systemSharedSetup
+gosub systemServerSetup
 gosub debugSharedSetup
 gosub debugServerSetup
+debugStart()
+
 gosub dataSharedSetup
 gosub dataServerSetup
 gosub netSharedSetup
 gosub netServerSetup
-
-
-REM SYSTEM START
-
 netServerStart()
+
+gosub keyboardSharedSetup
 
 repeat
 

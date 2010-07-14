@@ -8,14 +8,13 @@ sync on : sync rate 0
 gosub systemSharedSetup
 gosub debugSharedSetup
 gosub debugClientSetup
+debugStart()
+
+gosub dataSharedSetup
 gosub netSharedSetup
 gosub netClientSetup
+gosub keyboardSharedSetup
 gosub keyboardClientSetup
-
-
-REM MEDIATOR SHOULD ALWAYS
-REM BE SETUP LAST
-gosub mediatorClientSetup
 
 REM STARTUP FUNCTIONS HERE
 netClientStart()
@@ -35,7 +34,7 @@ REM Our avatar
 make object cylinder 5,2
 
 
-do
+repeat
 
    keyboardClientPollTop()
    netClientMaintain()
@@ -47,7 +46,10 @@ do
    sync
 
    keyboardClientPollBottom()
+   keyboardClientShowChat()
 
-loop
+until (systemMode && SYSTEM_MODE_QUITTING) <> 0
 
 REM STOP FUNCTION HERE
+netClientStop()
+debugStop()
