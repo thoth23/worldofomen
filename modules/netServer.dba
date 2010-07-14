@@ -56,8 +56,7 @@ function netServerStart()
          debugWrite(DEBUGINFO,"Press spacebar to quit.")
       else
          debugWrite(DEBUGERROR,"Server network start error " + str$(retval))
-         `systemGameModeAdd(SYSTEM_MODE_QUITTING)
-         rem not yet
+         systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
       endif
    next i
 
@@ -152,6 +151,15 @@ function netServerMaintain()
 
 endfunction
 
+function netServerChatBroadcast(instance as integer, channel$ as string, message$ as string, excludeID as integer)
+
+   netSharedAddHeader(NETS_CHAT, NET_HEADER_BYTES + len(channel$) + len(message$))
+   mn Add string SendPacket, channel$, 0, 1
+   mn Add String SendPacket, message$, 0, 1
+   mn Send TCP All instance, SendPacket, 0, 1, excludeID
+
+endfunction
+
 function netServerParseTCP(instance, client)
 
    local result as integer
@@ -166,15 +174,17 @@ function netServerParseTCP(instance, client)
    msgID = mn Get Int(RecvPacket)
    msgActualLen = mn Get Used Size(RecvPacket)
 
-   REM HERE WE NEED TO DO SOME SANITY CHECKS, WE'LL COME
-   REM BACK TO THESE SOON ENOUGH
+   REM HERE WE NEED TO DO SOME SANITY CHECKS
 
    select msgID
 
-     case NETC_TEST_MESSAGE
-         x# = mn Get Float(RecvPacket)
-         z# = mn Get Float(RecvPacket)
-         debugWrite(DEBUGINFO,"Message " + str$(msgID) + " recevied from client " + str$(client) + ": loc: " + str$(x#)+","+str$(z#))
+     case NETC_CHAT
+         channel$ = mn Get String(RecvPacket,0,1)
+         message$ = mn Get String(RecvPacket,0,1)
+         debugWrite(DEBUGINFO,message$)
+         channel$ = keyboardSharedSanitize(channel$)
+         message$ = keyboardSharedSanitize(message$)
+         netServerChatBroadcast(instance, channel$, message$, 0)
      endcase
 
    endselect

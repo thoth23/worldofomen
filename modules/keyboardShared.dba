@@ -1,0 +1,39 @@
+REM *** Include File: modules\keyboardShared.dba ***
+REM Created: 7/12/2010 9:08:19 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
+REM
+
+keyboardSharedSetup:
+
+   global KEYBOARD_SAFE_KEYS as string
+   KEYBOARD_SAFE_KEYS = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+{[}];:',./?|"
+
+return
+
+
+function keyBoardSharedSanitizeCharacter(in$)
+   if fast len(in$) = 1
+      if instr(KEYBOARD_SAFE_KEYS,in$) = 0
+         in$ = ""
+      endif
+   else
+      if fast len(in$) > 0
+         in$ = keyboardSharedSanitize(in$)
+      endif
+   endif
+endfunction in$
+
+function keyboardSharedSanitize(in$)
+    i=0
+    while fast len(in$)> 0 and i < fast len(in$)
+        inc i
+        char$ = mid$(in$,i)
+        if instr(KEYBOARD_SAFE_KEYS,char$) = 0
+            REM FOUND AN UNSAFE CHARACTER
+            in$ = remove$(in$,char$)
+            dec i
+        endif
+    endwhile
+    out$ = in$
+endfunction out$

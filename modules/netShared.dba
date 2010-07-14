@@ -35,6 +35,8 @@ netSharedSetup:
    global NET_TCP_RECONNECT_INTERVAL as integer
    NET_TCP_RECONNECT_INTERVAL = 5000 + rnd(2000)
 
+   #constant NET_HEADER_BYTES 12
+
    global SendPacket as dword
    global RecvPacket as dword
 
@@ -43,9 +45,13 @@ netSharedSetup:
    mn set memory size SendPacket,1024
    rem RecVPacket size is set automatically on receive
 
+   #constant NET_LISTEN_CHANNELS_DEFAULT "SYSTEM/LOCAL/BROADCAST"
 
    REM CLIENT TCP OPERATIONS
-   #constant NETC_TEST_MESSAGE            1
+   #constant NETC_CHAT              1
+
+   REM SERVER TCP OPERATIONS
+   #constant NETS_CHAT              1001
 
 return
 
