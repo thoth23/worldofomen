@@ -10,6 +10,7 @@ gosub debugSharedSetup
 gosub debugClientSetup
 debugStart()
 
+gosub commandSharedSetup
 gosub dataSharedSetup
 gosub netSharedSetup
 gosub netClientSetup
@@ -33,6 +34,8 @@ terrainLoad(2,2)
 REM Our avatar
 make object cylinder 5,2
 
+REM Parse the command line for commands
+commandSharedParseStartup()
 
 repeat
 

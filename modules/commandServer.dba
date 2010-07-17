@@ -2,4 +2,34 @@ REM *** Include File: modules\commandServer.dba ***
 REM Created: 7/4/2010 11:32:04 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\server.dbpro
-REM 
+REM
+
+function commandRun(cmd$)
+
+   local cmdFound as boolean
+
+   split string cmd$,COMMAND_CHAR_ARGSEP
+   cmdAction$ = get split word$(1)
+
+   REM ARGUMENTS WITH EMBEDDED ARGUMENT SEPERATOR
+   REM CHARACTERS WILL BE TRANSPOSED AS NEEDED
+   REM USING THIS COMMAND:
+   REM arg$ = replace all$(arg$,COMMAND_CHAR_ARGEMB,COMMAND_CHAR_ARGSEP)
+
+   cmdFound = 0
+   select cmdAction$
+
+      case "/gmshutdown"
+         systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
+         cmdFound = 1
+      endcase
+
+   endselect
+
+   if cmdFound = 0
+      REM NOT A SERVER COMMAND, REPORT IT
+      debugWrite(DEBUGWARN,"Command Not Found: " + cmd$)
+   endif
+
+
+endfunction

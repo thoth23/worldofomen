@@ -187,6 +187,18 @@ function netServerParseTCP(instance, client)
          netServerChatBroadcast(instance, channel$, message$, 0)
      endcase
 
+     case NETC_COMMAND
+         cmd$ = mn Get String(RecvPacket,0,1)
+         cmd$ = keyboardSharedSanitize(cmd$)
+
+         REM YOU WOULD NEVER DO THIS IN A REAL PRODUCT
+         REM THERE ARE MULTIPLE TESTS PERFORMED HERE
+         REM TO ALLOW COMMANDS BY GMLEVEL.  THIS IS
+         REM HERE JUST FOR DEMONSTRATION PURPOSES.
+         commandTranspose(cmd$)
+
+     endcase
+
    endselect
 
 endfunction

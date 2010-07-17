@@ -49,9 +49,11 @@ netSharedSetup:
 
    REM CLIENT TCP OPERATIONS
    #constant NETC_CHAT              1
+   #constant NETC_COMMAND           2
 
    REM SERVER TCP OPERATIONS
    #constant NETS_CHAT              1001
+   #constant NETS_COMMAND           1002
 
 return
 

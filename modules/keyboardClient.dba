@@ -22,7 +22,7 @@ keyboardClientSetup:
    global dim keyboardChatRecvd() as string
    add to queue keyboardChatRecvd()
 
-   REM KEYBOARD INPUT MAP
+   REM KEYBOARD INPUT MAP - SCANCODES
    global KEYBOARD_KEY_OPEN_CHAT as integer
    KEYBOARD_KEY_OPEN_CHAT = 53
    global KEYBOARD_KEY_SEND_CHAT as integer
@@ -83,7 +83,11 @@ function keyboardClientPollBottom()
          keyboardAddBuffer = 1
          if keyState(KEYBOARD_KEY_SEND_CHAT) = 1
             if fast len(keyboardChatInput) > 0
-               netClientSendChat(netClientCurrentChannel,keyboardChatInput)
+               if fast left$(keyboardChatInput,1) = COMMAND_CHAR_START
+                  commandSharedParse(keyboardChatInput)
+               else
+                  netClientSendChat(netClientCurrentChannel,keyboardChatInput)
+               endif
             else
                keyboardUpdateChatReceive("")
             endif

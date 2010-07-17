@@ -2,4 +2,120 @@ REM *** Include File: modules\commandShared.dba ***
 REM Created: 7/4/2010 10:59:52 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+commandSharedSetup:
+
+   type commandTokenType
+      name$ as string
+      value$ as string
+   endtype
+
+   global dim commandList() as string
+   add to queue commandList()
+
+   global COMMAND_MASKED_FIELDS as string
+   commandAddMaskedField("inputLogonPassword")
+   commandAddMaskedField("inputCreateAccountPassword")
+
+   #constant COMMAND_CHAR_START   "/"
+   #constant COMMAND_CHAR_CMDSEP  ";"
+   #constant COMMAND_CHAR_ARGSEP  " "
+   #constant COMMAND_CHAR_ARGEMB  "_"
+
+   global COMMAND_CURRENT as string
+
+return
+
+function commandAddMaskedField(fldName$ as string)
+
+   if len(COMMAND_MASKED_FIELDS) > 0
+      COMMAND_MASKED_FIELDS = COMMAND_MASKED_FIELDS + COMMAND_CHAR_CMDSEP
+   endif
+   COMMAND_MASKED_FIELDS = COMMAND_MASKED_FIELDS + fldName$
+
+endfunction
+
+function commandRemoveMaskedField(fldName$ as string)
+
+   COMMAND_MASKED_FIELDS = remove all$(COMMAND_MASKED_FIELDS,fldName$)
+   COMMAND_MASKED_FIELDS = replace all$(COMMAND_MASKED_FIELDS,COMMAND_CHAR_CMDSEP+COMMAND_CHAR_CMDSEP,COMMAND_CHAR_CMDSEP)
+
+endfunction
+
+function commandSharedParse(dat$ as string)
+
+   if dat$ = ""
+      exitfunction
+   endif
+
+   if instr(dat$, COMMAND_CHAR_CMDSEP) = 0
+      commandTranspose(dat$)
+      exitfunction
+   endif
+
+   split string dat$,COMMAND_CHAR_CMDSEP
+
+   for i = 1 to split count()
+      add to queue commandList()
+      commandList() = get split word$(i)
+   next
+
+   REM QUEUES ARE FIFO, SO ALWAYS RUN COMMAND 1
+   REM AND THEN REMOVE FROM QUEUE
+   while array count(commandList()) > 0
+      commandTranspose(commandList(1))
+      remove from queue commandList()
+   endwhile
+
+endfunction
+
+function commandSharedParseStartup()
+
+   local myCL$ as string
+
+   myCL$ = CL$()
+
+   if myCL$ <> ""
+      commandSharedParse(myCL$)
+   endif
+
+endfunction
+
+function commandTranspose(cmd$ as string)
+
+   REM WE NEED TO SEE IF THE COMMAND CONTAINS ANY FIELD NAMES
+   REM AND IF SO, REPLACE THE FIELD NAMES WITH THE VALUES OF THE
+   REM FIELDS.  FIELD VALUES WILL BE IN THE INPUT TABLE IN THE DATA
+   REM SYSTEM.  ALSO CHECK TO SEE IF THE FIELD IS A MEMBER OF THE
+   REM COMMAND_MASKED_FIELDS, AND IF SO, IT SHOULD BE MASKED IN THE LOG
+
+   if cmd$ = ""
+      exitfunction
+   endif
+
+   log$ = cmd$
+
+   split string cmd$,COMMAND_CHAR_ARGSEP
+
+   for i = 1 to split count()
+      myKey$ = get split word$(i)
+      myVal$ = dataSharedGetTag(DATA_TNAME_INPUT, myKey$, myKey$,0)
+      if myVal$ <> DATA_KEY_UNDEFINED and myVal$ <> myKey$
+         if instr(COMMAND_MASKED_FIELDS,myKey$) > 0
+            log$ = replace all$(log$,myKey$,DATA_KEY_HIDDEN)
+         else
+            log$ = replace all$(log$,myKey$,myVal$)
+         endif
+         cmd$ = replace all$(cmd$,myKey$,myVal$)
+      endif
+   next
+
+   debugWrite(DEBUGINFO,"Command Run: " + log$)
+
+   commandRun(cmd$)
+
+
+endfunction
+
+

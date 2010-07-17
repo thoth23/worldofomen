@@ -10,4 +10,26 @@ dataSharedSetup:
       key as string
    endtype
 
+   #constant DATA_KEY_UNDEFINED     "\\\undefined\\\"
+   #constant DATA_KEY_HIDDEN        "-----hidden----"
+
+   REM BASE TABLES MUST BE BUILT MANUALLY
+   #constant DATA_TABLES         1
+   #constant DATA_TNAME_TABLES   "tables"
+   #constant DATA_INPUT          2
+   #constant DATA_TNAME_INPUT    "input"
+
 return
+
+function dataSharedGetTag(tableName$, key$, default$,createFlag as boolean)
+   REM THIS IS JUST A STUB FOR NOW
+   REM TO DEMO OTHER PARTS OF THE
+   REM PROGRAM
+
+   retval$=default$
+
+   if key$="inputLogonPassword"
+      retval$="mysecretpassword"
+   endif
+
+endfunction retval$
