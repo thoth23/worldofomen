@@ -18,11 +18,15 @@ netServerStart()
 
 gosub keyboardSharedSetup
 
+REM Parse the command line for commands
+commandSharedParseStartup()
+
+
 repeat
 
    netServerMaintain()
 
-until (spacekey() > 0)
+until (spacekey() > 0) OR ((systemMode && SYSTEM_MODE_QUITTING) <> 0)
 
 
 REM SYSTEM STOP

@@ -83,11 +83,33 @@ function netClientSendChat(myChannel$,message$)
    inc bytes, len(myChannel$)
    inc bytes, len(message$)
 
+   REM CHAT WILL NEED TO BE ENCRYPTED ON
+   REM CHANNELS THAT ARE MARKED PRIVATE
+
    netSharedAddHeader(NETC_CHAT,bytes)
    mn Add string SendPacket, myChannel$, 0, 1
    mn Add String SendPacket, message$, 0, 1
    mn Send TCP 0,SendPacket,0,0,1
    debugWrite(DEBUGINFO,"Sent NETC_CHAT")
+
+endfunction
+
+function netClientSendCommand(cmd$)
+
+   cmd$ = keyboardSharedSanitize(cmd$)
+
+   bytes = NET_HEADER_BYTES
+   inc bytes, len(cmd$)
+
+   netSharedAddHeader(NETC_COMMAND,bytes)
+
+   REM COMMAND MESSAGES WILL ALWAYS
+   REM BE ENCRYPTED.  THIS WILL BE
+   REM DONE VERY SOON.
+   mn Add String SendPacket, cmd$, 0, 1
+
+   mn Send TCP 0,SendPacket,0,0,1
+   debugWrite(DEBUGINFO,"Sent NETC_COMMAND")
 
 endfunction
 

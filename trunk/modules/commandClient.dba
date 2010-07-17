@@ -2,4 +2,35 @@ REM *** Include File: modules\commandClient.dba ***
 REM Created: 7/4/2010 11:00:01 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+function commandRun(cmd$ as string)
+
+   local cmdFound as boolean
+
+   split string cmd$,COMMAND_CHAR_ARGSEP
+   cmdAction$ = get split word$(1)
+
+   REM ARGUMENTS WITH EMBEDDED ARGUMENT SEPERATOR
+   REM CHARACTERS WILL BE TRANSPOSED AS NEEDED
+   REM USING THIS COMMAND:
+   REM arg$ = replace all$(arg$,COMMAND_CHAR_ARGEMB,COMMAND_CHAR_ARGSEP)
+
+   cmdFound = 0
+   select cmdAction$
+
+      case "/exit"
+         systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
+         cmdFound = 1
+      endcase
+
+   endselect
+
+   if cmdFound = 0
+      REM NOT A CLIENT COMMAND, SEND TO SERVER
+      netClientSendCommand(cmd$)
+      debugWrite(DEBUGINFO,"Command Not Found, Sending to Server")
+   endif
+
+
+endfunction
