@@ -9,7 +9,7 @@ function commandRun(cmd$ as string)
    local cmdFound as boolean
 
    split string cmd$,COMMAND_CHAR_ARGSEP
-   cmdAction$ = get split word$(1)
+   cmdAction$ = lower$(get split word$(1))
 
    REM ARGUMENTS WITH EMBEDDED ARGUMENT SEPERATOR
    REM CHARACTERS WILL BE TRANSPOSED AS NEEDED
@@ -20,8 +20,31 @@ function commandRun(cmd$ as string)
    select cmdAction$
 
       case "/exit"
-         systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
          cmdFound = 1
+         systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
+      endcase
+
+      case "/loc"
+         cmdFound = 1
+         msg$="x:" + systemRound$(object position x(5),2) + ",y:" + systemRound$(object position y(5),2) + ",z:" + systemRound$(object position z(5),2)
+         keyboardUpdateChatReceive(msg$)
+      endcase
+
+      case "/listen"
+         cmdFound = 1
+         channel$ = upper$(get split word$(2))
+         netClientChangeChannels(NETC_LISTEN, channel$)
+      endcase
+
+      case "/mute"
+         cmdFound = 1
+         channel$ = upper$(get split word$(2))
+         netClientChangeChannels(NETC_MUTE, channel$)
+      endcase
+
+      case "/setchannel"
+         cmdfound = 1
+         netClientCurrentChannel = upper$(get split word$(2))
       endcase
 
    endselect

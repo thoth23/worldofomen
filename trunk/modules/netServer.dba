@@ -79,6 +79,7 @@ function netServerSessionReset(client as integer)
    REM GUARANTEES THAT NO MORE DATA CAN BE RECEIVED
    REM ON THIS CIRCUIT UNTIL IT IS REBUILT
    netSession(client).key=""
+   netSession(client).listenChannels=NET_LISTEN_CHANNELS_DEFAULT
 
 endfunction
 
@@ -105,11 +106,6 @@ function netServerMaintain()
 
          temp$ = mn Get Client IP TCP(instance, joinID)
          temp = mn Get Client Port TCP(instance, joinID)
-
-         REM INITIAL CONNECTS ARE "INFORMATIONLESS" AND SO WE
-         REM DO NOT YET HAVE ANY INFORMATION TO SHARE WITH OTHERS
-         REM UNTIL LOGON IS COMPLETED - AT WHICH POINT, A PLAYER
-         REM JOIN ANNOUNCEMENT WILL BE SENT
 
          debugWrite(DEBUGINFO,"Connection from " + temp$ + " on port " + str$(temp) + " as sessionID " + str$(joinID))
 
@@ -151,12 +147,30 @@ function netServerMaintain()
 
 endfunction
 
-function netServerChatBroadcast(instance as integer, channel$ as string, message$ as string, excludeID as integer)
+function netServerChatBroadcast(instance as integer, channel$ as string, message$ as string, clientSending as integer)
 
    netSharedAddHeader(NETS_CHAT, NET_HEADER_BYTES + len(channel$) + len(message$))
    mn Add string SendPacket, channel$, 0, 1
    mn Add String SendPacket, message$, 0, 1
-   mn Send TCP All instance, SendPacket, 0, 1, excludeID
+
+   for client = 1 to NET_CLIENTS_PER_INSTANCE
+       if instr(netSession(client).listenChannels,channel$) <> 0
+          mn Send TCP instance, SendPacket, client, 1, 1
+       endif
+   next client
+
+   REM BECAUSE WE KEPT THE PACKET,
+   REM NOW WE NEED TO CLEAR IT
+   mn Clear Packet SendPacket
+
+endfunction
+
+function netServerChatSend(instance as integer, channel$ as string, message$ as string, client as integer)
+
+   netSharedAddHeader(NETS_CHAT, NET_HEADER_BYTES + len(channel$) + len(message$))
+   mn Add string SendPacket, channel$, 0, 1
+   mn Add String SendPacket, message$, 0, 1
+   mn Send TCP instance, SendPacket, client, 0, 1
 
 endfunction
 
@@ -181,10 +195,13 @@ function netServerParseTCP(instance, client)
      case NETC_CHAT
          channel$ = mn Get String(RecvPacket,0,1)
          message$ = mn Get String(RecvPacket,0,1)
-         debugWrite(DEBUGINFO,message$)
+         debugWrite(DEBUGINFO,channel$+":"+message$)
          channel$ = keyboardSharedSanitize(channel$)
          message$ = keyboardSharedSanitize(message$)
-         netServerChatBroadcast(instance, channel$, message$, 0)
+         REM WHEN A CLIENT SENDS ON A CHANNEL,AUTOMATICALLY
+         rem SET THAT CLIENT TO LISTEN ON THAT CHANNEL
+         netSession(client).listenChannels = systemSharedFieldAdd(netSession(client).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
+         netServerChatBroadcast(instance, channel$, message$, client)
      endcase
 
      case NETC_COMMAND
@@ -196,7 +213,18 @@ function netServerParseTCP(instance, client)
          REM TO ALLOW COMMANDS BY GMLEVEL.  THIS IS
          REM HERE JUST FOR DEMONSTRATION PURPOSES.
          commandTranspose(cmd$)
+     endcase
 
+     case NETC_LISTEN
+         channel$ = upper$(mn Get String(RecvPacket,0,1))
+         netSession(client).listenChannels = systemSharedFieldAdd(netSession(client).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
+         netServerChatSend(instance, "SYSTEM", "Listening on channels: " + netSession(client).listenChannels, client)
+     endcase
+
+     case NETC_MUTE
+         channel$ = upper$(mn Get String(RecvPacket,0,1))
+         netSession(client).listenChannels = systemSharedFieldRemove(netSession(client).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
+         netServerChatSend(instance, "SYSTEM", "Listening on channels: " + netSession(client).listenChannels, client)
      endcase
 
    endselect

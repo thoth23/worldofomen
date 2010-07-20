@@ -11,9 +11,6 @@ netClientSetup:
    global netClientCurrentChannel as string
    netClientCurrentChannel = "BROADCAST"
 
-   global NET_LISTEN_CHANNELS as string
-   NET_LISTEN_CHANNELS = NET_LISTEN_CHANNELS_DEFAULT
-
 return
 
 
@@ -90,7 +87,6 @@ function netClientSendChat(myChannel$,message$)
    mn Add string SendPacket, myChannel$, 0, 1
    mn Add String SendPacket, message$, 0, 1
    mn Send TCP 0,SendPacket,0,0,1
-   debugWrite(DEBUGINFO,"Sent NETC_CHAT")
 
 endfunction
 
@@ -109,7 +105,19 @@ function netClientSendCommand(cmd$)
    mn Add String SendPacket, cmd$, 0, 1
 
    mn Send TCP 0,SendPacket,0,0,1
-   debugWrite(DEBUGINFO,"Sent NETC_COMMAND")
+
+endfunction
+
+function netClientChangeChannels(operation as integer, channel$ as string)
+
+   channel$ = keyboardSharedSanitize(channel$)
+
+   bytes = NET_HEADER_BYTES
+   inc bytes, len(channel$)
+
+   netSharedAddHeader(operation,bytes)
+   mn Add String SendPacket, channel$, 0, 1
+   mn Send TCP 0,SendPacket,0,0,1
 
 endfunction
 
@@ -126,14 +134,15 @@ function netClientParseTCP()
        case NETS_CHAT
           channel$ = mn Get String(RecvPacket,0,1)
           message$ = mn Get String(RecvPacket,0,1)
-          if instr(NET_LISTEN_CHANNELS,channel$) <> 0
-             message$ = "[" + channel$ + "]" + message$
-             message$ = keyboardSharedSanitize(message$)
-             debugWrite(DEBUGINFO,message$)
-             keyboardUpdateChatReceive(message$)
-             `guiUpdateChatReceive(message$)
-             rem not yet
-          endif
+          message$ = "[" + channel$ + "] " + message$
+          message$ = keyboardSharedSanitize(message$)
+
+          REM TURN ON CHAT WHEN WE RECEIVE A MESSAGE
+          REM ON A CHANNEL WE ARE LISTENING TO
+          systemSharedGameModeAdd(SYSTEM_MODE_CHAT_ACTIVE)
+          keyboardUpdateChatReceive(message$)
+          `guiUpdateChatReceive(message$)
+          rem not yet
        endcase
 
     endselect

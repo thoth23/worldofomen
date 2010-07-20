@@ -6,6 +6,11 @@ REM
 
 commandSharedSetup:
 
+   #constant COMMAND_CHAR_START   "/"
+   #constant COMMAND_CHAR_CMDSEP  ";"
+   #constant COMMAND_CHAR_ARGSEP  " "
+   #constant COMMAND_CHAR_ARGEMB  "_"
+
    type commandTokenType
       name$ as string
       value$ as string
@@ -15,33 +20,10 @@ commandSharedSetup:
    add to queue commandList()
 
    global COMMAND_MASKED_FIELDS as string
-   commandAddMaskedField("inputLogonPassword")
-   commandAddMaskedField("inputCreateAccountPassword")
-
-   #constant COMMAND_CHAR_START   "/"
-   #constant COMMAND_CHAR_CMDSEP  ";"
-   #constant COMMAND_CHAR_ARGSEP  " "
-   #constant COMMAND_CHAR_ARGEMB  "_"
-
-   global COMMAND_CURRENT as string
+   COMMAND_MASKED_FIELDS = systemSharedFieldAdd(COMMAND_MASKED_FIELDS,"inputLogonPassword",COMMAND_CHAR_CMDSEP)
+   COMMAND_MASKED_FIELDS = systemSharedFieldAdd(COMMAND_MASKED_FIELDS,"inputCreateAccountPassword",COMMAND_CHAR_CMDSEP)
 
 return
-
-function commandAddMaskedField(fldName$ as string)
-
-   if len(COMMAND_MASKED_FIELDS) > 0
-      COMMAND_MASKED_FIELDS = COMMAND_MASKED_FIELDS + COMMAND_CHAR_CMDSEP
-   endif
-   COMMAND_MASKED_FIELDS = COMMAND_MASKED_FIELDS + fldName$
-
-endfunction
-
-function commandRemoveMaskedField(fldName$ as string)
-
-   COMMAND_MASKED_FIELDS = remove all$(COMMAND_MASKED_FIELDS,fldName$)
-   COMMAND_MASKED_FIELDS = replace all$(COMMAND_MASKED_FIELDS,COMMAND_CHAR_CMDSEP+COMMAND_CHAR_CMDSEP,COMMAND_CHAR_CMDSEP)
-
-endfunction
 
 function commandSharedParse(dat$ as string)
 

@@ -82,11 +82,34 @@ function keyboardClientPollBottom()
 
          keyboardAddBuffer = 1
          if keyState(KEYBOARD_KEY_SEND_CHAT) = 1
+            keyboardChatInput = trim$(keyboardChatInput)
             if fast len(keyboardChatInput) > 0
                if fast left$(keyboardChatInput,1) = COMMAND_CHAR_START
                   commandSharedParse(keyboardChatInput)
                else
-                  netClientSendChat(netClientCurrentChannel,keyboardChatInput)
+                  sendChannel$ = netClientCurrentChannel
+                  if fast len(keyboardChatInput) > 2
+                     chSelector$ = upper$(fast left$(keyboardChatInput,2))
+                     selectorFound = 0
+                     select chSelector$
+                        case "B "
+                           selectorFound = 1
+                           sendChannel$ = "BROADCAST"
+                        endcase
+                        case "L "
+                           selectorFound = 1
+                           sendChannel$ = "LOCAL"
+                        endcase
+                        case "T "
+                           selectorFound = 1
+                           sendChannel$ = "TEAM"
+                        endcase
+                     endselect
+                     if selectorFound = 1
+                        keyboardChatInput = fast right$(keyboardChatInput,len(keyboardChatInput)-2)
+                     endif
+                  endif
+                  netClientSendChat(sendChannel$,keyboardChatInput)
                endif
             else
                keyboardUpdateChatReceive("")
@@ -151,9 +174,7 @@ function keyboardClientShowChat()
 
       text 5, ((keyboardShowLines+1) * text size()),"----------------"
 
-      if keyboardChatInput <> ""
-         text 5, ((keyboardShowLines+2) * text size()),keyboardChatInput
-      endif
+      text 5, ((keyboardShowLines+2) * text size()),"["+ netClientCurrentChannel +"] " + keyboardChatInput
 
       if timer() > keyboardCursorNextBlink
          keyboardCursorNextBlink = timer() + keyboardCursorBlinkDelay
@@ -161,7 +182,7 @@ function keyboardClientShowChat()
       endif
 
       if keyboardCursorBlinkState = 1
-         text 5 + text width(keyboardChatInput), ((keyboardShowLines+2) * text size()),"_"
+         text 5 + text width(keyboardChatInput) + text width(netClientCurrentChannel+"][ "), ((keyboardShowLines+2) * text size()),"_"
       endif
    endif
 
