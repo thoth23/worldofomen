@@ -45,15 +45,19 @@ netSharedSetup:
    mn set memory size SendPacket,1024
    rem RecVPacket size is set automatically on receive
 
-   #constant NET_LISTEN_CHANNELS_DEFAULT "SYSTEM/LOCAL/BROADCAST"
+   #constant NET_LISTEN_CHANNELS_DEFAULT "SYSTEM;LOCAL;BROADCAST"
 
    REM CLIENT TCP OPERATIONS
    #constant NETC_CHAT              1
    #constant NETC_COMMAND           2
+   #constant NETC_LISTEN            3
+   #constant NETC_MUTE              4
 
    REM SERVER TCP OPERATIONS
    #constant NETS_CHAT              1001
    #constant NETS_COMMAND           1002
+   #constant NETS_LISTEN            1003
+   #constant NETS_MUTE              1004
 
 return
 

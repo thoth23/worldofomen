@@ -58,3 +58,92 @@ function systemSharedGameModeRemove(mode as integer)
         systemMode = systemMode - mode
     endif
 endfunction
+
+function systemSharedFieldAdd(record$,field$,separator$)
+   if instr(record$,field$) = 0
+      if len(record$) > 0
+         record$ = record$ + separator$
+      endif
+      record$ = record$ + field$
+   endif
+endfunction record$
+
+function systemSharedFieldRemove(record$,field$,separator$)
+   record$ = remove all$(record$,field$)
+   record$ = replace all$(record$,separator$+separator$,separator$)
+endfunction record$
+
+function systemLerpColors(clr1 as dword, clr2 as dword, pct as float)
+
+   local clrFinal as dword
+   pct = clamp(pct, 0.0, 100.0)
+   percent# = pct/100.0
+
+   set vector4 systemVector4A, rgbr(clr1), rgbg(clr1), rgbb(clr1), rgba(clr1)
+   set vector4 systemVector4B, rgbr(clr2), rgbg(clr2), rgbb(clr2), rgba(clr2)
+   LINEAR INTERPOLATE VECTOR4 systemVector4C, systemVector4A, systemVector4B, percent#
+   r = int(clamp(X VECTOR4(systemVector4C),0.0,255.0))
+   g = int(clamp(Y VECTOR4(systemVector4C),0.0,255.0))
+   b = int(clamp(Z VECTOR4(systemVector4C),0.0,255.0))
+   a = int(clamp(W VECTOR4(systemVector4C),0.0,255.0))
+   clrFinal = rgb(r,g,b)
+   clrFinal = SET ALPHA(clrFinal,a)
+
+endfunction clrFinal
+
+function systemGetDistance3D(x1#,y1#,z1#,x2#,y2#,z2#)
+
+   set vector3 systemVector3A, (x1# - x2#), (y1# - y2#), (z1# - z2#)
+   exitfunction (length vector3(systemVector3A))
+
+endfunction 0.0
+
+function systemGetAngleDifference(a1 as float, a2 as float)
+
+  rem the angular difference returned
+  rem is the degrees you would have to rotate from a1 to reach a2
+  a1 = -(wrapvalue(a1+180-a2)-180)
+
+endfunction a1
+
+
+function systemPadLeft(source$,desiredSize,pad$)
+
+   retval$=source$
+   temp$=""
+   sizeDifference = desiredSize - len(source$)
+   if sizeDifference > 0
+      for a = 1 to sizeDifference
+         temp$=temp$+pad$
+      next a
+
+      retval$ = temp$ + source$
+
+   endif
+
+endfunction retval$
+
+function systemRound$(myFloat as float, places as integer)
+
+   myStr$=str$(myFloat)
+   a = instr(myStr$,".")
+   if a > 0
+      b = min(len(myStr$),a+places)
+      retval$ = fast left$(myStr$,b)
+   else
+      retval$ = myStr$
+   endif
+
+endfunction retval$
+
+function systemPercentBetween(i as float, j as float, pct as float)
+
+   local k as float
+   pct = clamp(pct, 0.0, 100.0)
+   percent# = pct/100.0
+
+   k = abs(i - j) * percent#
+   k = min(i,j) + k
+
+endfunction k
+

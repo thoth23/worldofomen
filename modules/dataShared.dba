@@ -8,6 +8,9 @@ dataSharedSetup:
 
    type dataObjectType
       key as string
+      accountName as string
+      avatarName as string
+      listenChannels as string
    endtype
 
    #constant DATA_KEY_UNDEFINED     "\\\undefined\\\"
