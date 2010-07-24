@@ -14,25 +14,186 @@ dataSharedSetup:
    endtype
 
    #constant DATA_KEY_UNDEFINED     "\\\undefined\\\"
-   #constant DATA_KEY_HIDDEN        "-----hidden----"
+   #constant DATA_KEY_HIDDEN        "\\\hidden\\\"
+   #constant DATA_KEY_NOSAVE        "\\\nosave\\\"
+   #constant DATA_TABLE_INPUT       "input"
+   #constant DATA_ARGSEP            ";"
+   #constant DATA_NAMEVALSEP        "="
+   #constant DATA_FILE_EXT          ".ini"
 
-   REM BASE TABLES MUST BE BUILT MANUALLY
-   #constant DATA_TABLES         1
-   #constant DATA_TNAME_TABLES   "tables"
-   #constant DATA_INPUT          2
-   #constant DATA_TNAME_INPUT    "input"
+   REM LOOKUP LOOP STATE CANT BE EVALUATED, SO IT CANNOT
+   REM BE PERSISTED, SO WE NEED TO USE A CSV LIST FOR
+   REM MAINTAINING TABLES THAT SHOULD NOT BE SAVED
+   global DATA_NOSAVE_TABLES as string
+
+   REM BASE TABLE MUST BE BUILT MANUALLY
+   REM AND SET IT TO NOSAVE
+   #constant DATA_TABLES            1
+   #constant DATA_TNAME_TABLES      "tables"
+   make lookup DATA_TABLES
+   set lookup DATA_TABLES, DATA_TNAME_TABLES, str$(DATA_TABLES)
+   debugWrite(DEBUGINFO,"dataSharedSetup: root table set to name " + DATA_TNAME_TABLES + " with tableid: " + str$(DATA_TABLES))
+   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TNAME_TABLES,DATA_ARGSEP)
+
+   REM PRE-BUILD THE INPUT TABLE
+   REM AND SET IT TO NOSAVE
+   dataSharedUpdateField(DATA_TABLE_INPUT, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
+   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_INPUT,DATA_ARGSEP)
+
+   REM NOW LET'S SET THE LOCALIZATION
+   REM AND SET IT TO NOSAVE
+   global DATA_LANGUAGE as string
+   DATA_LANGUAGE = dataSharedGetField("gui", "language", "language/english",1)
+   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_LANGUAGE,DATA_ARGSEP)
 
 return
 
-function dataSharedGetTag(tableName$, key$, default$,createFlag as boolean)
-   REM THIS IS JUST A STUB FOR NOW
-   REM TO DEMO OTHER PARTS OF THE
-   REM PROGRAM
 
-   retval$=default$
+function dataSharedGetField(tableName$, key$, default$,createFlag as boolean)
 
-   if key$="inputLogonPassword"
-      retval$="mysecretpassword"
+   local retval$ as string
+   retval$ = DATA_KEY_UNDEFINED
+
+   rem first find the tableID
+   if search lookup (DATA_TABLES, tableName$) = 1
+      if lookup is valid(DATA_TABLES)
+         tableid = intval(lookup current value$(DATA_TABLES))
+         rem now find the key/value pair in the right table
+         if search lookup(tableid, key$) = 1
+            if lookup is valid(tableid)
+               retval$ = lookup current value$(tableid)
+            else
+               debugWrite(DEBUGWARN,"dataSharedGetField lookup invalid for table: " + str$(tableid))
+            endif
+         else
+            `debugWrite(DEBUGINFO,"dataSharedGetField lookup not found for table: " + str$(tableid) + " and key: " + key$ + ", using default: " + default$)
+            if createFlag = 1
+               dataSharedUpdateField(tablename$,key$,default$)
+            endif
+            retval$ = default$
+         endif
+      else
+         debugWrite(DEBUGWARN,"dataSharedGetField table lookup invalid for table: " + tablename$)
+      endif
+   else
+      debugWrite(DEBUGWARN,"dataSharedGetField table lookup not found for table,key,value: " + tablename$ + "," + key$ + "," + default$)
+      if createFlag = 1
+         tableID = systemFreeLookup()
+         make lookup tableID
+         set lookup DATA_TABLES, tablename$, str$(tableID)
+         set lookup tableid, key$, default$
+         debugWrite(DEBUGINFO,"dataSharedGetField ...so we built it as tableid: " + str$(tableID))
+      endif
+      retval$ = default$
    endif
 
 endfunction retval$
+
+
+function dataSharedUpdateField(tableName$, key$, value$)
+   local tableid as integer
+
+   rem first find the tableID
+   if search lookup (DATA_TABLES, tableName$) = 1
+      if lookup is valid(DATA_TABLES)
+         tableid = intval(LOOKUP CURRENT VALUE$(DATA_TABLES))
+      endif
+   else
+      tableID = systemFreeLookup()
+      make lookup tableID
+      set lookup DATA_TABLES, tableName$, str$(tableID)
+      debugWrite(DEBUGINFO,"dataSharedUpdateField created table " + str$(tableID) + ". " + tableName$)
+   endif
+
+   rem now set the key/value pair in the table
+   set lookup tableid, key$, value$
+   `debugWrite(DEBUGINFO,"dataSharedUpdateField updated key " + key$ + " to " + value$ + " in table " + str$(tableID) + ". " + tableName$)
+
+endfunction
+
+function dataSharedLoad()
+
+   filename$ = DATA_PATH + DATA_TNAME_TABLES + DATA_FILE_EXT
+   if file exist(filename$)
+      open to read SYSTEM_FILE_TABLE, filename$
+         while not file end(SYSTEM_FILE_TABLE)
+            read string SYSTEM_FILE_TABLE, table$
+            filename$ = DATA_PATH + table$ + DATA_FILE_EXT
+            if file exist(filename$)
+               open to read SYSTEM_FILE_DATA, filename$
+               while not file end(SYSTEM_FILE_DATA)
+                  read string SYSTEM_FILE_DATA, dat$
+                  split string dat$,DATA_NAMEVALSEP
+                  dataSharedUpdateField(table$, get split word$(1), get split word$(2))
+               endwhile
+               close file SYSTEM_FILE_DATA
+            endif
+         endwhile
+      close file SYSTEM_FILE_TABLE
+   endif
+
+   REM LOCALIZATION
+   filename$ = DATA_PATH + DATA_LANGUAGE + DATA_FILE_EXT
+   if file exist(filename$)
+      open to read SYSTEM_FILE_DATA, filename$
+      while not file end(SYSTEM_FILE_DATA)
+         read string SYSTEM_FILE_DATA, dat$
+         split string dat$,DATA_NAMEVALSEP
+         dataSharedUpdateField(DATA_LANGUAGE, get split word$(1), get split word$(2))
+      endwhile
+      close file SYSTEM_FILE_DATA
+   endif
+
+endfunction
+
+
+function dataSharedSave()
+
+   local myTable as integer
+   myTable = 1
+
+
+   if lookup exist(DATA_TABLES)
+      FIRST LOOKUP DATA_TABLES
+      while lookup is valid(DATA_TABLES)
+         myKey$ = LOOKUP CURRENT KEY$(DATA_TABLES)
+
+         REM IF THE TABLE IS NOT IN DATA_NOSAVE_TABLES
+         REM THEN GO AHEAD AND SAVE TABLE - WE CANNOT
+         REM NEST A LOOKUP HERE, SO WE MUST USE A STRING
+         if instr(DATA_NOSAVE_TABLES,myKey$) = 0
+            filename$ = DATA_PATH + myKey$ + DATA_FILE_EXT
+            myTable = intval(LOOKUP CURRENT VALUE$(DATA_TABLES))
+            if lookup exist(myTable)
+               if file exist(filename$)
+                  delete file filename$
+               endif
+               open to write SYSTEM_FILE_DATA, filename$
+               FIRST LOOKUP myTable
+               while lookup is valid(myTable)
+                  if LOOKUP CURRENT KEY$(myTable) <> ""
+                     dat$ = LOOKUP CURRENT KEY$(myTable) + DATA_NAMEVALSEP + LOOKUP CURRENT VALUE$(myTable)
+                     write string SYSTEM_FILE_DATA, dat$
+                  endif
+                  next lookup myTable
+               endwhile
+               close file SYSTEM_FILE_DATA
+            endif
+         endif
+         next lookup DATA_TABLES
+      endwhile
+   endif
+
+
+endfunction
+
+function dataSharedTableExist(tableName$ as string)
+   local retval as integer
+   retval = 0
+   if search lookup (DATA_TABLES, tableName$) = 1
+      if lookup is valid(DATA_TABLES)
+         retval = intval(LOOKUP CURRENT VALUE$(DATA_TABLES))
+      endif
+   endif
+endfunction retval
+

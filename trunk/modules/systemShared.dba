@@ -7,12 +7,18 @@ REM
 systemSharedSetup:
 
     global systemNextFileID as integer
+    global systemNextFreeLookup as integer
+    global systemNextFreeTicker as integer
 
     REM RESERVED FILE ID MANAGEMENT
     global SYSTEM_FILE_DATA_SERVERID as integer
     SYSTEM_FILE_DATA_SERVERID = systemSharedGetFreeFileID()
     global SYSTEM_FILE_DATA_GUID as integer
     SYSTEM_FILE_DATA_GUID = systemSharedGetFreeFileID()
+    global SYSTEM_FILE_TABLE as integer
+    SYSTEM_FILE_TABLE = systemSharedGetFreeFileID()
+    global SYSTEM_FILE_DATA as integer
+    SYSTEM_FILE_DATA = systemSharedGetFreeFileID()
 
     REM SYSTEM MODES
     global systemMode as integer
@@ -22,11 +28,23 @@ systemSharedSetup:
     #constant SYSTEM_MODE_NET_TCP             %100
 
 
+
 return
 
 function systemSharedGetFreeFileID()
    inc systemNextFileID
 endfunction systemNextFileID
+
+function systemFreeLookup()
+   repeat
+      inc systemNextFreeLookup
+    until lookup exist(systemNextFreeLookup) = 0
+endfunction systemNextFreeLookup
+
+function systemFindFreeTicker()
+   temp = systemNextFreeTicker
+   inc systemNextFreeTicker
+endfunction temp
 
 function systemSharedGetRealDateTime(dsep$,dtsep$,tsep$)
 

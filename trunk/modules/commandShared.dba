@@ -82,7 +82,7 @@ function commandTranspose(cmd$ as string)
 
    for i = 1 to split count()
       myKey$ = get split word$(i)
-      myVal$ = dataSharedGetTag(DATA_TNAME_INPUT, myKey$, myKey$,0)
+      myVal$ = dataSharedGetField(DATA_TABLE_INPUT, myKey$, myKey$,0)
       if myVal$ <> DATA_KEY_UNDEFINED and myVal$ <> myKey$
          if instr(COMMAND_MASKED_FIELDS,myKey$) > 0
             log$ = replace all$(log$,myKey$,DATA_KEY_HIDDEN)
