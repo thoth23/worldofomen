@@ -10,8 +10,15 @@ gosub debugSharedSetup
 gosub debugClientSetup
 debugStart()
 
-gosub commandSharedSetup
+REM FOR DATA, CLIENT/SERVER
+REM MUST BE CALLED BEFORE
+REM SHARED TO SET PATH
+REM CONSTANT
+gosub dataClientSetup
 gosub dataSharedSetup
+dataSharedLoad()
+
+gosub commandSharedSetup
 gosub netSharedSetup
 gosub netClientSetup
 gosub keyboardSharedSetup
@@ -55,4 +62,5 @@ until (systemMode && SYSTEM_MODE_QUITTING) <> 0
 
 REM STOP FUNCTION HERE
 netClientStop()
+dataSharedSave()
 debugStop()
