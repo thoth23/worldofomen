@@ -7,33 +7,33 @@ REM
 netSharedSetup:
 
    #constant NET_SERVER_NAME_DEFAULT "127.0.0.1"
+
    global NET_SERVER_NAME as string
+   NET_SERVER_NAME = dataSharedGetField("netShared", "netServerName", "", DATA_CREATE)
 
    global NET_SERVER_PORT as integer
-   NET_SERVER_PORT = 9669
+   NET_SERVER_PORT = intval(dataSharedGetField("netShared", "netServerPort", "9669", DATA_CREATE))
 
    global NET_INSTANCES as integer
-   NET_INSTANCES = 1
+   NET_INSTANCES = intval(dataSharedGetField("netShared", "netInstances", "1", DATA_CREATE))
 
    global NET_THREADS as integer
-   NET_THREADS = 0
-   REM SETTING THREADS TO ZERO WILL CAUSE SERVER
-   REM TO START 1 THREAD PER PHYSICAL CPU
+   NET_THREADS = intval(dataSharedGetField("netShared", "netThreads", "0", DATA_CREATE))
 
    global NET_UDP_MODE as integer
-   NET_UDP_MODE = 2
+   NET_UDP_MODE = intval(dataSharedGetField("netShared", "netUDPMode", "2", DATA_CREATE))
 
    global NET_TIMEOUT_SECONDS as integer
-   NET_TIMEOUT_SECONDS = 10
+   NET_TIMEOUT_SECONDS = intval(dataSharedGetField("netShared", "netTimeOutSeconds", "10", DATA_CREATE))
 
    global NET_UDP_UPDATE_INTERVAL as integer
-   NET_UDP_UPDATE_INTERVAL = 250
+   NET_UDP_UPDATE_INTERVAL = intval(dataSharedGetField("netShared", "netUDPUpdateInterval", "250", DATA_CREATE))
 
    global NET_UDP_HEARTBEAT_INTERVAL as integer
-   NET_UDP_HEARTBEAT_INTERVAL = 5000
+   NET_UDP_HEARTBEAT_INTERVAL = intval(dataSharedGetField("netShared", "netUDPHeartbeatInterval", "5000", DATA_CREATE))
 
    global NET_TCP_RECONNECT_INTERVAL as integer
-   NET_TCP_RECONNECT_INTERVAL = 5000 + rnd(2000)
+   NET_TCP_RECONNECT_INTERVAL = NET_UDP_HEARTBEAT_INTERVAL + rnd(2000)
 
    #constant NET_HEADER_BYTES 12
 
@@ -45,7 +45,8 @@ netSharedSetup:
    mn set memory size SendPacket,1024
    rem RecVPacket size is set automatically on receive
 
-   #constant NET_LISTEN_CHANNELS_DEFAULT "SYSTEM;LOCAL;BROADCAST"
+   global NET_LISTEN_CHANNELS_DEFAULT as string
+   NET_LISTEN_CHANNELS_DEFAULT = dataSharedGetField("netShared", "netListenChannelsDefault", "SYSTEM;LOCAL;BROADCAST", DATA_CREATE)
 
    REM CLIENT TCP OPERATIONS
    #constant NETC_CHAT              1
