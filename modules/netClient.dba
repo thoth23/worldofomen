@@ -6,10 +6,10 @@ REM
 
 netClientSetup:
 
-   NET_SERVER_NAME = "192.168.1.4"
+   NET_SERVER_NAME = dataSharedGetField("netClient", "netServerName", "192.168.1.4", DATA_CREATE)
 
    global netClientCurrentChannel as string
-   netClientCurrentChannel = "BROADCAST"
+   netClientCurrentChannel = dataSharedGetField("netClient", "netClientCurrentChannel", "BROADCAST", DATA_CREATE)
 
 return
 

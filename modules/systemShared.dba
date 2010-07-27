@@ -6,19 +6,35 @@ REM
 
 systemSharedSetup:
 
+    #constant SYSTEM_TYPE_FILE     1
+    #constant SYSTEM_TYPE_LOOKUP   2
+    #constant SYSTEM_TYPE_TICKER   3
+    #constant SYSTEM_TYPE_OBJECT   4
+    #constant SYSTEM_TYPE_IMAGE    5
+    #constant SYSTEM_TYPE_SPRITE   6
+    #constant SYSTEM_TYPE_SOUND    7
+    #constant SYSTEM_TYPE_MUSIC    8
+
+    #constant SYSTEM_TYPE_MAX      8
+
+    global dim systemNextID(SYSTEM_TYPE_MAX) as integer
+
+    #constant SYSTEM_SEARCH_FAST    1
+    #constant SYSTEM_SEARCH_REUSE   2
+
     global systemNextFileID as integer
     global systemNextFreeLookup as integer
     global systemNextFreeTicker as integer
 
     REM RESERVED FILE ID MANAGEMENT
     global SYSTEM_FILE_DATA_SERVERID as integer
-    SYSTEM_FILE_DATA_SERVERID = systemSharedGetFreeFileID()
+    SYSTEM_FILE_DATA_SERVERID = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
     global SYSTEM_FILE_DATA_GUID as integer
-    SYSTEM_FILE_DATA_GUID = systemSharedGetFreeFileID()
+    SYSTEM_FILE_DATA_GUID = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
     global SYSTEM_FILE_TABLE as integer
-    SYSTEM_FILE_TABLE = systemSharedGetFreeFileID()
+    SYSTEM_FILE_TABLE = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
     global SYSTEM_FILE_DATA as integer
-    SYSTEM_FILE_DATA = systemSharedGetFreeFileID()
+    SYSTEM_FILE_DATA = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
 
     REM SYSTEM MODES
     global systemMode as integer
@@ -31,20 +47,79 @@ systemSharedSetup:
 
 return
 
-function systemSharedGetFreeFileID()
-   inc systemNextFileID
-endfunction systemNextFileID
+function systemGetFree(myType as integer, mySearch as integer)
 
-function systemFreeLookup()
-   repeat
-      inc systemNextFreeLookup
-    until lookup exist(systemNextFreeLookup) = 0
-endfunction systemNextFreeLookup
+   local retval as integer
+   retval = -1
 
-function systemFindFreeTicker()
-   temp = systemNextFreeTicker
-   inc systemNextFreeTicker
-endfunction temp
+   mySearch=clamp(mySearch, SYSTEM_SEARCH_FAST, SYSTEM_SEARCH_REUSE)
+
+   if myType < 1 or myType > SYSTEM_TYPE_MAX
+      debugWrite(DEBUGERROR,"systemGetFree: Invalid Type Specified: " + str$(myType))
+      exitfunction -1
+   endif
+
+   select mySearch
+      case SYSTEM_SEARCH_FAST
+         inc systemNextID(myType)
+         retval = systemNextID(myType)
+      endcase
+      case SYSTEM_SEARCH_REUSE
+         found = 0
+         ctr = 0
+         while ctr < systemNextID(myType) and found = 0
+            inc ctr
+            select myType
+               case SYSTEM_TYPE_FILE
+                  REM WON'T NORMALLY USE THIS FOR FILES
+                  if file open(ctr) = 0 then found = 1
+               endcase
+               case SYSTEM_TYPE_LOOKUP
+                  if lookup exist(ctr) = 0 then found = 1
+               endcase
+               case SYSTEM_TYPE_TICKER
+                  if ticker exist(ctr) = 0 then found = 1
+               endcase
+               case SYSTEM_TYPE_OBJECT
+                  if object exist(ctr) = 0 then found = 1
+               endcase
+               case SYSTEM_TYPE_IMAGE
+                  if image exist(ctr) = 0 then found = 1
+               endcase
+               case SYSTEM_TYPE_SPRITE
+                  if sprite exist(ctr) = 0 then found = 1
+               endcase
+               case SYSTEM_TYPE_SOUND
+                  if sound exist(ctr) = 0 then found = 1
+               endcase
+               case SYSTEM_TYPE_MUSIC
+                  if music exist(ctr) = 0 then found =1
+               endcase
+            endselect
+         endwhile
+
+         if found = 0
+            debugWrite(DEBUGWARN,"systemGetFree Optimaization: method Search requested with Fast result")
+            inc systemNextID(myType)
+            retval = systemNextID(myType)
+         else
+            retval = ctr
+         endif
+      endcase
+   endselect
+
+endfunction retval
+
+function systemPushFree(myType as integer)
+
+   if myType < 1 or myType > SYSTEM_TYPE_MAX
+      debugWrite(DEBUGERROR,"systemPushFree: Invalid Type Specified: " + str$(myType))
+      exitfunction
+   endif
+
+   inc systemNextID(myType)
+
+endfunction
 
 function systemSharedGetRealDateTime(dsep$,dtsep$,tsep$)
 

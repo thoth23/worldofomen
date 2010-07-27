@@ -9,12 +9,12 @@ keyboardClientSetup:
    global keyboardKeyDown as boolean
    global keyboardNextKeyRepeat as float
    global keyboardRepeatDelay as float
-   keyboardRepeatDelay = 500
+   keyboardRepeatDelay = intval(dataSharedGetField("keyboardClient", "keyboardRepeatDelay", "250", DATA_CREATE))
 
    global keyboardCursorBlinkState as boolean
    global keyboardCursorNextBlink as integer
    global keyboardCursorBlinkDelay as float
-   keyboardCursorBlinkDelay = 333
+   keyboardCursorBlinkDelay = intval(dataSharedGetField("keyboardClient", "keyboardCursorBlinkDelay", "333", DATA_CREATE))
 
    global keyboardShowLines as integer
    keyboardShowLines = int(screen height()/(text size() * 2.0))
@@ -24,15 +24,15 @@ keyboardClientSetup:
 
    REM KEYBOARD INPUT MAP - SCANCODES
    global KEYBOARD_KEY_OPEN_CHAT as integer
-   KEYBOARD_KEY_OPEN_CHAT = 53
+   KEYBOARD_KEY_OPEN_CHAT = intval(dataSharedGetField("keyboardClient", "keyboardKeyOpenChat", "53", DATA_CREATE))
    global KEYBOARD_KEY_SEND_CHAT as integer
-   KEYBOARD_KEY_SEND_CHAT = 28
+   KEYBOARD_KEY_SEND_CHAT = intval(dataSharedGetField("keyboardClient", "keyboardKeySendChat", "28", DATA_CREATE))
    global KEYBOARD_KEY_DELETE as integer
-   KEYBOARD_KEY_DELETE = 14
+   KEYBOARD_KEY_DELETE = intval(dataSharedGetField("keyboardClient", "keyboardKeyOpenDelete", "14", DATA_CREATE))
    global KEYBOARD_KEY_CLOSE_CHAT as integer
-   KEYBOARD_KEY_CLOSE_CHAT = 1
+   KEYBOARD_KEY_CLOSE_CHAT = intval(dataSharedGetField("keyboardClient", "keyboardKeyCloseChat", "1", DATA_CREATE))
    global KEYBOARD_KEY_QUIT_GAME as integer
-   KEYBOARD_KEY_QUIT_GAME = 1
+   KEYBOARD_KEY_QUIT_GAME = intval(dataSharedGetField("keyboardClient", "keyboardKeyQuitGame", "1", DATA_CREATE))
 
    disable escapekey
 
