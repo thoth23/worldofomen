@@ -6,15 +6,31 @@ REM
 
 dataSharedSetup:
 
+   REM ARRAY DOCUMENTATION
+
+   REM RPGID IS THE ROLE-PLAY ID - THIS IS THE UNIQUE ID OF THE PLAYER CONTROLLED BY THE SERVER
+   REM DBPID IS THE DARKBASIC PRO ID - THIS IS THE UNIQUE ID OF THE DBP OBJECT THE PLAYER IS ASSOCIATED WITH ON THE CLIENT
+   REM KEY IS THE UNIQUE SESSION KEY FOR THE PLAYER SESSION ASSIGNED AND MAINTAINED BY THE SERVER
+
    type dataObjectType
+      rpgid as integer
+      dbpid as integer
+      inUse as boolean
+      class as integer
       key as string
       accountName as string
       avatarName as string
       listenChannels as string
    endtype
 
+   global dim dataObject() as dataObjectType
+   add to queue dataObject()
+
    #constant DATA_NO_CREATE   0
    #constant DATA_CREATE      1
+
+   #constant DATA_SEARCH_FAST    1
+   #constant DATA_SEARCH_REUSE   2
 
    #constant DATA_KEY_UNDEFINED     "\\\undefined\\\"
    #constant DATA_KEY_HIDDEN        "\\\hidden\\\"
@@ -23,6 +39,14 @@ dataSharedSetup:
    #constant DATA_ARGSEP            ";"
    #constant DATA_NAMEVALSEP        "="
    #constant DATA_FILE_EXT          ".ini"
+
+   #constant DATA_CLASS_SKYBOX         1
+   #constant DATA_CLASS_TERRAIN        2
+   #constant DATA_CLASS_PLAYER_LOCAL   3
+   #constant DATA_CLASS_PLAYER_REMOTE  4
+   #constant DATA_CLASS_NPC            5
+   #constant DATA_CASSS_PROP           6
+
 
    REM LOOKUP LOOP STATE CANT BE EVALUATED, SO IT CANNOT
    REM BE PERSISTED, SO WE NEED TO USE A CSV LIST FOR
@@ -50,8 +74,85 @@ dataSharedSetup:
    DATA_LANGUAGE = dataSharedGetField("gui", "language", "language/english",1)
    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_LANGUAGE,DATA_ARGSEP)
 
+   REM ...AND A TABLE TO ALLOW FAST LOOKUPS
+   REM OF PLAYER ARRAY INDEX BY RPGID - THIS
+   REM IS FOR FAST REVERSE-LOOKUPS
+   REM AND SET IT TO NOSAVE
+   #constant DATA_TABLE_PIDX "pidx"
+   dataSharedUpdateField(DATA_TABLE_PIDX, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
+   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_PIDX,DATA_ARGSEP)
+
+
 return
 
+function dataSharedReset(idx as integer)
+
+   if idx <1 or idx> array count(dataObject()) then exitfunction -1
+
+   dataObject(idx).rpgid = 0
+   dataObject(idx).dbpid = 0
+   dataObject(idx).inUse = 0
+   dataObject(idx).class = 0
+   dataObject(idx).key = ""
+   dataObject(idx).accountName = ""
+   dataObject(idx).avatarName = ""
+   dataObject(idx).listenChannels = ""
+
+
+endfunction 0
+
+function dataSharedGetFree(mySearch as integer)
+
+   local retval as integer
+   retval = -1
+
+   mySearch=clamp(mySearch, DATA_SEARCH_FAST, DATA_SEARCH_REUSE)
+
+   select mySearch
+      case DATA_SEARCH_FAST
+         add to queue dataObject()
+         retval = array count(dataObject())
+      endcase
+      case DATA_SEARCH_REUSE
+         found = 0
+         ctr = 0
+         while ctr < array count(dataObject()) and found = 0
+            inc ctr
+            if dataObject(ctr).inUse=0
+               found = 1
+               retval = ctr
+            endif
+         endwhile
+
+         if found = 0
+            debugWrite(DEBUGWARN,"dataSharedGetFree Optimization: method Search requested with Fast result")
+            add to queue dataObject()
+            retval = array count(dataObject())
+         else
+            retval = ctr
+         endif
+      endcase
+   endselect
+
+   dataSharedReset(retval)
+   dataObject(retval).inUse = 1
+
+endfunction retval
+
+function dataSharedSetKeys(idx as integer, rpgid as integer, dbpid as integer)
+
+   if idx <1 or idx> array count(dataObject()) then exitfunction -1
+
+   if dbpid = 0
+      dbpid = systemGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)
+   endif
+
+   dataObject(idx).rpgid=rpgid
+   dataObject(idx).dbpid=dbpid
+
+   dataSharedUpdateField(DATA_TABLE_PIDX, str$(rpgid), str$(idx))
+
+endfunction dbpid
 
 function dataSharedGetField(tableName$, key$, default$,createFlag as boolean)
 

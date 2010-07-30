@@ -99,7 +99,7 @@ function systemGetFree(myType as integer, mySearch as integer)
          endwhile
 
          if found = 0
-            debugWrite(DEBUGWARN,"systemGetFree Optimaization: method Search requested with Fast result")
+            debugWrite(DEBUGWARN,"systemGetFree Optimization: method Search requested with Fast result")
             inc systemNextID(myType)
             retval = systemNextID(myType)
          else

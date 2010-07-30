@@ -2,4 +2,17 @@ REM *** Include File: modules\skyClient.dba ***
 REM Created: 7/4/2010 11:06:14 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+
+function playerSharedGetIndex(rpgid as integer)
+
+   local retval as integer
+   retval = intval(dataSharedGetField(DATA_TABLE_PIDX, str$(rpgid), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+   if retval < 1 or retval > array count(dataObject()) then exitfunction -1
+
+endfunction retval
+
+
+
+
