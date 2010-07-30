@@ -2,4 +2,55 @@ REM *** Include File: modules\playerShared.dba ***
 REM Created: 7/4/2010 11:07:28 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+playerClientSetup:
+
+   global idxPlayer as integer
+   REM THIS IS THE DATAOBJECT ARRAY INDEX
+   REM FOR THE LOCAL PLAYER OBJECT
+
+return
+
+function playerClientCreate(rpgid as integer, dbpid as integer)
+
+   local mydbpid as integer
+
+   idxPlayer = dataSharedGetFree(DATA_SEARCH_REUSE)
+   debugWrite(DEBUGINFO,"playerClientCreate: idxPlayer set to " + str$(idxPlayer))
+
+   if idxPlayer > 0
+      mydbpid = dataSharedSetKeys(idxPlayer, rpgid, dbpid)
+      if mydbpid > 0
+         make object sphere mydbpid, 1.0
+      else
+         debugWrite(DEBUGERROR,"playerClientCreate: array index returned " + str$(idxPlayer) + " invalid from dataSharedSetKeys")
+      endif
+   else
+      debugWrite(DEBUGERROR,"playerClientCreate: Failed to find free object from dataSharedGetFree")
+   endif
+
+endfunction idxPlayer
+
+function playerClientDestroy(rpgid as integer)
+
+   local mydbpid as integer
+   local idx as integer
+
+   idx = playerSharedGetIndex(rpgid)
+   if idx > 0
+      mydbpid = dataObject(idx).dbpid
+      if mydbpid > 0
+         if object exist(mydbpid)
+            delete object mydbpid
+         else
+            debugWrite(DEBUGWARN,"playerClientDestory: player " + str$(rpgid) + " had valid dbpid " + str$(mydbpid) + " but no object.")
+         endif
+      else
+         debugWrite(DEBUGWARN,"playerClientDestory: player " + str$(rpgid) + " had dbpid with value 0")
+      endif
+   else
+   endif
+
+endfunction 0
+

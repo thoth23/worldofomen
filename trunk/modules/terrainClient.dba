@@ -8,25 +8,36 @@ terrainClientSetup:
 
    #constant TERRAIN_PATH "media/terrain/"
 
-   global idTerrain as integer
+   global idxTerrain as integer
    global idTerrainTex as integer
    global idTerrainDet as integer
 
-   idTerrain=2
-   idTerrainTex=3
-   idTerrainDet=4
-   rem temporary
 
 return
 
-function terrainLoad(terrainID, detailID)
+function terrainClientLoad(terrainID, detailID)
 
-   `if idTerrainTex = 0 then idTerrainTex = systemFreeImage()
-   `if idTerrainDet = 0 then idTerrainDet = systemFreeImage()
-   `if idTerrain = 0 then idTerrain = dataSharedObjectFindFree()
-   `dataObject(idTerrain).rpgid=1
-   `dataObject(idTerrain).class=DATA_CLASS_TERRAIN
-   rem not yet
+   if terrainID = 0 or detailID = 0 then exitfunction -1
+
+   if idTerrainTex = 0 then idTerrainTex = systemGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
+   if idTerrainDet = 0 then idTerrainDet = systemGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
+
+   if idxTerrain = 0
+      idxTerrain = dataSharedGetFree(DATA_SEARCH_REUSE)
+      debugWrite(DEBUGINFO,"terrainLoad: idxTerrain set to " + str$(idxTerrain))
+   endif
+
+   dataObject(idxTerrain).class = DATA_CLASS_TERRAIN
+
+   if dataObject(idxTerrain).dbpid = 0
+      mydbpid = dataSharedSetKeys(idxTerrain, 0, 0)
+      debugWrite(DEBUGINFO,"terrainLoad: dbpid found for terrain " + str$(mydbpid))
+   else
+      if object exist(dataObject(idxTerrain).dbpid)
+         delete object dataObject(idxTerrain).dbpid
+      endif
+      mydbpid = dataObject(idxTerrain).dbpid
+   endif
 
 
    texFileName$ = TERRAIN_PATH + str$(terrainID) + "_TX.jpg"
@@ -36,21 +47,21 @@ function terrainLoad(terrainID, detailID)
    load image texFileName$, idTerrainTex
    load image detFileName$, idTerrainDet
 
-   make object terrain idTerrain
-   set terrain heightmap idTerrain, mapFileName$
-   set terrain scale idTerrain, 3, 0.6, 3
-   set terrain split idTerrain, 4
-   set terrain tiling idTerrain, 4
-   set terrain light idTerrain, 1, -0.25, 0, 1, 1, 0.78, 0.5
-   set terrain texture idTerrain, idTerrainTex, idTerrainDet
-   build terrain idTerrain
+   make object terrain idxTerrain
+   set terrain heightmap idxTerrain, mapFileName$
+   set terrain scale idxTerrain, 3, 0.6, 3
+   set terrain split idxTerrain, 4
+   set terrain tiling idxTerrain, 4
+   set terrain light idxTerrain, 1, -0.25, 0, 1, 1, 0.78, 0.5
+   set terrain texture idxTerrain, idTerrainTex, idTerrainDet
+   build terrain idxTerrain
 
-   position object idTerrain,0,-5,0
+   position object idxTerrain,0,-5,0
    rem temporary
 
-endfunction
+endfunction idxTerrain
 
-function terrainUnload()
+function terrainClientUnload()
 
 
    if idTerrainTex > 0
