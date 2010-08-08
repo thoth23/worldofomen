@@ -4,7 +4,7 @@ REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
 REM
 
-skyboxClientSetup:
+skyClientSetup:
 
    global idxSkybox as integer
    #constant SKYBOX_PATH "media/skybox/"
@@ -13,7 +13,7 @@ return
 
 
 
-function skyboxClientLoad(skyboxID)
+function skyClientLoad(skyboxID)
 
    if skyboxID = 0 then exitfunction -1
    meshName$ = "skybox"+str$(skyboxID)+".x"
@@ -49,11 +49,17 @@ function skyboxClientLoad(skyboxID)
 
 endfunction idxSkybox
 
-function skyboxClientUnload()
+function skyClientUnload()
 
    if idxSkybox = 0 then exitfunction -1
    if object exist(dataObject(idxSkybox).dbpid) = 0 then exitfunction -2
    delete object dataObject(idxSkybox).dbpid
 
 endfunction 0
+
+function skyClientSetSun(x as float, y as float, z as float)
+
+   set directional light 0, x, y, z
+
+endfunction
 

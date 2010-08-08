@@ -35,6 +35,8 @@ systemSharedSetup:
     SYSTEM_FILE_TABLE = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
     global SYSTEM_FILE_DATA as integer
     SYSTEM_FILE_DATA = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+    global SYSTEM_FILE_NET as integer
+    SYSTEM_FILE_NET = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
 
     REM SYSTEM MODES
     global systemMode as integer

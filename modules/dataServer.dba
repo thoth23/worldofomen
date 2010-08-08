@@ -45,6 +45,14 @@ dataServerSetup:
    dataNextGUID = dataServerLoadNextGUID()
    debugWrite(DEBUGINFO, "NEXT GUID FOUND : " + str$(dataNextGUID))
 
+   REM THIS IS A FAST LOOKUP TABLE TO FIND
+   REM THE DATAOBJECT ARRAY INDEX BY THE
+   REM DARKNET CLIENT ID - IT IS ONLY NEEDED
+   REM BY THE SERVER
+   dataSharedUpdateField(DATA_TABLE_DIDX, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
+   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_DIDX,DATA_ARGSEP)
+
+
 return
 
 function dataServerLoadServerID()
@@ -109,5 +117,13 @@ function dataServerGetNextRPGID()
    dataNextRPGID = (dataServerID << DATA_GUID_BITS_OBJECTS) + dataNextGUID
 
 endfunction dataNextRPGID
+
+function dataServerSetClient(idx as integer, client as integer)
+
+   if idx <1 or idx> array count(dataObject()) then exitfunction -1
+   dataObject(idx).clientid = client
+   dataSharedUpdateField(DATA_TABLE_DIDX, str$(client), str$(idx))
+
+endfunction dbpid
 
 

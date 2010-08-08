@@ -15,12 +15,21 @@ dataSharedSetup:
    type dataObjectType
       rpgid as integer
       dbpid as integer
+      clientid as integer
       inUse as boolean
       class as integer
       key as string
       accountName as string
       avatarName as string
       listenChannels as string
+      posx as float
+      posy as float
+      posz as float
+      roty as float
+      jumpx as float
+      jumpy as float
+      jumpz as float
+      jumpry as float
    endtype
 
    global dim dataObject() as dataObjectType
@@ -79,6 +88,7 @@ dataSharedSetup:
    REM IS FOR FAST REVERSE-LOOKUPS
    REM AND SET IT TO NOSAVE
    #constant DATA_TABLE_PIDX "pidx"
+   #constant DATA_TABLE_DIDX "didx"
    dataSharedUpdateField(DATA_TABLE_PIDX, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_PIDX,DATA_ARGSEP)
 
@@ -87,17 +97,39 @@ return
 
 function dataSharedReset(idx as integer)
 
+   local tableid as integer
+
    if idx <1 or idx> array count(dataObject()) then exitfunction -1
+
+   REM DELETE RPGID REVERSE LOOKUP
+   tableid = dataSharedTableExist(DATA_TABLE_PIDX)
+   if tableid > 0
+      delete lookup tableid, str$(dataObject(idx).rpgid)
+   endif
+
+   REM DELETE DARKNET CLIENTID REVERSE LOOKUP
+   tableid = dataSharedTableExist(DATA_TABLE_DIDX)
+   if tableid > 0
+      delete lookup tableid, str$(dataObject(idx).clientid)
+   endif
 
    dataObject(idx).rpgid = 0
    dataObject(idx).dbpid = 0
+   dataObject(idx).clientid = 0
    dataObject(idx).inUse = 0
    dataObject(idx).class = 0
    dataObject(idx).key = ""
    dataObject(idx).accountName = ""
    dataObject(idx).avatarName = ""
-   dataObject(idx).listenChannels = ""
-
+   dataObject(idx).listenChannels = NET_LISTEN_CHANNELS_DEFAULT
+   dataObject(idx).posx = 0.0
+   dataObject(idx).posy = 0.0
+   dataObject(idx).posz = 0.0
+   dataObject(idx).roty = 0.0
+   dataObject(idx).jumpx = 0.0
+   dataObject(idx).jumpy = 0.0
+   dataObject(idx).jumpz = 0.0
+   dataObject(idx).jumpry = 0.0
 
 endfunction 0
 
@@ -181,13 +213,13 @@ function dataSharedGetField(tableName$, key$, default$,createFlag as boolean)
          debugWrite(DEBUGWARN,"dataSharedGetField table lookup invalid for table: " + tablename$)
       endif
    else
-      debugWrite(DEBUGWARN,"dataSharedGetField table lookup not found for table,key,value: " + tablename$ + "," + key$ + "," + default$)
+      `debugWrite(DEBUGWARN,"dataSharedGetField table lookup not found for table,key,value: " + tablename$ + "," + key$ + "," + default$)
       if createFlag = 1
          tableID = systemGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
          make lookup tableID
          set lookup DATA_TABLES, tablename$, str$(tableID)
          set lookup tableid, key$, default$
-         debugWrite(DEBUGINFO,"dataSharedGetField ...so we built it as tableid: " + str$(tableID))
+         `debugWrite(DEBUGINFO,"dataSharedGetField ...so we built it as tableid: " + str$(tableID))
       endif
       retval$ = default$
    endif

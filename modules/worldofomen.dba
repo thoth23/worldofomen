@@ -31,8 +31,9 @@ netClientConnectStart()
 
 gosub cameraClientSetup
 
-gosub skyboxClientSetup
-skyboxClientLoad(2)
+gosub skyClientSetup
+skyClientLoad(2)
+skyClientSetSun(-0.5, -0.5, 0.5)
 
 gosub terrainClientSetup
 terrainClientLoad(2,2)

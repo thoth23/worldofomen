@@ -10,6 +10,10 @@ playerClientSetup:
    REM THIS IS THE DATAOBJECT ARRAY INDEX
    REM FOR THE LOCAL PLAYER OBJECT
 
+   #constant PLAYER_PATH "media/avatar/"
+   global PLAYER_DEFAULT_MESH as string
+   PLAYER_DEFAULT_MESH = dataSharedGetField("player", "defaultMesh", "humanfemale1.x",1)
+
 return
 
 function playerClientCreate(rpgid as integer, dbpid as integer)
@@ -22,7 +26,7 @@ function playerClientCreate(rpgid as integer, dbpid as integer)
    if idxPlayer > 0
       mydbpid = dataSharedSetKeys(idxPlayer, rpgid, dbpid)
       if mydbpid > 0
-         make object sphere mydbpid, 1.0
+         load object PLAYER_PATH + PLAYER_DEFAULT_MESH,mydbpid,1
       else
          debugWrite(DEBUGERROR,"playerClientCreate: array index returned " + str$(idxPlayer) + " invalid from dataSharedSetKeys")
       endif

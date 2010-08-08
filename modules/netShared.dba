@@ -75,3 +75,44 @@ function netSharedAddHeader(msgID as integer,size as integer)
 
 endfunction
 
+function netSharedGetLANIP()
+
+   local i as integer
+   local retval$ as string
+   retval$ = ""
+
+   PERFORM CHECKLIST FOR INTERFACES
+   for i = 1 to INTERFACE COUNT()
+      if retval$ = ""
+         if checklist value a(i) <> 0
+            retval$ = IP TO STRING$(checklist value a(i))
+         endif
+      endif
+   next
+
+endfunction retval$
+
+function netSharedGetWANIP()
+
+   local i as integer
+   local retval$ as string
+   retval$ = ""
+   local filename$ as string
+
+   filename$ = "temp" + "_" + systemSharedGetRealDateTime("_","_","_") + ".txt"
+
+   if file exist(filename$) then delete file filename$
+
+   load dll "urlmon.dll", 101
+   Status = call dll(101, "URLDownloadToFileA", 0, "http://www.whatismyip.com/automation/n09230945.asp", filename$, 0, 0)
+   delete dll 101
+
+   if Status = 0
+      open to read SYSTEM_FILE_NET, filename$
+      read string SYSTEM_FILE_NET, retval$
+      close file SYSTEM_FILE_NET
+   endif
+
+   if file exist(filename$) then delete file filename$
+
+endfunction retval$

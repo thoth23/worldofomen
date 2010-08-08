@@ -6,22 +6,64 @@ REM
 
 netServerSetup:
 
-   NET_SERVER_NAME = dataSharedGetField("netServer", "netServerName", "192.168.1.4", DATA_CREATE)
+   NET_SERVER_NAME = dataSharedGetField("netServer", "netServerName", NET_SERVER_NAME_DEFAULT, DATA_CREATE)
 
    global netServerPlayerCount as integer
 
    global NET_CLIENTS_PER_INSTANCE as integer
    NET_CLIENTS_PER_INSTANCE = intval(dataSharedGetField("netServer", "netClientsPerInstance", "50", DATA_CREATE))
-   global dim netSession(NET_CLIENTS_PER_INSTANCE) as dataObjectType
 
    global NET_MAX_OPERATIONS as integer
    NET_MAX_OPERATIONS = intval(dataSharedGetField("netServer", "netMaxOperations", "2", DATA_CREATE))
+
+   global NET_VISIBILITY_MOVE as float
+   NET_VISIBILITY_MOVE = intval(dataSharedGetField("netServer", "netVisibilityMove", "80",1))
+
+   global NET_VISIBILITY_LOCAL_CHAT as float
+   NET_VISIBILITY_LOCAL_CHAT = intval(dataSharedGetField("netServer", "netVisibilityLocalChat", "200",1))
+
 
    REM TURN OFF DARKNET DEBUG ON SERVER SO WE DON'T
    REM SEE POPUP WINDOWS FOR WARNINGS
    mn Disable Debug
    mn Disable Message Boxes
 
+   if NET_SERVER_NAME = NET_SERVER_NAME_DEFAULT
+      debugWrite(DEBUGWARN,"Server name not set, attempting search...")
+      REM NAME WAS NOT SET, SEARCH AND UPDATE
+      i = intval(dataSharedGetField("netServer", "netSearchMode", "1",1))
+      select i
+         case 0:
+            REM DO NOT SEARCH
+            debugWrite(DEBUGWARN,"Search mode set to 0, default server name will be used.")
+         endcase
+         case 1:
+            REM SEARCH LAN
+            debugWrite(DEBUGINFO,"Search mode set to 1, searching on LAN...")
+            i$ = netSharedGetLANIP()
+            if i$ = ""
+               debugWrite(DEBUGERROR,"NO VALID LAN INTERFACES FOUND.  FORCING QUIT.")
+               systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
+            else
+               NET_SERVER_NAME = i$
+               dataSharedUpdateField("netServer","netServerName",NET_SERVER_NAME)
+            endif
+         endcase
+         case 2:
+            REM SEARCH WAN
+            debugWrite(DEBUGINFO,"Search mode set to 2, searching on WAN...")
+            i$ = netSharedGetWANIP()
+            if i$ = ""
+               debugWrite(DEBUGERROR,"NO VALID WAN INTERFACES FOUND.  FORCING QUIT.")
+               systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
+            else
+               NET_SERVER_NAME = i$
+               dataSharedUpdateField("netServer","netServerName",NET_SERVER_NAME)
+            endif
+
+         endcase
+      endselect
+   endif
 
 return
 
@@ -53,21 +95,6 @@ function netServerStop()
 
 endfunction
 
-function netServerSessionReset(client as integer)
-
-   if client < 1 or client > NET_CLIENTS_PER_INSTANCE
-      debugWrite(DEBUGWARN,"Attempted to reset session out of range " + str$(client))
-      exitfunction
-   endif
-
-   REM SETTING THE SESSION KEY TO THE INVALID VALUE
-   REM GUARANTEES THAT NO MORE DATA CAN BE RECEIVED
-   REM ON THIS CIRCUIT UNTIL IT IS REBUILT
-   netSession(client).key=""
-   netSession(client).listenChannels=NET_LISTEN_CHANNELS_DEFAULT
-
-endfunction
-
 
 function netServerMaintain()
 
@@ -87,32 +114,29 @@ function netServerMaintain()
       REM TAKE CARE OF CLIENT JOINS
 
       joinID = mn Client Joined(instance)
-      if joinID > 0
+      if joinID > 0 and joinID <= NET_CLIENTS_PER_INSTANCE
 
          temp$ = mn Get Client IP TCP(instance, joinID)
          temp = mn Get Client Port TCP(instance, joinID)
 
          debugWrite(DEBUGINFO,"Connection from " + temp$ + " on port " + str$(temp) + " as sessionID " + str$(joinID))
 
-         netServerSessionReset(joinID)
+         idx = dataSharedGetFree(DATA_SEARCH_REUSE)
+         dataServerSetClient(idx, joinID)
 
       endif
 
       REM TAKE CARE OF CLIENT DISCONNECTS
 
-     leftID = mn Client Left(instance)
-     if leftID > 0
+      leftID = mn Client Left(instance)
+      if leftID > 0 and leftID <= NET_CLIENTS_PER_INSTANCE
 
-        if leftID <= NET_CLIENTS_PER_INSTANCE
-           debugWrite(DEBUGINFO,"Connection dropped from sessionID " + str$(leftID))
-           `netServerDropObject(instance, leftID, leftID)
-           `netServerChatBroadcast(instance, "SYSTEM", dataObject(leftID).avatarname + " has left.", leftID)
-           rem not yet
-        endif
+         debugWrite(DEBUGINFO,"Connection dropped from sessionID " + str$(leftID))
 
-      netServerSessionReset(leftID)
+         idx = intval(dataSharedGetField(DATA_TABLE_DIDX, str$(leftID), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+         dataSharedReset(idx)
 
-     endif
+      endif
 
      REM TAKE CARE OF UDP AND TCP MESSAGES
      for client = 1 to NET_CLIENTS_PER_INSTANCE
@@ -123,8 +147,7 @@ function netServerMaintain()
          for operationID = 0 to (NET_MAX_OPERATIONS - 1)
             UDPPackets = mn Recv UDP(instance,RecvPacket,client,operationID)
             if UDPPackets > 0
-               `netServerParseUDP(instance, client, operationID)
-               rem not yet
+               netServerParseUDP(instance, client, operationID)
             endif
          next operationID
      next client
@@ -132,17 +155,32 @@ function netServerMaintain()
 
 endfunction
 
-function netServerChatBroadcast(instance as integer, channel$ as string, message$ as string, clientSending as integer)
+
+
+function netServerChatBroadcast(instance as integer, channel$ as string, message$ as string, idx as integer)
+
+   local tableid as integer
 
    netSharedAddHeader(NETS_CHAT, NET_HEADER_BYTES + len(channel$) + len(message$))
    mn Add string SendPacket, channel$, 0, 1
    mn Add String SendPacket, message$, 0, 1
 
-   for client = 1 to NET_CLIENTS_PER_INSTANCE
-       if instr(netSession(client).listenChannels,channel$) <> 0
-          mn Send TCP instance, SendPacket, client, 1, 1
-       endif
-   next client
+   REM INSTEAD OF GOING THROUGH ALL POSSIBLE CLIENTS
+   REM WE NOW ONLY LOOP OVER CONNECTED CLIENTS
+
+   tableid = dataSharedTableExist(DATA_TABLE_DIDX)
+   if tableid > 0
+      FIRST LOOKUP tableid
+      while lookup is valid(tableid)
+         if LOOKUP CURRENT KEY$(tableid) <> ""
+            idx = intval(LOOKUP CURRENT VALUE$(tableid))
+            if instr(dataObject(idx).listenChannels,channel$) <> 0
+               mn Send TCP instance, SendPacket, dataObject(idx).clientid, 1, 1
+            endif
+         endif
+         next lookup tableid
+      endwhile
+   endif
 
    REM BECAUSE WE KEPT THE PACKET,
    REM NOW WE NEED TO CLEAR IT
@@ -150,14 +188,96 @@ function netServerChatBroadcast(instance as integer, channel$ as string, message
 
 endfunction
 
-function netServerChatSend(instance as integer, channel$ as string, message$ as string, client as integer)
+function netServerChatSend(instance as integer, channel$ as string, message$ as string, idx as integer)
 
    netSharedAddHeader(NETS_CHAT, NET_HEADER_BYTES + len(channel$) + len(message$))
    mn Add string SendPacket, channel$, 0, 1
    mn Add String SendPacket, message$, 0, 1
-   mn Send TCP instance, SendPacket, client, 0, 1
+   mn Send TCP instance, SendPacket, dataObject(idx).clientid, 0, 1
 
 endfunction
+
+function netServerParseUDP(instance as integer, client as integer, operationID as integer)
+
+   local idx as integer
+   local remoteRPGID as integer
+
+   idx = intval(dataSharedGetField(DATA_TABLE_DIDX, str$(client), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+
+   if idx>0 and idx<= array count(dataObject())
+
+     REM SANITY CHECK
+     REM UDP SENDS MUST ALWAYS START
+     REM WITH THE RPGID OF THE PLAYER
+
+     remoteRPGID = mn Get Int(RecvPacket)
+
+     if remoteRPGID = dataObject(idx).rpgid
+
+       dataObject(idx).posx = mn Get Float(RecvPacket)
+       dataObject(idx).posy = mn Get Float(RecvPacket)
+       dataObject(idx).posz = mn Get Float(RecvPacket)
+       dataObject(idx).roty = mn Get Float(RecvPacket)
+
+       if operationID = NETC_JUMP
+          dataObject(idx).jumpx = dataObject(idx).posx
+          dataObject(idx).jumpy = dataObject(idx).posy
+          dataObject(idx).jumpz = dataObject(idx).posz
+          dataObject(idx).jumpry = dataObject(idx).roty
+       endif
+
+       mn Clear Packet SendPacket
+       mn Add Int SendPacket, dataObject(idx).clientID
+       mn Add Int SendPacket,operationID
+       mn Add Int SendPacket,dataObject(idx).rpgid
+       mn Add Float SendPacket,dataObject(idx).posx
+       mn Add Float SendPacket,dataObject(idx).posy
+       mn Add Float SendPacket,dataObject(idx).posz
+       mn Add Float SendPacket,dataObject(idx).roty
+
+       netServerUDPBroadcast(instance, idx)
+
+       `if timer() > dataObject(idx).nextSaveTime
+       `  dbSaveObject(idx,0)
+       `endif
+       rem not yet
+
+     endif
+   endif
+
+endfunction
+
+function netServerUDPBroadcast(instance as integer, idx as integer)
+
+   local tableid as integer
+
+   REM INSTEAD OF GOING THROUGH ALL POSSIBLE CLIENTS
+   REM WE NOW ONLY LOOP OVER CONNECTED CLIENTS
+
+   tableid = dataSharedTableExist(DATA_TABLE_DIDX)
+   if tableid > 0
+      FIRST LOOKUP tableid
+      while lookup is valid(tableid)
+         if LOOKUP CURRENT KEY$(tableid) <> ""
+            remoteidx = intval(LOOKUP CURRENT VALUE$(tableid))
+            if remoteidx > 0 and remoteidx <= array count(dataObject()) and remoteidx <> idx
+               if mn client connected(instance,dataObject(remoteidx).clientID)
+                  if (systemGetDistance3D(dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz,dataObject(remoteidx).posx,dataObject(remoteidx).posy,dataObject(remoteidx).posz)) < NET_VISIBILITY_MOVE
+                     mn Send UDP instance, SendPacket, dataObject(remoteidx).clientID, 1, 1
+                  endif
+               endif
+            endif
+         endif
+         next lookup tableid
+      endwhile
+   endif
+
+   REM BECAUSE WE KEPT THE PACKET,
+   REM NOW WE NEED TO CLEAR IT
+   mn Clear Packet SendPacket
+
+endfunction
+
 
 function netServerParseTCP(instance, client)
 
@@ -185,8 +305,9 @@ function netServerParseTCP(instance, client)
          message$ = keyboardSharedSanitize(message$)
          REM WHEN A CLIENT SENDS ON A CHANNEL,AUTOMATICALLY
          rem SET THAT CLIENT TO LISTEN ON THAT CHANNEL
-         netSession(client).listenChannels = systemSharedFieldAdd(netSession(client).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
-         netServerChatBroadcast(instance, channel$, message$, client)
+         idx = intval(dataSharedGetField(DATA_TABLE_DIDX, str$(client), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+         dataObject(idx).listenChannels = systemSharedFieldAdd(dataObject(idx).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
+         netServerChatBroadcast(instance, channel$, message$, idx)
      endcase
 
      case NETC_COMMAND
@@ -202,14 +323,16 @@ function netServerParseTCP(instance, client)
 
      case NETC_LISTEN
          channel$ = upper$(mn Get String(RecvPacket,0,1))
-         netSession(client).listenChannels = systemSharedFieldAdd(netSession(client).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
-         netServerChatSend(instance, "SYSTEM", "Listening on channels: " + netSession(client).listenChannels, client)
+         idx = intval(dataSharedGetField(DATA_TABLE_DIDX, str$(client), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+         dataObject(idx).listenChannels = systemSharedFieldAdd(dataObject(idx).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
+         netServerChatSend(instance, "SYSTEM", "Listening on channels: " + dataObject(idx).listenChannels, idx)
      endcase
 
      case NETC_MUTE
          channel$ = upper$(mn Get String(RecvPacket,0,1))
-         netSession(client).listenChannels = systemSharedFieldRemove(netSession(client).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
-         netServerChatSend(instance, "SYSTEM", "Listening on channels: " + netSession(client).listenChannels, client)
+         idx = intval(dataSharedGetField(DATA_TABLE_DIDX, str$(client), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+         dataObject(idx).listenChannels = systemSharedFieldRemove(dataObject(idx).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
+         netServerChatSend(instance, "SYSTEM", "Listening on channels: " + dataObject(idx).listenChannels, idx)
      endcase
 
    endselect
