@@ -52,7 +52,7 @@ function terrainClientLoad(terrainID, detailID)
    set terrain scale idxTerrain, 3, 0.6, 3
    set terrain split idxTerrain, 4
    set terrain tiling idxTerrain, 4
-   set terrain light idxTerrain, 1, -0.25, 0, 1, 1, 0.78, 0.5
+   set terrain light idxTerrain, -0.5, -0.5, 0.5, 1, 1, 1, .25
    set terrain texture idxTerrain, idTerrainTex, idTerrainDet
    build terrain idxTerrain
 
