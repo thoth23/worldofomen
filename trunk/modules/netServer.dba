@@ -17,10 +17,10 @@ netServerSetup:
    NET_MAX_OPERATIONS = intval(dataSharedGetField("netServer", "netMaxOperations", "2", DATA_CREATE))
 
    global NET_VISIBILITY_MOVE as float
-   NET_VISIBILITY_MOVE = intval(dataSharedGetField("netServer", "netVisibilityMove", "80",1))
+   NET_VISIBILITY_MOVE = intval(dataSharedGetField("netServer", "netVisibilityMove", "80.0",1))
 
    global NET_VISIBILITY_LOCAL_CHAT as float
-   NET_VISIBILITY_LOCAL_CHAT = intval(dataSharedGetField("netServer", "netVisibilityLocalChat", "200",1))
+   NET_VISIBILITY_LOCAL_CHAT = intval(dataSharedGetField("netServer", "netVisibilityLocalChat", "200.0",1))
 
 
    REM TURN OFF DARKNET DEBUG ON SERVER SO WE DON'T
@@ -118,11 +118,19 @@ function netServerMaintain()
 
          temp$ = mn Get Client IP TCP(instance, joinID)
          temp = mn Get Client Port TCP(instance, joinID)
-
-         debugWrite(DEBUGINFO,"Connection from " + temp$ + " on port " + str$(temp) + " as sessionID " + str$(joinID))
-
          idx = dataSharedGetFree(DATA_SEARCH_REUSE)
          dataServerSetClient(idx, joinID)
+
+         REM WE NEED LOGON AND AVATAR PERSISTENCE
+         REM TO BE COMPLETE TO LOOKUP AND SET THE
+         REM CORRECT RPGID - SO FOR NOW, WE WILL
+         REM JUST SET IT TO A RANDOM NUMBER
+         rndrpgid = rnd(2000)+1
+         dataServerSetRPGID(idx, rndrpgid)
+         debugWrite(DEBUGINFO,"Connect from " + temp$ + ", port:" + str$(temp) + ", sessionID:" + str$(joinID) + ", rpgid:" + str$(rndrpgid))
+
+         REM NOW TELL THE CLIENT WHAT THEIR RPGID IS
+         netServerRpgidSend(instance, idx)
 
       endif
 
@@ -138,19 +146,29 @@ function netServerMaintain()
 
       endif
 
-     REM TAKE CARE OF UDP AND TCP MESSAGES
-     for client = 1 to NET_CLIENTS_PER_INSTANCE
-         TCPPackets = mn Recv TCP(instance,RecvPacket,client)
-         if TCPPackets > 0
-            netServerParseTCP(instance, client)
-         endif
-         for operationID = 0 to (NET_MAX_OPERATIONS - 1)
-            UDPPackets = mn Recv UDP(instance,RecvPacket,client,operationID)
-            if UDPPackets > 0
-               netServerParseUDP(instance, client, operationID)
+      REM TAKE CARE OF TCP AND UDP MESSAGES
+
+      tableid = dataSharedTableExist(DATA_TABLE_DIDX)
+      if tableid > 0
+         FIRST LOOKUP tableid
+         while lookup is valid(tableid)
+            if LOOKUP CURRENT KEY$(tableid) <> ""
+               idx = intval(LOOKUP CURRENT VALUE$(tableid))
+               client = dataObject(idx).clientid
+               if mn Recv TCP(instance,RecvPacket,client) > 0
+                  netServerParseTCP(instance, idx)
+               endif
+               for operationID = 0 to (NET_MAX_OPERATIONS - 1)
+                  if mn Recv UDP(instance,RecvPacket,client,operationID) > 0
+                     debugWrite(DEBUGINFO,"UDP operation " + str$(operationID) + " received on sessionID " + str$(client))
+                     netServerParseUDP(instance, idx, operationID)
+                  endif
+               next operationID
             endif
-         next operationID
-     next client
+            next lookup tableid
+         endwhile
+      endif
+
    next instance
 
 endfunction
@@ -164,9 +182,6 @@ function netServerChatBroadcast(instance as integer, channel$ as string, message
    netSharedAddHeader(NETS_CHAT, NET_HEADER_BYTES + len(channel$) + len(message$))
    mn Add string SendPacket, channel$, 0, 1
    mn Add String SendPacket, message$, 0, 1
-
-   REM INSTEAD OF GOING THROUGH ALL POSSIBLE CLIENTS
-   REM WE NOW ONLY LOOP OVER CONNECTED CLIENTS
 
    tableid = dataSharedTableExist(DATA_TABLE_DIDX)
    if tableid > 0
@@ -182,8 +197,6 @@ function netServerChatBroadcast(instance as integer, channel$ as string, message
       endwhile
    endif
 
-   REM BECAUSE WE KEPT THE PACKET,
-   REM NOW WE NEED TO CLEAR IT
    mn Clear Packet SendPacket
 
 endfunction
@@ -197,14 +210,22 @@ function netServerChatSend(instance as integer, channel$ as string, message$ as 
 
 endfunction
 
-function netServerParseUDP(instance as integer, client as integer, operationID as integer)
+function netServerRpgidSend(instance as integer, idx as integer)
 
-   local idx as integer
+   netSharedAddHeader(NETS_RPGID, NET_HEADER_BYTES + 4)
+   mn Add int SendPacket, dataObject(idx).rpgid
+   mn Send TCP instance, SendPacket, dataObject(idx).clientid, 0, 1
+
+endfunction
+
+
+function netServerParseUDP(instance as integer, idx as integer, operationID as integer)
+
    local remoteRPGID as integer
 
-   idx = intval(dataSharedGetField(DATA_TABLE_DIDX, str$(client), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
-
    if idx>0 and idx<= array count(dataObject())
+
+     client = dataObject(idx).clientID
 
      REM SANITY CHECK
      REM UDP SENDS MUST ALWAYS START
@@ -242,7 +263,10 @@ function netServerParseUDP(instance as integer, client as integer, operationID a
        `endif
        rem not yet
 
+     else
+         debugWrite(DEBUGHACK, "Attempt to position unowned object by account name: " + dataObject(idx).accountName)
      endif
+
    endif
 
 endfunction
@@ -250,9 +274,6 @@ endfunction
 function netServerUDPBroadcast(instance as integer, idx as integer)
 
    local tableid as integer
-
-   REM INSTEAD OF GOING THROUGH ALL POSSIBLE CLIENTS
-   REM WE NOW ONLY LOOP OVER CONNECTED CLIENTS
 
    tableid = dataSharedTableExist(DATA_TABLE_DIDX)
    if tableid > 0
@@ -264,6 +285,7 @@ function netServerUDPBroadcast(instance as integer, idx as integer)
                if mn client connected(instance,dataObject(remoteidx).clientID)
                   if (systemGetDistance3D(dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz,dataObject(remoteidx).posx,dataObject(remoteidx).posy,dataObject(remoteidx).posz)) < NET_VISIBILITY_MOVE
                      mn Send UDP instance, SendPacket, dataObject(remoteidx).clientID, 1, 1
+                     debugWrite(DEBUGINFO, "Sent UDP update for player " + str$(idx) + " to player " + str$(remoteidx))
                   endif
                endif
             endif
@@ -272,19 +294,19 @@ function netServerUDPBroadcast(instance as integer, idx as integer)
       endwhile
    endif
 
-   REM BECAUSE WE KEPT THE PACKET,
-   REM NOW WE NEED TO CLEAR IT
    mn Clear Packet SendPacket
 
 endfunction
 
 
-function netServerParseTCP(instance, client)
+function netServerParseTCP(instance as integer, idx as integer)
 
    local result as integer
    result = 0
    local temp$ as string
    local temp as integer
+
+   client = dataObject(idx).clientid
 
    if client < 1 or client > NET_CLIENTS_PER_INSTANCE then exitfunction
 
@@ -305,7 +327,6 @@ function netServerParseTCP(instance, client)
          message$ = keyboardSharedSanitize(message$)
          REM WHEN A CLIENT SENDS ON A CHANNEL,AUTOMATICALLY
          rem SET THAT CLIENT TO LISTEN ON THAT CHANNEL
-         idx = intval(dataSharedGetField(DATA_TABLE_DIDX, str$(client), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
          dataObject(idx).listenChannels = systemSharedFieldAdd(dataObject(idx).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
          netServerChatBroadcast(instance, channel$, message$, idx)
      endcase
@@ -323,14 +344,12 @@ function netServerParseTCP(instance, client)
 
      case NETC_LISTEN
          channel$ = upper$(mn Get String(RecvPacket,0,1))
-         idx = intval(dataSharedGetField(DATA_TABLE_DIDX, str$(client), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
          dataObject(idx).listenChannels = systemSharedFieldAdd(dataObject(idx).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
          netServerChatSend(instance, "SYSTEM", "Listening on channels: " + dataObject(idx).listenChannels, idx)
      endcase
 
      case NETC_MUTE
          channel$ = upper$(mn Get String(RecvPacket,0,1))
-         idx = intval(dataSharedGetField(DATA_TABLE_DIDX, str$(client), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
          dataObject(idx).listenChannels = systemSharedFieldRemove(dataObject(idx).listenChannels,channel$,COMMAND_CHAR_CMDSEP)
          netServerChatSend(instance, "SYSTEM", "Listening on channels: " + dataObject(idx).listenChannels, idx)
      endcase

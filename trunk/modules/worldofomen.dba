@@ -39,7 +39,7 @@ gosub terrainClientSetup
 terrainClientLoad(2,2)
 
 gosub playerClientSetup
-playerClientCreate(0,0)
+idxPlayer = playerClientCreate(0,0)
 
 
 REM Parse the command line for commands
@@ -48,9 +48,14 @@ commandSharedParseStartup()
 repeat
 
    keyboardClientPollTop()
+
+   set vector3 SYSTEM_VECTOR3_LOCLAST, camera position x(0), camera position y(0), camera position z(0)
+   control camera using arrowkeys 0,1,1
+   set vector3 SYSTEM_VECTOR3_LOCNOW, camera position x(0), camera position y(0), camera position z(0)
+   if not is equal vector3(SYSTEM_VECTOR3_LOCLAST,SYSTEM_VECTOR3_LOCNOW) then netUpdateMode = 1
+
    netClientMaintain()
 
-   control camera using arrowkeys 0,1,1
    position object idxPlayer, camera position x(0), camera position y(0), camera position z(0)
    rotate object idxPlayer, 0, camera angle y(0), 0
    move object idxPlayer, 4

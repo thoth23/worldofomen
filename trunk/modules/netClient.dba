@@ -11,6 +11,32 @@ netClientSetup:
    global netClientCurrentChannel as string
    netClientCurrentChannel = dataSharedGetField("netClient", "netClientCurrentChannel", "BROADCAST", DATA_CREATE)
 
+   global netTickerUpdate as integer
+   netTickerUpdate = systemGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
+   MAKE TICKER netTickerUpdate, NET_UDP_UPDATE_INTERVAL
+
+   global netTickerHeartbeat as integer
+   netTickerHeartbeat = systemGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
+   MAKE TICKER netTickerHeartbeat,  NET_UDP_HEARTBEAT_INTERVAL
+
+   global netTickerReconnect as integer
+   netTickerReconnect = systemGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
+   MAKE TICKER netTickerReconnect, NET_TCP_RECONNECT_INTERVAL
+
+   global netTickSendNow as boolean
+   global netTickConnectNow as boolean
+   global netMaxUDPClients as integer
+   global netMaxUDPOperations as integer
+   global netSessionKey$ as string
+   global netUpdateMode as integer
+
+    global netClientUsername$ as string
+    global netClientPassword$ as string
+    global netClientAvatarname$ as string
+    `encryptSetKey(systemGameTitle$)
+    rem not yet
+
+
 return
 
 
@@ -83,28 +109,109 @@ endfunction
 
 function netClientMaintain()
 
+   local i as integer
+   local j as integer
+   local pollStatus as integer
+
    if (systemMode && SYSTEM_MODE_NET_TCP) = 0
-
-      REM NOT CONNECTED YET
-
+      REM WE HAVE NEVER CONNNECTED BEFORE
       pollStatus = mn poll connect(0)
-      if pollStatus = 1
-         REM SUCCESSFUL
-         systemSharedGameModeAdd(SYSTEM_MODE_NET_TCP)
-         debugWrite(DEBUGINFO,"Net Connect Successful.  Mode TCP Added.")
-         netMaxUDPClients = mn Get Max Clients(0)
-         debugWrite(DEBUGINFO,"Net Max UDP Clients set to " + str$(netMaxUDPClients))
-         netMaxUDPOperations = mn Get Max Operations(0)
-         debugWrite(DEBUGINFO,"Net Max UDP Operations set to " + str$(netMaxUDPOperations))
+      select pollStatus
+         case -1:
+            REM ERROR
+            netClientConnectStop()
+            netClientConnectStart()
+            debugWrite(DEBUGERROR,"Net Connect Error: " + NET_SERVER_NAME + ":" + str$(NET_SERVER_PORT) + ":" + str$(NET_TIMEOUT_SECONDS))
+         endcase
+         case 0:
+            REM TIMEOUT
+            netClientConnectStop()
+            netClientConnectStart()
+            debugWrite(DEBUGERROR,"Net Connect Timeout.")
+         endcase
+         case 1:
+            REM SUCCESSFUL
+            systemSharedGameModeAdd(SYSTEM_MODE_NET_TCP)
+            debugWrite(DEBUGINFO,"Net Connect Successful.  Mode TCP Added.")
+
+            `guiHideWindow("windowMessageBox")
+
+            netMaxUDPClients = mn Get Max Clients(0)
+            debugWrite(DEBUGINFO,"Net Max UDP Clients set to " + str$(netMaxUDPClients))
+            netMaxUDPOperations = mn Get Max Operations(0)
+            debugWrite(DEBUGINFO,"Net Max UDP Operations set to " + str$(netMaxUDPOperations))
+
+         endcase
+
+         case 2:
+            REM CONNECT IS STILL IN PROGRESS
+            REM LET IT KEEP TRYING UNTIL ITS
+            REM TIMEOUT VALUE
+            if TICKER(netTickerReconnect,1) = 1 or netTickConnectNow = 1
+               debugWrite(DEBUGINFO,"Attempting to connect to server...")
+            endif
+         endcase
+
+      endselect
+   endif
+
+   if (systemMode && SYSTEM_MODE_NET_TCP)
+      REM WE HAVE CONNECTED AT LEAST ONCE
+      if TICKER(netTickerReconnect,1) = 1 or netTickConnectNow = 1
+         netTickConnectNow = 0
+         if mn Client Connected(0,0) < 1
+            debugWrite(DEBUGINFO,"Net Disconnected.")
+
+            `areaUnload()
+            `playerUnload(idxPlayer)
+
+            systemSharedGameModeRemove(SYSTEM_MODE_NET_TCP)
+            netClientStop()
+            netClientStart()
+            netClientConnectStart()
+
+            `guiSwitchToWindow("windowLogon")
+            `msg$ = "Lost connection to server... attempting to reconnect.  Press Cancel to stop."
+            `guiMessageBoxShow(msg$,2,"","Cancel","","","/exit","")
+
+         endif
       endif
-   else
+   endif
 
-      REM CONNECTED
+   REM SEND UPDATES
 
-       TcpPackets = mn Recv TCP(0,RecvPacket,0)
-       if TcpPackets > 0
+   if (systemMode && SYSTEM_MODE_NET_TCP) <> 0 AND (systemMode && SYSTEM_MODE_LOGON_COMPLETE) <> 0
+      if ( (TICKER(netTickerUpdate,1)=1 and netUpdateMode>0) or netTickSendNow=1 or TICKER(netTickerHeartbeat,1)=1 )
+        netTickSendNow = 0
+        netUpdateMode = 0
+        netClientMove()
+      endif
+   endif
+
+   REM RECEIVE UPDATES
+
+   if (systemMode && SYSTEM_MODE_NET_TCP)
+      TcpPackets = mn Recv TCP(0,RecvPacket,0)
+      if TcpPackets > 0
          netClientParseTCP()
-       endif
+      endif
+
+      REM ONLY PARSE UDP DATA WHEN THE PLAYER IS IN-WORLD
+      REM HERE WE MUST LOOP THROUGH ALL CLIENT PORTS BECAUSE
+      REM DATA COULD BE WAITING ON ANY PORT
+
+      if (systemMode && SYSTEM_MODE_LOGON_COMPLETE)
+       for i = 0 to (netMaxUDPOperations - 1)
+         for j = 0 to netMaxUDPClients
+            REM A ZERO CLIENT IS THE SERVER
+             UdpPackets = mn Recv UDP(0,RecvPacket,j,i)
+             if UdpPackets > 0
+               netClientParseUDP(j,i)
+               debugWrite(DEBUGINFO,"UDP message " + str$(i) + " received on channel " + str$(j))
+             endif
+          next j
+       next i
+      endif
 
    endif
 
@@ -146,14 +253,14 @@ function netClientSendCommand(cmd$)
 
 endfunction
 
-function netClientChangeChannels(operation as integer, channel$ as string)
+function netClientChangeChannels(operationID as integer, channel$ as string)
 
    channel$ = keyboardSharedSanitize(channel$)
 
    bytes = NET_HEADER_BYTES
    inc bytes, len(channel$)
 
-   netSharedAddHeader(operation,bytes)
+   netSharedAddHeader(operationID,bytes)
    mn Add String SendPacket, channel$, 0, 1
    mn Send TCP 0,SendPacket,0,0,1
 
@@ -183,6 +290,71 @@ function netClientParseTCP()
           rem not yet
        endcase
 
+       case NETS_RPGID
+         dataObject(idxPlayer).rpgid = mn Get Int(RecvPacket)
+         debugWrite(DEBUGINFO,"Local Player RPGID received: " + str$(dataObject(idxPlayer).rpgid))
+         systemSharedGameModeAdd(SYSTEM_MODE_LOGON_COMPLETE)
+       endcase
+
     endselect
+
+endfunction
+
+function netClientParseUDP(clientID as integer,OperationID as integer)
+
+   REM GET UDP MESSAGES
+
+   RPGIDRemotePlayer = mn Get Int(RecvPacket)
+   idRemotePlayer = playerSharedGetIndex(RPGIDRemotePlayer)
+
+   if idRemotePlayer = SYSTEM_INVALID_ID and RPGIDRemotePlayer <> 0
+
+      REM THIS PLAYER IS NEW TO THIS CLIENT
+
+      idRemotePlayer = playerClientCreate(RPGIDRemotePlayer, 0)
+      dataObject(idRemotePlayer).rpgid = RPGIDRemotePlayer
+      dataObject(idRemotePlayer).clientID = clientID
+
+   endif
+
+   select OperationID
+
+      case NETS_MOVE
+
+        dataObject(idRemotePlayer).posx = mn Get Float(RecvPacket)
+        dataObject(idRemotePlayer).posy = mn Get Float(RecvPacket)
+        dataObject(idRemotePlayer).posz = mn Get Float(RecvPacket)
+        dataObject(idRemotePlayer).roty = mn Get Float(RecvPacket)
+        dataObject(idRemotePlayer).atTarget = 0
+
+      endcase
+
+      case NETS_JUMP
+
+        dataObject(idRemotePlayer).jumpx = mn Get Float(RecvPacket)
+        dataObject(idRemotePlayer).jumpy = mn Get Float(RecvPacket)
+        dataObject(idRemotePlayer).jumpz = mn Get Float(RecvPacket)
+        dataObject(idRemotePlayer).jumpry = mn Get Float(RecvPacket)
+        dataObject(idRemotePlayer).jumpReady = 1
+        dataObject(idRemotePlayer).atTarget = 0
+
+      endcase
+
+
+   endselect
+
+endfunction
+
+function netClientMove()
+
+   mn Clear Packet SendPacket
+   mn Add Int SendPacket, NETC_MOVE
+   mn Add Int SendPacket, dataObject(idxPlayer).rpgid
+   mn Add Float SendPacket, object position x(idxPlayer)
+   mn Add Float SendPacket, object position y(idxPlayer)
+   mn Add Float SendPacket, object position z(idxPlayer)
+   mn Add Float SendPacket, object angle y(idxPlayer)
+   mn Send UDP 0, SendPacket, NULL, 0, 1
+   debugWrite(DEBUGINFO,"Sent Movement Update")
 
 endfunction

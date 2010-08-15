@@ -53,12 +53,22 @@ netSharedSetup:
    #constant NETC_COMMAND           2
    #constant NETC_LISTEN            3
    #constant NETC_MUTE              4
+   #constant NETC_RPGID             5
 
    REM SERVER TCP OPERATIONS
    #constant NETS_CHAT              1001
    #constant NETS_COMMAND           1002
    #constant NETS_LISTEN            1003
    #constant NETS_MUTE              1004
+   #constant NETS_RPGID             1005
+
+   REM CLIENT UDP OPERATIONS
+   #constant NETC_MOVE 0
+   #constant NETC_JUMP 1
+
+   REM SERVER UDP OPERATIONS
+   #constant NETS_MOVE 0
+   #constant NETS_JUMP 1
 
 return
 
