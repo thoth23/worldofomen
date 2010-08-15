@@ -30,6 +30,8 @@ dataSharedSetup:
       jumpy as float
       jumpz as float
       jumpry as float
+      atTarget as boolean
+      jumpReady as boolean
    endtype
 
    global dim dataObject() as dataObjectType
@@ -99,7 +101,7 @@ function dataSharedReset(idx as integer)
 
    local tableid as integer
 
-   if idx <1 or idx> array count(dataObject()) then exitfunction -1
+   if idx <1 or idx> array count(dataObject()) then exitfunction SYSTEM_INVALID_ID
 
    REM DELETE RPGID REVERSE LOOKUP
    tableid = dataSharedTableExist(DATA_TABLE_PIDX)
@@ -136,7 +138,7 @@ endfunction 0
 function dataSharedGetFree(mySearch as integer)
 
    local retval as integer
-   retval = -1
+   retval = SYSTEM_INVALID_ID
 
    mySearch=clamp(mySearch, DATA_SEARCH_FAST, DATA_SEARCH_REUSE)
 
@@ -173,7 +175,7 @@ endfunction retval
 
 function dataSharedSetKeys(idx as integer, rpgid as integer, dbpid as integer)
 
-   if idx <1 or idx> array count(dataObject()) then exitfunction -1
+   if idx <1 or idx> array count(dataObject()) then exitfunction SYSTEM_INVALID_ID
 
    if dbpid = 0
       dbpid = systemGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)

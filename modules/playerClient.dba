@@ -20,21 +20,21 @@ function playerClientCreate(rpgid as integer, dbpid as integer)
 
    local mydbpid as integer
 
-   idxPlayer = dataSharedGetFree(DATA_SEARCH_REUSE)
-   debugWrite(DEBUGINFO,"playerClientCreate: idxPlayer set to " + str$(idxPlayer))
+   idx = dataSharedGetFree(DATA_SEARCH_REUSE)
+   debugWrite(DEBUGINFO,"playerClientCreate: idx found " + str$(idx))
 
-   if idxPlayer > 0
-      mydbpid = dataSharedSetKeys(idxPlayer, rpgid, dbpid)
+   if idx > 0
+      mydbpid = dataSharedSetKeys(idx, rpgid, dbpid)
       if mydbpid > 0
          load object PLAYER_PATH + PLAYER_DEFAULT_MESH,mydbpid,1
       else
-         debugWrite(DEBUGERROR,"playerClientCreate: array index returned " + str$(idxPlayer) + " invalid from dataSharedSetKeys")
+         debugWrite(DEBUGERROR,"playerClientCreate: array index returned " + str$(idx) + " invalid from dataSharedSetKeys")
       endif
    else
       debugWrite(DEBUGERROR,"playerClientCreate: Failed to find free object from dataSharedGetFree")
    endif
 
-endfunction idxPlayer
+endfunction idx
 
 function playerClientDestroy(rpgid as integer)
 

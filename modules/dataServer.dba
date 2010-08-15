@@ -126,4 +126,12 @@ function dataServerSetClient(idx as integer, client as integer)
 
 endfunction dbpid
 
+function dataServerSetRPGID(idx as integer, rpgid as integer)
+
+   if idx <1 or idx> array count(dataObject()) then exitfunction -1
+   dataObject(idx).rpgid = rpgid
+   dataSharedUpdateField(DATA_TABLE_PIDX, str$(rpgid), str$(idx))
+
+endfunction dbpid
+
 

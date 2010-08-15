@@ -14,8 +14,10 @@ systemSharedSetup:
     #constant SYSTEM_TYPE_SPRITE   6
     #constant SYSTEM_TYPE_SOUND    7
     #constant SYSTEM_TYPE_MUSIC    8
+    #constant SYSTEM_TYPE_VECTOR3  9
+    #constant SYSTEM_TYPE_VECTOR4  10
 
-    #constant SYSTEM_TYPE_MAX      8
+    #constant SYSTEM_TYPE_MAX      10
 
     global dim systemNextID(SYSTEM_TYPE_MAX) as integer
 
@@ -44,7 +46,23 @@ systemSharedSetup:
     #constant SYSTEM_MODE_CHAT_ACTIVE         %1
     #constant SYSTEM_MODE_QUITTING            %10
     #constant SYSTEM_MODE_NET_TCP             %100
+    #constant SYSTEM_MODE_LOGON_COMPLETE      %1000
 
+    #constant SYSTEM_INVALID_ID  -1
+
+    REM SYSTEM UTILITY VECTORS
+    global SYSTEM_VECTOR4_LERPCOLORA as integer
+    SYSTEM_VECTOR3_LERPCOLORA = systemGetFree(SYSTEM_TYPE_VECTOR4,SYSTEM_SEARCH_FAST)
+    global SYSTEM_VECTOR4_LERPCOLORB as integer
+    SYSTEM_VECTOR3_LERPCOLORB = systemGetFree(SYSTEM_TYPE_VECTOR4,SYSTEM_SEARCH_FAST)
+    global SYSTEM_VECTOR4_LERPCOLORC as integer
+    SYSTEM_VECTOR3_LERPCOLORC = systemGetFree(SYSTEM_TYPE_VECTOR4,SYSTEM_SEARCH_FAST)
+    global SYSTEM_VECTOR3_GETDIST as integer
+    SYSTEM_VECTOR3_GETDIST = systemGetFree(SYSTEM_TYPE_VECTOR3,SYSTEM_SEARCH_FAST)
+    global SYSTEM_VECTOR3_LOCLAST as integer
+    SYSTEM_VECTOR3_LOCLAST = systemGetFree(SYSTEM_TYPE_VECTOR3,SYSTEM_SEARCH_FAST)
+    global SYSTEM_VECTOR3_LOCNOW as integer
+    SYSTEM_VECTOR3_LOCNOW = systemGetFree(SYSTEM_TYPE_VECTOR3,SYSTEM_SEARCH_FAST)
 
 
 return
@@ -52,19 +70,25 @@ return
 function systemGetFree(myType as integer, mySearch as integer)
 
    local retval as integer
-   retval = -1
+   retval = SYSTEM_INVALID_ID
 
    mySearch=clamp(mySearch, SYSTEM_SEARCH_FAST, SYSTEM_SEARCH_REUSE)
 
    if myType < 1 or myType > SYSTEM_TYPE_MAX
       debugWrite(DEBUGERROR,"systemGetFree: Invalid Type Specified: " + str$(myType))
-      exitfunction -1
+      exitfunction SYSTEM_INVALID_ID
    endif
 
    select mySearch
       case SYSTEM_SEARCH_FAST
          inc systemNextID(myType)
          retval = systemNextID(myType)
+         if myType = SYSTEM_TYPE_VECTOR3
+            r = make vector3(retval)
+         endif
+         if myType = SYSTEM_TYPE_VECTOR4
+            r = make vector4(retval)
+         endif
       endcase
       case SYSTEM_SEARCH_REUSE
          found = 0
@@ -188,8 +212,8 @@ endfunction clrFinal
 
 function systemGetDistance3D(x1#,y1#,z1#,x2#,y2#,z2#)
 
-   set vector3 systemVector3A, (x1# - x2#), (y1# - y2#), (z1# - z2#)
-   exitfunction (length vector3(systemVector3A))
+   set vector3 SYSTEM_VECTOR3_GETDIST, (x1# - x2#), (y1# - y2#), (z1# - z2#)
+   exitfunction (length vector3(SYSTEM_VECTOR3_GETDIST))
 
 endfunction 0.0
 

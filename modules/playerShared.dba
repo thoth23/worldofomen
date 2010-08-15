@@ -9,7 +9,7 @@ function playerSharedGetIndex(rpgid as integer)
 
    local retval as integer
    retval = intval(dataSharedGetField(DATA_TABLE_PIDX, str$(rpgid), DATA_KEY_UNDEFINED, DATA_NO_CREATE))
-   if retval < 1 or retval > array count(dataObject()) then exitfunction -1
+   if retval < 1 or retval > array count(dataObject()) then exitfunction SYSTEM_INVALID_ID
 
 endfunction retval
 
