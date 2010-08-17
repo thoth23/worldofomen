@@ -19,8 +19,8 @@ function terrainClientLoad(terrainID, detailID)
 
    if terrainID = 0 or detailID = 0 then exitfunction -1
 
-   if idTerrainTex = 0 then idTerrainTex = systemGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
-   if idTerrainDet = 0 then idTerrainDet = systemGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
+   if idTerrainTex = 0 then idTerrainTex = systemSharedGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
+   if idTerrainDet = 0 then idTerrainDet = systemSharedGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
 
    if idxTerrain = 0
       idxTerrain = dataSharedGetFree(DATA_SEARCH_REUSE)
@@ -47,22 +47,28 @@ function terrainClientLoad(terrainID, detailID)
    load image texFileName$, idTerrainTex
    load image detFileName$, idTerrainDet
 
-   make object terrain idxTerrain
-   set terrain heightmap idxTerrain, mapFileName$
-   set terrain scale idxTerrain, 3, 0.6, 3
-   set terrain split idxTerrain, 4
-   set terrain tiling idxTerrain, 4
-   set terrain light idxTerrain, -0.5, -0.5, 0.5, 1, 1, 1, .25
-   set terrain texture idxTerrain, idTerrainTex, idTerrainDet
-   build terrain idxTerrain
+   make object terrain mydbpid
+   set terrain heightmap mydbpid, mapFileName$
+   set terrain scale mydbpid, 3, 0.6, 3
+   set terrain split mydbpid, 4
+   set terrain tiling mydbpid, 4
+   set terrain light mydbpid, -0.5, -0.5, 0.5, 1, 1, 1, .25
+   set terrain texture mydbpid, idTerrainTex, idTerrainDet
+   build terrain mydbpid
 
-   position object idxTerrain,0,-5,0
-   rem temporary
+   collisionClientSet(mydbpid, COLLISION_TYPE_COMPLEX, COLLISION_GROUP_WORLD)
+
+   systemSharedGameModeAdd(SYSTEM_MODE_TERRAIN)
 
 endfunction idxTerrain
 
-function terrainClientUnload()
+function terrainClientUpdate()
 
+   update terrain
+
+endfunction
+
+function terrainClientUnload()
 
    if idTerrainTex > 0
       if image exist(idTerrainTex)
@@ -76,17 +82,17 @@ function terrainClientUnload()
       endif
    endif
 
-   if idTerrain > 0
-      if object exist(idTerrain)
-         `collisionDelete(idTerrain)
-         rem not yet
-         destroy terrain idTerrain
+   if idxTerrain > 0 and idxTerrain < array count(dataObject())
+      if object exist(dataObject(idxTerrain).dbpid)
+         collisionClientDelete(dataObject(idxTerrain).dbpid)
+         destroy terrain dataObject(idxTerrain).dbpid
       endif
    endif
 
-   `systemGameModeRemove(SYSTEM_MODE_AREA_TERRAIN)
-   rem not yet
+   systemSharedGameModeRemove(SYSTEM_MODE_TERRAIN)
 
 endfunction
+
+
 
 

@@ -34,6 +34,18 @@ keyboardClientSetup:
    global KEYBOARD_KEY_QUIT_GAME as integer
    KEYBOARD_KEY_QUIT_GAME = intval(dataSharedGetField("keyboardClient", "keyboardKeyQuitGame", "1", DATA_CREATE))
 
+   global KEYBOARD_MOVE_FORWARD as integer
+   KEYBOARD_MOVE_FORWARD = intval(dataSharedGetField("keyboardClient", "keyboardKeyMoveForward", "17", DATA_CREATE))
+   global KEYBOARD_STRAFE_LEFT as integer
+   KEYBOARD_STRAFE_LEFT = intval(dataSharedGetField("keyboardClient", "keyboardKeyStrafeLeft", "30", DATA_CREATE))
+   global KEYBOARD_MOVE_BACKWARD as integer
+   KEYBOARD_MOVE_BACKWARD = intval(dataSharedGetField("keyboardClient", "keyboardKeyMoveBackward", "31", DATA_CREATE))
+   global KEYBOARD_STRAFE_RIGHT as integer
+   KEYBOARD_STRAFE_RIGHT = intval(dataSharedGetField("keyboardClient", "keyboardKeyStrafeRight", "32", DATA_CREATE))
+   global KEYBOARD_JUMP as integer
+   KEYBOARD_JUMP = intval(dataSharedGetField("keyboardClient", "keyboardKeyJump", "57", DATA_CREATE))
+
+
    disable escapekey
 
 return
@@ -75,6 +87,10 @@ function keyboardClientPollBottom()
          if keyState(KEYBOARD_KEY_QUIT_GAME) = 1
             systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
          endif
+
+         playerMoveZ = keystate(KEYBOARD_MOVE_FORWARD) - keystate(KEYBOARD_MOVE_BACKWARD)
+         playerMoveX = keystate(KEYBOARD_STRAFE_LEFT) - keystate(KEYBOARD_STRAFE_RIGHT)
+         playerJumping = keystate(KEYBOARD_JUMP)
 
       else
 

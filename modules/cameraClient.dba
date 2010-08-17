@@ -9,5 +9,86 @@ cameraClientSetup:
    autocam off
    set camera range 0.5, 30000
 
+   global cameraAngleX as float
+   global cameraAngleNowX as float
+   global cameraAngleY as float
+   global cameraAngleNowY
+   global cameraDistanceZ as float
+   global cameraDistanceNowZ as float
+   global cameraAngleOrbit as float
+
+   global cameraOrbitSensitivity as float
+   global cameraZoomSensitivity as float
+   global cameraOrbitSmoothing as integer
+   global cameraZoomSmoothing as float
+
+   cameraOrbitSmoothing = 24.0
+   cameraOrbitSensitivity = 0.4
+   cameraZoomSensitivity = 0.02
+   cameraZoomSmoothing = 32.0
+
+   #constant cameraDistanceMinimum 2.0
+   #constant cameraDistanceMaximum 128.0
+
+
 return
+
+
+function cameraClientFollow()
+
+   if playerObjectExit(idxPlayer) = 0 then exitfunction
+   mydbpid = dataObject(idxPlayer).dbpid
+
+   position camera 0, object position x(mydbpid), object position y(mydbpid) + 1, object position z(mydbpid)
+
+   if (mouseclick() && MOUSE_BUTTON_RIGHT)
+      cameraAngleY = wrapvalue ( cameraAngleY + mouseMoveX# * cameraOrbitSensitivity )
+      cameraAngleX = wrapvalue ( cameraAngleX + mouseMoveY# * cameraOrbitSensitivity )
+   endif
+
+   if (mouseclick() && MOUSE_BUTTON_THREE)
+      cameraAngleOrbit = wrapvalue ( cameraAngleOrbit + mouseMoveX# * cameraOrbitSensitivity )
+   endif
+
+   cameraDistanceZ = cameraDistanceZ - (mouseMoveZ# * cameraZoomSensitivity)
+
+   cameraAngleNowY = curveangle ( cameraAngleY, cameraAngleNowY, cameraOrbitSmoothing )
+   cameraAngleNowX = curveangle ( cameraAngleX, cameraAngleNowX, cameraOrbitSmoothing )
+
+   cameraDistanceNowZ = curvevalue( cameraDistanceZ, cameraDistanceNowZ, cameraZoomSmoothing)
+   if cameraDistanceNowZ < cameraDistanceMinimum then cameraDistanceNowZ = cameraDistanceMinimum
+   if cameraDistanceNowZ > cameraDistanceMaximum then cameraDistanceNowZ = cameraDistanceMaximum
+
+   xrotate camera 0, cameraAngleNowX
+   yrotate camera 0, cameraAngleNowY + cameraAngleOrbit
+
+   `use negative distance here becasue we want to move the camera backwards
+   move camera 0, -cameraDistanceNowZ
+
+   playerClientRotateY(mydbpid,cameraAngleNowY)
+
+endfunction
+
+function cameraClientPaperDoll(idTarget as integer)
+
+   if idTarget < 1 then exitfunction
+   if object exist(idTarget) = 0 then exitfunction
+
+   position camera 0, (object position x(idTarget)), (object position y(idTarget)), (object position z(idTarget))
+   rotate camera 0, 0,0,0
+   move camera 0, 2.25
+   move camera left 0, 1.0
+   `move camera up 0, 1.0
+   point camera 0, (object position x(idTarget)), (object position y(idTarget)), (object position z(idTarget))
+   move camera left 0, 0.5
+
+endfunction
+
+function cameraClientToPlayer(idTarget as integer)
+   position camera 0, (object position x(idTarget)), (object position y(idTarget))+1.0, (object position z(idTarget))
+   rotate camera 0, 0,object angle y(idTarget), 0
+   move camera -2.0
+endfunction
+
+
 

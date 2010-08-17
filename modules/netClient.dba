@@ -12,15 +12,15 @@ netClientSetup:
    netClientCurrentChannel = dataSharedGetField("netClient", "netClientCurrentChannel", "BROADCAST", DATA_CREATE)
 
    global netTickerUpdate as integer
-   netTickerUpdate = systemGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
+   netTickerUpdate = systemSharedGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
    MAKE TICKER netTickerUpdate, NET_UDP_UPDATE_INTERVAL
 
    global netTickerHeartbeat as integer
-   netTickerHeartbeat = systemGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
+   netTickerHeartbeat = systemSharedGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
    MAKE TICKER netTickerHeartbeat,  NET_UDP_HEARTBEAT_INTERVAL
 
    global netTickerReconnect as integer
-   netTickerReconnect = systemGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
+   netTickerReconnect = systemSharedGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
    MAKE TICKER netTickerReconnect, NET_TCP_RECONNECT_INTERVAL
 
    global netTickSendNow as boolean
@@ -30,11 +30,11 @@ netClientSetup:
    global netSessionKey$ as string
    global netUpdateMode as integer
 
-    global netClientUsername$ as string
-    global netClientPassword$ as string
-    global netClientAvatarname$ as string
-    `encryptSetKey(systemGameTitle$)
-    rem not yet
+   global netClientUsername$ as string
+   global netClientPassword$ as string
+   global netClientAvatarname$ as string
+   `encryptSetKey(systemGameTitle$)
+   rem not yet
 
 
 return
