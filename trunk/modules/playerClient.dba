@@ -10,11 +10,29 @@ playerClientSetup:
    REM THIS IS THE DATAOBJECT ARRAY INDEX
    REM FOR THE LOCAL PLAYER OBJECT
 
+   global playerMoveX as float
+   global playerMoveZ as float
+   global playerJumping as boolean
+
    #constant PLAYER_PATH "media/avatar/"
    global PLAYER_DEFAULT_MESH as string
    PLAYER_DEFAULT_MESH = dataSharedGetField("player", "defaultMesh", "humanfemale1.x",1)
 
 return
+
+function playerObjectExit(idx as integer)
+   local retval as boolean
+   retval = 0
+
+   REM ARRAY INDEX MUST BE VALID
+   if idx > 0 and idx <= array count(dataObject())
+      REM DBPRO ID MUST BE VALID
+      if dataObject(idx).dbpid > 0
+         if object exist(dataObject(idx).dbpid) then retval = 1
+      endif
+   endif
+
+endfunction retval
 
 function playerClientCreate(rpgid as integer, dbpid as integer)
 
@@ -27,6 +45,8 @@ function playerClientCreate(rpgid as integer, dbpid as integer)
       mydbpid = dataSharedSetKeys(idx, rpgid, dbpid)
       if mydbpid > 0
          load object PLAYER_PATH + PLAYER_DEFAULT_MESH,mydbpid,1
+         position object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
+         collisionClientSet(mydbpid,COLLISION_TYPE_SPHERE,COLLISION_GROUP_PLAYER)
       else
          debugWrite(DEBUGERROR,"playerClientCreate: array index returned " + str$(idx) + " invalid from dataSharedSetKeys")
       endif
@@ -58,3 +78,85 @@ function playerClientDestroy(rpgid as integer)
 
 endfunction 0
 
+function playerClientControlLocal()
+
+   local mydbpid as integer
+
+   if idxPlayer < 1 or idxPlayer > array count(dataObject()) then exitfunction
+
+   mydbpid = dataObject(idxPlayer).dbpid
+
+   if mydbpid = 0
+      exitfunction
+   else
+      if object exist(mydbpid) = 0 then exitfunction
+   endif
+
+   dataObject(idxPlayer).velxz = systemSharedFrameMoved(dataObject(idxPlayer).speed)
+
+   if dataObject(idxPlayer).vely > 0.0
+      move object up mydbpid, systemSharedFrameMoved(dataObject(idxPlayer).vely)
+      dataObject(idxPlayer).vely = dataObject(idxPlayer).vely - systemSharedFrameMoved((dataObject(idxPlayer).veljump * 0.5))
+      dataObject(idxPlayer).vely = max(0.0, dataObject(idxPlayer).vely)
+   endif
+
+
+   if playerMoveX = 0.0 and playerMoveY = 0.0 and playerMoveZ = 0.0
+      REM PLAYER DID NOT MOVE
+      REM BUT WE STILL NEED TO FALL
+      dataObject(idxPlayer).velxz = 0
+
+      if dataObject(idxPlayer).gravity <> 0
+
+         x# = object position x(mydbpid)
+         y# = object position y(mydbpid)
+         z# = object position z(mydbpid)
+
+         dataObject(idxPlayer).ground = collisionClientFall(idxPlayer,COLLISIONGROUPWORLD,x#,y#,z#,x#,y#,z#,1)
+
+      endif
+
+   else
+      REM PLAYER DID MOVE
+
+      netUpdateMode = 1
+
+      oldx# = object position x(mydbpid)
+      oldy# = object position y(mydbpid)
+      oldz# = object position z(mydbpid)
+
+      move object mydbpid, (dataObject(idxPlayer).velxz * playerMoveZ)
+      move object left mydbpid, (dataObject(idxPlayer).velxz * playerMoveX)
+
+      x# = object position x(mydbpid)
+      y# = object position y(mydbpid)
+      z# = object position z(mydbpid)
+
+      dataObject(idxPlayer).ground = collisionClientSlide(idxPlayer,COLLISIONGROUPWORLD,oldx#,oldy#,oldz#,x#,y#,z#,1)
+
+   endif
+
+   REM NOW LETS SEE IF THE PLAYER IS TRYING TO
+   REM JUMP AND IF SO, SEE IF JUMP IS VALID
+   REM AND IF SO, THEN START JUMP
+   if playerJumping = 1
+      if dataObject(idxPlayer).ground = 1
+         dataObject(idxPlayer).vely = dataObject(idxPlayer).veljump
+         REM IMMEDIATELY SEND A JUMP PACKET
+         `netClientJump()
+         rem not yet
+      endif
+   endif
+
+   REM MAINTAIN PITCH AND ROLL AT 0 WHEN NOT FLYING
+   rotate object mydbpid, 0.0, object angle y(mydbpid), 0.0
+
+endfunction
+
+function playerClientRotateY(mydbpid as integer, angle# as float)
+   if mydbpid > 0
+      if object exist(mydbpid)
+         rotate object mydbpid, 0.0, angle#, 0.0
+      endif
+   endif
+endfunction

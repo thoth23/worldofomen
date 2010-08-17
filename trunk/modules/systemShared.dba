@@ -30,15 +30,15 @@ systemSharedSetup:
 
     REM RESERVED FILE ID MANAGEMENT
     global SYSTEM_FILE_DATA_SERVERID as integer
-    SYSTEM_FILE_DATA_SERVERID = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+    SYSTEM_FILE_DATA_SERVERID = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
     global SYSTEM_FILE_DATA_GUID as integer
-    SYSTEM_FILE_DATA_GUID = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+    SYSTEM_FILE_DATA_GUID = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
     global SYSTEM_FILE_TABLE as integer
-    SYSTEM_FILE_TABLE = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+    SYSTEM_FILE_TABLE = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
     global SYSTEM_FILE_DATA as integer
-    SYSTEM_FILE_DATA = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+    SYSTEM_FILE_DATA = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
     global SYSTEM_FILE_NET as integer
-    SYSTEM_FILE_NET = systemGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+    SYSTEM_FILE_NET = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
 
     REM SYSTEM MODES
     global systemMode as integer
@@ -47,27 +47,55 @@ systemSharedSetup:
     #constant SYSTEM_MODE_QUITTING            %10
     #constant SYSTEM_MODE_NET_TCP             %100
     #constant SYSTEM_MODE_LOGON_COMPLETE      %1000
+    #constant SYSTEM_MODE_TERRAIN             %10000
 
     #constant SYSTEM_INVALID_ID  -1
+    #constant SYSTEM_FUNCTION_FAILED -1
+    #constant SYSTEM_FUNCTION_OK 1
 
     REM SYSTEM UTILITY VECTORS
     global SYSTEM_VECTOR4_LERPCOLORA as integer
-    SYSTEM_VECTOR3_LERPCOLORA = systemGetFree(SYSTEM_TYPE_VECTOR4,SYSTEM_SEARCH_FAST)
+    SYSTEM_VECTOR3_LERPCOLORA = systemSharedGetFree(SYSTEM_TYPE_VECTOR4,SYSTEM_SEARCH_FAST)
     global SYSTEM_VECTOR4_LERPCOLORB as integer
-    SYSTEM_VECTOR3_LERPCOLORB = systemGetFree(SYSTEM_TYPE_VECTOR4,SYSTEM_SEARCH_FAST)
+    SYSTEM_VECTOR3_LERPCOLORB = systemSharedGetFree(SYSTEM_TYPE_VECTOR4,SYSTEM_SEARCH_FAST)
     global SYSTEM_VECTOR4_LERPCOLORC as integer
-    SYSTEM_VECTOR3_LERPCOLORC = systemGetFree(SYSTEM_TYPE_VECTOR4,SYSTEM_SEARCH_FAST)
+    SYSTEM_VECTOR3_LERPCOLORC = systemSharedGetFree(SYSTEM_TYPE_VECTOR4,SYSTEM_SEARCH_FAST)
     global SYSTEM_VECTOR3_GETDIST as integer
-    SYSTEM_VECTOR3_GETDIST = systemGetFree(SYSTEM_TYPE_VECTOR3,SYSTEM_SEARCH_FAST)
+    SYSTEM_VECTOR3_GETDIST = systemSharedGetFree(SYSTEM_TYPE_VECTOR3,SYSTEM_SEARCH_FAST)
     global SYSTEM_VECTOR3_LOCLAST as integer
-    SYSTEM_VECTOR3_LOCLAST = systemGetFree(SYSTEM_TYPE_VECTOR3,SYSTEM_SEARCH_FAST)
+    SYSTEM_VECTOR3_LOCLAST = systemSharedGetFree(SYSTEM_TYPE_VECTOR3,SYSTEM_SEARCH_FAST)
     global SYSTEM_VECTOR3_LOCNOW as integer
-    SYSTEM_VECTOR3_LOCNOW = systemGetFree(SYSTEM_TYPE_VECTOR3,SYSTEM_SEARCH_FAST)
+    SYSTEM_VECTOR3_LOCNOW = systemSharedGetFree(SYSTEM_TYPE_VECTOR3,SYSTEM_SEARCH_FAST)
 
+   REM GAMETIME VARIABLES
+
+   global systemGameTimeMilliseconds as integer = 0
+   global systemGameTimeLastFrameMilliseconds as integer = 0
+   global systemGameTimeSeconds# as float = 0.0
+   global systemGameTimeLastFrameSeconds# as float = 0.0
+   global systemServerTimeDelta as integer = 0
+   global systemGameFPS as float
+
+   global SYSTEM_GRAVITY as float
+   SYSTEM_GRAVITY = -25.0
 
 return
 
-function systemGetFree(myType as integer, mySearch as integer)
+function systemSharedUpdateGameTime()
+
+   REM THIS CAN ONLY BE CALLED ONCE PER FRAME
+
+   systemGameTimeLastFrameMilliseconds = systemGameTimeMilliseconds
+   systemGameTimeLastFrameSeconds# = systemGameTimeSeconds#
+
+   systemGameTimeMilliseconds = hitimer()
+   systemGameTimeSeconds# = (systemGameTimeMilliseconds / 1000.0)
+
+   systemGameFPS = ( 1000.0 / (systemGameTimeMilliseconds - systemGameTimeLastFrameMilliseconds) )
+
+endfunction
+
+function systemSharedGetFree(myType as integer, mySearch as integer)
 
    local retval as integer
    retval = SYSTEM_INVALID_ID
@@ -75,7 +103,7 @@ function systemGetFree(myType as integer, mySearch as integer)
    mySearch=clamp(mySearch, SYSTEM_SEARCH_FAST, SYSTEM_SEARCH_REUSE)
 
    if myType < 1 or myType > SYSTEM_TYPE_MAX
-      debugWrite(DEBUGERROR,"systemGetFree: Invalid Type Specified: " + str$(myType))
+      debugWrite(DEBUGERROR,"systemSharedGetFree: Invalid Type Specified: " + str$(myType))
       exitfunction SYSTEM_INVALID_ID
    endif
 
@@ -125,7 +153,7 @@ function systemGetFree(myType as integer, mySearch as integer)
          endwhile
 
          if found = 0
-            debugWrite(DEBUGWARN,"systemGetFree Optimization: method Search requested with Fast result")
+            debugWrite(DEBUGWARN,"systemSharedGetFree Optimization: method Search requested with Fast result")
             inc systemNextID(myType)
             retval = systemNextID(myType)
          else
@@ -136,10 +164,10 @@ function systemGetFree(myType as integer, mySearch as integer)
 
 endfunction retval
 
-function systemPushFree(myType as integer)
+function systemSharedPushFree(myType as integer)
 
    if myType < 1 or myType > SYSTEM_TYPE_MAX
-      debugWrite(DEBUGERROR,"systemPushFree: Invalid Type Specified: " + str$(myType))
+      debugWrite(DEBUGERROR,"systemSharedPushFree: Invalid Type Specified: " + str$(myType))
       exitfunction
    endif
 
@@ -165,6 +193,15 @@ function systemSharedGetRealDateTime(dsep$,dtsep$,tsep$)
    datetime$=date$+dtsep$+time$
 
 endfunction datetime$
+
+function systemSharedFrameMoved(rate# as float)
+
+   local moved# as float
+
+   REM rate# is number of game units per second
+   moved# = (systemGameTimeSeconds# - systemGameTimeLastFrameSeconds#) * rate#
+
+endfunction moved#
 
 function systemSharedGameModeAdd(mode as integer)
     systemModeLast = systemMode
@@ -192,7 +229,7 @@ function systemSharedFieldRemove(record$,field$,separator$)
    record$ = replace all$(record$,separator$+separator$,separator$)
 endfunction record$
 
-function systemLerpColors(clr1 as dword, clr2 as dword, pct as float)
+function systemSharedLerpColors(clr1 as dword, clr2 as dword, pct as float)
 
    local clrFinal as dword
    pct = clamp(pct, 0.0, 100.0)
@@ -210,14 +247,14 @@ function systemLerpColors(clr1 as dword, clr2 as dword, pct as float)
 
 endfunction clrFinal
 
-function systemGetDistance3D(x1#,y1#,z1#,x2#,y2#,z2#)
+function systemSharedGetDistance3D(x1#,y1#,z1#,x2#,y2#,z2#)
 
    set vector3 SYSTEM_VECTOR3_GETDIST, (x1# - x2#), (y1# - y2#), (z1# - z2#)
    exitfunction (length vector3(SYSTEM_VECTOR3_GETDIST))
 
 endfunction 0.0
 
-function systemGetAngleDifference(a1 as float, a2 as float)
+function systemSharedGetAngleDifference(a1 as float, a2 as float)
 
   rem the angular difference returned
   rem is the degrees you would have to rotate from a1 to reach a2
@@ -226,7 +263,7 @@ function systemGetAngleDifference(a1 as float, a2 as float)
 endfunction a1
 
 
-function systemPadLeft(source$,desiredSize,pad$)
+function systemSharedPadLeft(source$,desiredSize,pad$)
 
    retval$=source$
    temp$=""
@@ -242,7 +279,7 @@ function systemPadLeft(source$,desiredSize,pad$)
 
 endfunction retval$
 
-function systemRound$(myFloat as float, places as integer)
+function systemSharedRound$(myFloat as float, places as integer)
 
    myStr$=str$(myFloat)
    a = instr(myStr$,".")
@@ -255,7 +292,7 @@ function systemRound$(myFloat as float, places as integer)
 
 endfunction retval$
 
-function systemPercentBetween(i as float, j as float, pct as float)
+function systemSharedPercentBetween(i as float, j as float, pct as float)
 
    local k as float
    pct = clamp(pct, 0.0, 100.0)

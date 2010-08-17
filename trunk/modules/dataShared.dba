@@ -32,6 +32,12 @@ dataSharedSetup:
       jumpry as float
       atTarget as boolean
       jumpReady as boolean
+      velxz as float
+      speed as float
+      vely as float
+      veljump as float
+      ground as boolean
+      gravity as boolean
    endtype
 
    global dim dataObject() as dataObjectType
@@ -70,7 +76,7 @@ dataSharedSetup:
    #constant DATA_TNAME_TABLES      "tables"
    make lookup DATA_TABLES
    set lookup DATA_TABLES, DATA_TNAME_TABLES, str$(DATA_TABLES)
-   systemPushFree(SYSTEM_TYPE_LOOKUP)
+   systemSharedPushFree(SYSTEM_TYPE_LOOKUP)
    debugWrite(DEBUGINFO,"dataSharedSetup: root table set to name " + DATA_TNAME_TABLES + " with tableid: " + str$(DATA_TABLES))
    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TNAME_TABLES,DATA_ARGSEP)
 
@@ -124,14 +130,22 @@ function dataSharedReset(idx as integer)
    dataObject(idx).accountName = ""
    dataObject(idx).avatarName = ""
    dataObject(idx).listenChannels = NET_LISTEN_CHANNELS_DEFAULT
-   dataObject(idx).posx = 0.0
-   dataObject(idx).posy = 0.0
-   dataObject(idx).posz = 0.0
+   dataObject(idx).posx = 425.0
+   dataObject(idx).posy = 10.0
+   dataObject(idx).posz = 450.0
    dataObject(idx).roty = 0.0
    dataObject(idx).jumpx = 0.0
    dataObject(idx).jumpy = 0.0
    dataObject(idx).jumpz = 0.0
    dataObject(idx).jumpry = 0.0
+   dataObject(idx).atTarget = 0
+   dataObject(idx).jumpReady = 0
+   dataObject(idx).velxz = 0.0
+   dataObject(idx).speed = 14.0
+   dataObject(idx).vely = 0.0
+   dataObject(idx).veljump = 40.0
+   dataObject(idx).ground = 0
+   dataObject(idx).gravity = 1
 
 endfunction 0
 
@@ -178,7 +192,7 @@ function dataSharedSetKeys(idx as integer, rpgid as integer, dbpid as integer)
    if idx <1 or idx> array count(dataObject()) then exitfunction SYSTEM_INVALID_ID
 
    if dbpid = 0
-      dbpid = systemGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)
+      dbpid = systemSharedGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)
    endif
 
    dataObject(idx).rpgid=rpgid
@@ -217,7 +231,7 @@ function dataSharedGetField(tableName$, key$, default$,createFlag as boolean)
    else
       `debugWrite(DEBUGWARN,"dataSharedGetField table lookup not found for table,key,value: " + tablename$ + "," + key$ + "," + default$)
       if createFlag = 1
-         tableID = systemGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
+         tableID = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
          make lookup tableID
          set lookup DATA_TABLES, tablename$, str$(tableID)
          set lookup tableid, key$, default$
@@ -238,7 +252,7 @@ function dataSharedUpdateField(tableName$, key$, value$)
          tableid = intval(LOOKUP CURRENT VALUE$(DATA_TABLES))
       endif
    else
-      tableID = systemGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
+      tableID = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
       make lookup tableID
       set lookup DATA_TABLES, tableName$, str$(tableID)
       debugWrite(DEBUGINFO,"dataSharedUpdateField created table " + str$(tableID) + ". " + tableName$)

@@ -28,7 +28,7 @@ REM STARTUP FUNCTIONS HERE
 netClientStart()
 netClientConnectStart()
 
-
+gosub mouseClientSetup
 gosub cameraClientSetup
 
 gosub skyClientSetup
@@ -41,24 +41,27 @@ terrainClientLoad(2,2)
 gosub playerClientSetup
 idxPlayer = playerClientCreate(0,0)
 
-
 REM Parse the command line for commands
 commandSharedParseStartup()
 
 repeat
 
+   systemSharedUpdateGameTime()
+
    keyboardClientPollTop()
 
-   set vector3 SYSTEM_VECTOR3_LOCLAST, camera position x(0), camera position y(0), camera position z(0)
-   control camera using arrowkeys 0,1,1
-   set vector3 SYSTEM_VECTOR3_LOCNOW, camera position x(0), camera position y(0), camera position z(0)
-   if not is equal vector3(SYSTEM_VECTOR3_LOCLAST,SYSTEM_VECTOR3_LOCNOW) then netUpdateMode = 1
+   if (systemMode && SYSTEM_MODE_LOGON_COMPLETE)
+      mouseClientGetMove()
+      playerClientControlLocal()
+      cameraClientFollow()
+   endif
 
    netClientMaintain()
 
-   position object idxPlayer, camera position x(0), camera position y(0), camera position z(0)
-   rotate object idxPlayer, 0, camera angle y(0), 0
-   move object idxPlayer, 4
+   if (systemMode && SYSTEM_MODE_TERRAIN)
+      terrainClientUpdate()
+   endif
+
    sync
 
    keyboardClientPollBottom()
@@ -67,6 +70,8 @@ repeat
 until (systemMode && SYSTEM_MODE_QUITTING) <> 0
 
 REM STOP FUNCTION HERE
+terrainClientUnload()
+skyClientUnload()
 netClientStop()
 dataSharedSave()
 debugStop()

@@ -26,8 +26,10 @@ function commandRun(cmd$ as string)
 
       case "/loc"
          cmdFound = 1
-         msg$="x:" + systemRound$(object position x(5),2) + ",y:" + systemRound$(object position y(5),2) + ",z:" + systemRound$(object position z(5),2)
-         keyboardUpdateChatReceive(msg$)
+         if playerObjectExit(idxPlayer)
+            msg$="x:" + systemSharedRound$(object position x(dataObject(idxPlayer).dbpid),2) + ",y:" + systemSharedRound$(object position y(dataObject(idxPlayer).dbpid),2) + ",z:" + systemSharedRound$(object position z(dataObject(idxPlayer).dbpid),2)
+            keyboardUpdateChatReceive(msg$)
+         endif
       endcase
 
       case "/listen"
