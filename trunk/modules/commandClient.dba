@@ -26,7 +26,7 @@ function commandRun(cmd$ as string)
 
       case "/loc"
          cmdFound = 1
-         if playerObjectExit(idxPlayer)
+         if playerObjectExist(idxPlayer)
             msg$="x:" + systemSharedRound$(object position x(dataObject(idxPlayer).dbpid),2) + ",y:" + systemSharedRound$(object position y(dataObject(idxPlayer).dbpid),2) + ",z:" + systemSharedRound$(object position z(dataObject(idxPlayer).dbpid),2)
             keyboardUpdateChatReceive(msg$)
          endif
