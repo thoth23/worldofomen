@@ -39,7 +39,6 @@ gosub terrainClientSetup
 terrainClientLoad(2,2)
 
 gosub playerClientSetup
-idxPlayer = playerClientCreate(0,0)
 
 REM Parse the command line for commands
 commandSharedParseStartup()
@@ -52,7 +51,7 @@ repeat
 
    if (systemMode && SYSTEM_MODE_LOGON_COMPLETE)
       mouseClientGetMove()
-      playerClientControlLocal()
+      playerClientControl()
       cameraClientFollow()
    endif
 

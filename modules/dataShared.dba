@@ -198,7 +198,9 @@ function dataSharedSetKeys(idx as integer, rpgid as integer, dbpid as integer)
    dataObject(idx).rpgid=rpgid
    dataObject(idx).dbpid=dbpid
 
-   dataSharedUpdateField(DATA_TABLE_PIDX, str$(rpgid), str$(idx))
+   if rpgid <> 0
+      dataSharedUpdateField(DATA_TABLE_PIDX, str$(rpgid), str$(idx))
+   endif
 
 endfunction dbpid
 

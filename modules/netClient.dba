@@ -207,7 +207,7 @@ function netClientMaintain()
              UdpPackets = mn Recv UDP(0,RecvPacket,j,i)
              if UdpPackets > 0
                netClientParseUDP(j,i)
-               debugWrite(DEBUGINFO,"UDP message " + str$(i) + " received on channel " + str$(j))
+               `debugWrite(DEBUGINFO,"UDP message " + str$(i) + " received on channel " + str$(j))
              endif
           next j
        next i
@@ -291,7 +291,8 @@ function netClientParseTCP()
        endcase
 
        case NETS_RPGID
-         dataObject(idxPlayer).rpgid = mn Get Int(RecvPacket)
+         temp = mn Get Int(RecvPacket)
+         idxPlayer = playerClientCreate(temp,0)
          debugWrite(DEBUGINFO,"Local Player RPGID received: " + str$(dataObject(idxPlayer).rpgid))
          systemSharedGameModeAdd(SYSTEM_MODE_LOGON_COMPLETE)
        endcase
@@ -313,7 +314,9 @@ function netClientParseUDP(clientID as integer,OperationID as integer)
 
       idRemotePlayer = playerClientCreate(RPGIDRemotePlayer, 0)
       dataObject(idRemotePlayer).rpgid = RPGIDRemotePlayer
-      dataObject(idRemotePlayer).clientID = clientID
+
+      REM CLIENTS DO NOT NEED TO KNOW THE CLIENTID OF OTHER PLAYERS
+      dataObject(idRemotePlayer).clientID = 0
 
    endif
 
@@ -355,6 +358,6 @@ function netClientMove()
    mn Add Float SendPacket, object position z(idxPlayer)
    mn Add Float SendPacket, object angle y(idxPlayer)
    mn Send UDP 0, SendPacket, NULL, 0, 1
-   debugWrite(DEBUGINFO,"Sent Movement Update")
+   `debugWrite(DEBUGINFO,"Sent Movement Update")
 
 endfunction

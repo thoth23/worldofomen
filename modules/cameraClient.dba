@@ -36,7 +36,7 @@ return
 
 function cameraClientFollow()
 
-   if playerObjectExit(idxPlayer) = 0 then exitfunction
+   if playerObjectExist(idxPlayer) = 0 then exitfunction
    mydbpid = dataObject(idxPlayer).dbpid
 
    position camera 0, object position x(mydbpid), object position y(mydbpid) + 1, object position z(mydbpid)
