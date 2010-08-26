@@ -292,6 +292,26 @@ function systemSharedRound$(myFloat as float, places as integer)
 
 endfunction retval$
 
+function floatval(float$ as string)
+
+   local retval as float
+   local a as integer
+   local b as float
+   local c as float
+
+   a = instr(float$,".")
+   if a > 0
+      sd = len(float$) - a
+      b = intval(float$)
+      c = intval(fast right$(float$,sd))
+      c = c / (10^sd)
+      retval = b + c
+   else
+      retval = intval(float$)
+   endif
+
+endfunction retval
+
 function systemSharedPercentBetween(i as float, j as float, pct as float)
 
    local k as float
