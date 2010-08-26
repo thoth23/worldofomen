@@ -15,14 +15,17 @@ playerClientSetup:
    global playerJumping as boolean
 
    global PLAYER_MOVE_PRECISION as float
-   PLAYER_MOVE_PRECISION = intval(dataSharedGetField("playerClient", "playerMovePrecision", "0.25", DATA_CREATE))
+   PLAYER_MOVE_PRECISION = floatval(dataSharedGetField("playerClient", "playerMovePrecision", "0.25", DATA_CREATE))
+
+   global PLAYER_CURVE_SPEED as float
+   PLAYER_CURVE_SPEED = floatval(dataSharedGetField("playerClient", "playerCurveSpeed", "1.0", DATA_CREATE))
 
    global PLAYER_JUMP_VELOCITY as float
-   PLAYER_JUMP_VELOCITY = intval(dataSharedGetField("playerClient", "playerJumpVelocity", "40.0", DATA_CREATE))
+   PLAYER_JUMP_VELOCITY = floatval(dataSharedGetField("playerClient", "playerJumpVelocity", "40.0", DATA_CREATE))
 
    REM INERTIA MUST ALWAYS BE LESS THAN MOVEMENT PRECISION
    global PLAYER_MAX_INERTIA as float
-   PLAYER_MAX_INERTIA = intval(dataSharedGetField("playerClient", "playerMaxInertia", "0.10", DATA_CREATE))
+   PLAYER_MAX_INERTIA = floatval(dataSharedGetField("playerClient", "playerMaxInertia", "0.10", DATA_CREATE))
 
    #constant PLAYER_PATH "media/avatar/"
    global PLAYER_DEFAULT_MESH as string
@@ -214,36 +217,64 @@ endfunction
 function playerClientControlRemote(idx as integer)
 
    local mydbpid as integer
+   local distCategory as integer
+   local deltaVelocity as float
+   local tempy as float
 
    mydbpid = dataObject(idx).dbpid
 
    REM REGULATE MOVEMENT
    dist# = systemSharedGetDistance3D(dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz,object position x(mydbpid),object position y(mydbpid),object position z(mydbpid))
+   distCategory = int(dist#/PLAYER_MOVE_PRECISION)
+   deltaVelocity = systemSharedFrameMoved(dataObject(idx).speed)
+   oldx# = object position x(mydbpid)
+   oldy# = object position y(mydbpid)
+   oldz# = object position z(mydbpid)
 
-   if dist# <= PLAYER_MOVE_PRECISION
+   REM MOVE
 
-      REM PLAYER IS AT TARGET
-      dataObject(idx).velxz = 0
+   select distCategory
+      case 0
+         REM LESS THAN MOVE PRECISION
+         dataObject(idx).velxz = 0
+      endcase
+      case 1
+         REM BETWEEN 1x AND 2x MOVE PRECISION
 
-   else
+         REM START SLOWING DOWN OVER 1 SECOND
+         if dataObject(idx).velxz > 0
+            dataObject(idx).velxz = max(dataObject(idx).velxz - deltaVelocity,0)
+         endif
 
-      REM PLAYER IS NOT AT TARGET
-      dataObject(idx).velxz = systemSharedFrameMoved(dataObject(idx).speed)
+         point object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
+         move object mydbpid, systemSharedFrameMoved(dataObject(idx).velxz)
 
-      oldx# = object position x(mydbpid)
-      oldy# = object position y(mydbpid)
-      oldz# = object position z(mydbpid)
+      endcase
+      case default
+         REM GREATER THAN 3x MOVE PRECISION
 
-      point object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
-      move object mydbpid, dataObject(idx).velxz
+         if dataObject(idx).velxz < dataObject(idx).speed
+            REM START SPEEDING UP OVER 1 SECOND
+            dataObject(idx).velxz = min(dataObject(idx).velxz + deltaVelocity,dataObject(idx).speed)
+         endif
 
-      x# = object position x(mydbpid)
-      y# = object position y(mydbpid)
-      z# = object position z(mydbpid)
+         REM THE LARGER THE CURVEANGLE SPEED VALUE, THE MORE PRECISION, THE SMALLER THE CHANGE PER FRAME
+         starty = object angle y(mydbpid)
+         point object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
+         endy = object angle y(mydbpid)
+         rotate object mydbpid, object angle x(mydbpid),curveangle(starty, endy, systemGameFPS),object angle z(mydbpid)
 
-      REM APPLY GRAVITY AND SLIDING COLLISION
-      dataObject(idx).ground = collisionClientSlide(mydbpid,COLLISIONGROUPWORLD,oldx#,oldy#,oldz#,x#,y#,z#,1)
+         move object mydbpid, systemSharedFrameMoved(dataObject(idx).velxz)
 
+      endcase
+   endselect
+
+   REM HANDLE COLLISION IF MOVING
+   if distCategory > 0
+         x# = object position x(mydbpid)
+         y# = object position y(mydbpid)
+         z# = object position z(mydbpid)
+         dataObject(idx).ground = collisionClientSlide(mydbpid,COLLISIONGROUPWORLD,oldx#,oldy#,oldz#,x#,y#,z#,1)
    endif
 
 endfunction

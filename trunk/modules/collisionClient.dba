@@ -76,7 +76,7 @@ function collisionClientSlide(dbpid as integer,cGroup as integer,oldx# as float,
    endif
 
    rem handle vertical movement
-   mobRadius# = (object size y(dbpid,1) * 0.6)
+   mobRadius# = (object size y(dbpid,1) * 0.5)
 
    if gravityOn = 1
 
