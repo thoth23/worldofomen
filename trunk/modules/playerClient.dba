@@ -29,7 +29,7 @@ playerClientSetup:
 
    #constant PLAYER_PATH "media/avatar/"
    global PLAYER_DEFAULT_MESH as string
-   PLAYER_DEFAULT_MESH = dataSharedGetField("playerClient", "playerDefaultMesh", "humanfemale1.x",1)
+   PLAYER_DEFAULT_MESH = dataSharedGetField("playerClient", "playerDefaultMesh", "player_base.dbo",1)
 
    #constant PLAYER_FUNCTION_FAIL 0
    #constant PLAYER_FUNCTION_OK 1
@@ -61,9 +61,41 @@ function playerClientCreate(rpgid as integer, dbpid as integer)
    if idx > 0
       mydbpid = dataSharedSetKeys(idx, rpgid, dbpid)
       if mydbpid > 0
-         load object PLAYER_PATH + PLAYER_DEFAULT_MESH,mydbpid,1
-         position object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
-         collisionClientSet(mydbpid,COLLISION_TYPE_SPHERE,COLLISION_GROUP_PLAYER)
+
+         REM THIS SECTION WILL BE MOVED OVER
+         REM TO THE MESHCLIENT MODULE SOON
+
+         if file exist(PLAYER_PATH + PLAYER_DEFAULT_MESH)
+
+            datafilename$ = PLAYER_PATH + PLAYER_DEFAULT_MESH + DATA_FILE_EXT
+
+            if file exist(datafilename$)
+
+               REM MESH HAS ITS OWN DATA FILE
+               REM LOAD TABLE IF NOT ALREADY LOADED
+               if dataSharedTableExist(datafilename$) = DATA_FUNCTION_FAIL
+                  debugWrite(DEBUGINFO,"playerClientCreate: attempting to load data file: " + datafilename$)
+                  dataSharedLoadTable(datafilename$,datafilename$)
+               endif
+
+               REM APPLY THE DATA FILE TO THE ASSOCIATED
+               REM DATAOBJECT ARRAY
+               dataSharedApply(datafilename$, idx)
+
+            endif
+
+            load object PLAYER_PATH + PLAYER_DEFAULT_MESH,mydbpid,1
+            debugWrite(DEBUGINFO,"playerClientCreate player height " + str$(object size y(mydbpid)))
+            position object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
+            REM ONLY SCALE WHEN NECESSARY
+            if dataObject(idx).sclx <> 1 or dataObject(idx).scly <> 1 or dataObject(idx).sclz <> 1
+               scale object mydbpid, (dataObject(idx).sclx * 100.0),(dataObject(idx).scly * 100.0),(dataObject(idx).sclz * 100.0)
+            endif
+            collisionClientSet(mydbpid,dataObject(idx).collisionType,dataObject(idx).collisionGroup)
+
+         else
+            debugWrite(DEBUGERROR,"playerClientCreate: file not found " + PLAYER_PATH + PLAYER_DEFAULT_MESH)
+         endif
       else
          debugWrite(DEBUGERROR,"playerClientCreate: array index returned " + str$(idx) + " invalid from dataSharedSetKeys")
       endif
@@ -115,7 +147,7 @@ function playerClientControl()
    if mytableid > 0
       FIRST LOOKUP mytableid
       while lookup is valid(mytableid)
-         if LOOKUP CURRENT KEY$(mytableid) <> ""
+         if LOOKUP CURRENT KEY$(mytableid) <> "" AND LOOKUP CURRENT KEY$(mytableid) <> DATA_KEY_DIRTY
             myidx = intval(LOOKUP CURRENT VALUE$(mytableid))
 
             if playerObjectExist(myidx) = PLAYER_FUNCTION_OK

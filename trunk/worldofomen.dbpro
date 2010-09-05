@@ -23,16 +23,17 @@ include14=modules\keyboardClient.dba
 include15=modules\guiClient.dba
 include16=modules\cameraClient.dba
 include17=modules\meshClient.dba
-include18=modules\collisionClient.dba
-include19=modules\terrainClient.dba
-include20=modules\skyClient.dba
-include21=modules\playerShared.dba
-include22=modules\playerClient.dba
-include23=modules\abilityShared.dba
-include24=modules\inventoryShared.dba
-include25=modules\goalShared.dba
-include26=modules\effectClient.dba
-include27=modules\soundClient.dba
+include18=modules\collisionShared.dba
+include19=modules\collisionClient.dba
+include20=modules\terrainClient.dba
+include21=modules\skyClient.dba
+include22=modules\playerShared.dba
+include23=modules\playerClient.dba
+include24=modules\abilityShared.dba
+include25=modules\inventoryShared.dba
+include26=modules\goalShared.dba
+include27=modules\effectClient.dba
+include28=modules\soundClient.dba
 ; The compiler only needs to read the final source from this entry - the editor
 ; handles include files, concatenation, etc.
 final source=_Temp.dbsource

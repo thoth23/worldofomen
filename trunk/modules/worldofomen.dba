@@ -10,13 +10,16 @@ gosub debugSharedSetup
 gosub debugClientSetup
 debugStart()
 
+gosub collisionSharedSetup
+gosub collisionClientSetup
+
 REM FOR DATA, CLIENT/SERVER
 REM MUST BE CALLED BEFORE
 REM SHARED TO SET PATH
 REM CONSTANT
 gosub dataClientSetup
 gosub dataSharedSetup
-dataSharedLoad()
+dataSharedLoadAllTables()
 
 gosub commandSharedSetup
 gosub netSharedSetup
