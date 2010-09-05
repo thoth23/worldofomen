@@ -10,6 +10,7 @@ gosub debugSharedSetup
 gosub debugServerSetup
 debugStart()
 
+gosub collisionSharedSetup
 gosub dataSharedSetup
 gosub dataServerSetup
 gosub netSharedSetup

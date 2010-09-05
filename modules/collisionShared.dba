@@ -1,0 +1,22 @@
+REM *** Include File: modules\collisionShared.dba ***
+REM Created: 9/4/2010 3:09:11 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
+REM
+
+collisionSharedSetup:
+
+   #constant COLLISION_GROUP_PLAYER 0
+   #constant COLLISION_GROUP_WORLD 1
+
+   #constant COLLISION_TYPE_POLY 0
+   #constant COLLISION_TYPE_SPHERE 1
+   #constant COLLISION_TYPE_BOX 2
+   #constant COLLISION_TYPE_COMPLEX 3
+   #constant COLLISION_TYPE_NONE 4
+
+   #constant COLLISION_FALLOUT_Y -100
+   #constant COLLISION_RESET_Y 200
+
+
+return

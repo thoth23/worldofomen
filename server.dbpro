@@ -23,6 +23,7 @@ include14=modules\abilityShared.dba
 include15=modules\inventoryShared.dba
 include16=modules\goalShared.dba
 include17=modules\keyboardShared.dba
+include18=modules\collisionShared.dba
 ; The compiler only needs to read the final source from this entry - the editor
 ; handles include files, concatenation, etc.
 final source=_Temp.dbsource

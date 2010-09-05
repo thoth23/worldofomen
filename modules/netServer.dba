@@ -17,10 +17,10 @@ netServerSetup:
    NET_MAX_OPERATIONS = intval(dataSharedGetField("netServer", "netMaxOperations", "2", DATA_CREATE))
 
    global NET_VISIBILITY_MOVE as float
-   NET_VISIBILITY_MOVE = intval(dataSharedGetField("netServer", "netVisibilityMove", "80.0",1))
+   NET_VISIBILITY_MOVE = intval(dataSharedGetField("netServer", "netVisibilityMove", "10000.0",1))
 
    global NET_VISIBILITY_LOCAL_CHAT as float
-   NET_VISIBILITY_LOCAL_CHAT = intval(dataSharedGetField("netServer", "netVisibilityLocalChat", "200.0",1))
+   NET_VISIBILITY_LOCAL_CHAT = intval(dataSharedGetField("netServer", "netVisibilityLocalChat", "10000.0",1))
 
 
    REM TURN OFF DARKNET DEBUG ON SERVER SO WE DON'T
@@ -152,7 +152,7 @@ function netServerMaintain()
       if tableid > 0
          FIRST LOOKUP tableid
          while lookup is valid(tableid)
-            if LOOKUP CURRENT KEY$(tableid) <> ""
+            if LOOKUP CURRENT KEY$(tableid) <> "" AND LOOKUP CURRENT KEY$(tableid) <> DATA_KEY_DIRTY
                idx = intval(LOOKUP CURRENT VALUE$(tableid))
                client = dataObject(idx).clientid
                if mn Recv TCP(instance,RecvPacket,client) > 0
@@ -187,7 +187,7 @@ function netServerChatBroadcast(instance as integer, channel$ as string, message
    if tableid > 0
       FIRST LOOKUP tableid
       while lookup is valid(tableid)
-         if LOOKUP CURRENT KEY$(tableid) <> ""
+         if LOOKUP CURRENT KEY$(tableid) <> "" AND LOOKUP CURRENT KEY$(tableid) <> DATA_KEY_DIRTY
             idx = intval(LOOKUP CURRENT VALUE$(tableid))
             if instr(dataObject(idx).listenChannels,channel$) <> 0
                mn Send TCP instance, SendPacket, dataObject(idx).clientid, 1, 1
@@ -279,11 +279,11 @@ function netServerUDPBroadcast(instance as integer, idx as integer)
    if tableid > 0
       FIRST LOOKUP tableid
       while lookup is valid(tableid)
-         if LOOKUP CURRENT KEY$(tableid) <> ""
+         if LOOKUP CURRENT KEY$(tableid) <> "" AND LOOKUP CURRENT KEY$(tableid) <> DATA_KEY_DIRTY
             remoteidx = intval(LOOKUP CURRENT VALUE$(tableid))
             if remoteidx > 0 and remoteidx <= array count(dataObject()) and remoteidx <> idx
                if mn client connected(instance,dataObject(remoteidx).clientID)
-                  if (systemGetDistance3D(dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz,dataObject(remoteidx).posx,dataObject(remoteidx).posy,dataObject(remoteidx).posz)) < NET_VISIBILITY_MOVE
+                  if (systemSharedGetDistance3D(dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz,dataObject(remoteidx).posx,dataObject(remoteidx).posy,dataObject(remoteidx).posz)) < NET_VISIBILITY_MOVE
                      mn Send UDP instance, SendPacket, dataObject(remoteidx).clientID, 1, 1
                      debugWrite(DEBUGINFO, "Sent UDP update for player " + str$(idx) + " to player " + str$(remoteidx))
                   endif
