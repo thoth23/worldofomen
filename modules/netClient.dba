@@ -292,8 +292,14 @@ function netClientParseTCP()
 
        case NETS_RPGID
          temp = mn Get Int(RecvPacket)
-         idxPlayer = playerClientCreate(temp,0)
-         debugWrite(DEBUGINFO,"Local Player RPGID received: " + str$(dataObject(idxPlayer).rpgid))
+         debugWrite(DEBUGINFO,"Local Player RPGID received: " + str$(temp))
+
+         idxPlayer = playerClientCreate(temp,0,1)
+         REM WE ARE TEMPORARILY CHEATING HERE - THE SERVER
+         REM WILL NEED TO SEND THE BASE MESH RPGID BY THIS
+         REM POINT AS WELL - WE'LL USE A WELL-KNOWN VALUE
+         REM FOR NOW (1 for the player_base.dbo)
+
          systemSharedGameModeAdd(SYSTEM_MODE_LOGON_COMPLETE)
        endcase
 
@@ -312,7 +318,8 @@ function netClientParseUDP(clientID as integer,OperationID as integer)
 
       REM THIS PLAYER IS NEW TO THIS CLIENT
 
-      idRemotePlayer = playerClientCreate(RPGIDRemotePlayer, 0)
+      idRemotePlayer = playerClientCreate(RPGIDRemotePlayer, 0,1)
+      REM TEMPORARILY CHEATING HERE AS WELL
       dataObject(idRemotePlayer).rpgid = RPGIDRemotePlayer
 
       REM CLIENTS DO NOT NEED TO KNOW THE CLIENTID OF OTHER PLAYERS

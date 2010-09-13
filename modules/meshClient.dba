@@ -1,5 +1,188 @@
 REM *** Include File: modules\meshClient.dba ***
 REM Created: 7/4/2010 11:02:33 AM
-REM 
+REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+meshClientSetup:
+
+   #constant MESH_FUNCTION_FAIL -1
+   #constant MESH_FUNCTION_OK 1
+
+   #constant MESH_ANIMDATA_PREFIX "anim_"
+   #constant MESH_ANIMDATA_START "_start"
+   #constant MESH_ANIMDATA_STOP "_stop"
+   #constant MESH_ANIMDATA_SPEED "_speed"
+   #constant MESH_ANIMDATA_SWITCH "_switch"
+   #constant MESH_ANIM_LOOP 0
+   #constant MESH_ANIM_PLAY 1
+
+   global MESH_DEFAULT_FPS as float
+   MESH_DEFAULT_FPS = floatval(dataSharedGetField("meshClient", "meshDefaultFPS", "24.0", DATA_CREATE))
+
+
+return
+
+function meshClientLoad(myPath$, mydbpid)
+
+   REM LOADS AN ASSET FOR LATER INSTANTIATION
+
+   if file exist(myPath$) = 0 then exitfunction MESH_FUNCTION_FAIL
+   load object myPath$, mydbpid, 1
+   hide object mydbpid
+   exclude object on mydbpid
+
+endfunction MESH_FUNCTION_OK
+
+function meshClientCreate(idx as integer,  rpgidMesh as integer)
+
+   REM INSTANTIATE A MESH INTO THE WORLD
+
+   mydbpid = dataObject(idx).dbpid
+   if mydbpid < 1 then exitfunction MESH_FUNCTION_FAIL
+
+   REM WE'RE GOING TO MAKE A "HOLDER" OBJECT TO
+   REM GUARANTEE WE HAVE THIS OBJECT RESERVED
+   REM WE'RE ALSO GOING TO MAKE IT HIGHLY
+   REM VISIBLE TO MAKE SOURCE MESH ISSUES
+   REM VERY EASY TO SEE
+
+   make object cylinder mydbpid, 10
+   scale object mydbpid, 100, 5000, 100
+   color object mydbpid, rgb(255,0,128)
+
+   myPath$ = dataSharedGetLibraryPath(rpgidMesh)
+   mysourcedbpid = dataSharedGetAssetID(rpgidMesh)
+   `debugWrite(DEBUGINFO,"meshClientCreate: target dbpid found for cloning " + str$(mydbpid))
+   `debugWrite(DEBUGINFO,"meshClientCreate: source dbpid found for cloning " + str$(mysourcedbpid))
+
+   if mysourcedbpid < 1 then exitfunction MESH_FUNCTION_FAIL
+   if object exist(mysourcedbpid) = 0 then exitfunction MESH_FUNCTION_FAIL
+
+   REM A MESH SOURCE ERROR PRIOR TO THIS POINT WOULD LEAVE
+   REM THE HOLDER OJBECT IN PLACE
+   if object exist(mydbpid) then delete object mydbpid
+   clone object mydbpid, mysourcedbpid, 1
+
+   datafilename$ = myPath$ + DATA_FILE_EXT
+
+   if file exist(datafilename$)
+
+      debugWrite(DEBUGINFO,"meshClientCreate: data file for mesh exists: " + datafilename$)
+      REM MESH HAS ITS OWN DATA FILE
+      REM LOAD TABLE IF NOT ALREADY LOADED
+      if dataSharedTableExist(datafilename$) = DATA_FUNCTION_FAIL
+         debugWrite(DEBUGINFO,"meshClientCreate: data file not previously loaded, loading and applying: " + datafilename$)
+         dataSharedLoadTable(datafilename$,datafilename$)
+      else
+         debugWrite(DEBUGINFO,"meshClientCreate: data file already loaded, applying: " + datafilename$)
+      endif
+
+      REM APPLY THE DATA FILE TO THE ASSOCIATED
+      REM DATAOBJECT ARRAY
+      dataSharedApply(datafilename$, idx)
+      dataObject(idx).meshdata = datafilename$
+
+   endif
+
+   position object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
+   if dataObject(idx).sclx <> 1.0 or dataObject(idx).scly <> 1.0 or dataObject(idx).sclz <> 1.0
+      scale object mydbpid, (dataObject(idx).sclx * 100.0),(dataObject(idx).scly * 100.0),(dataObject(idx).sclz * 100.0)
+   endif
+   collisionClientSet(mydbpid,dataObject(idx).collisionType,dataObject(idx).collisionGroup)
+
+endfunction MESH_FUNCTION_OK
+
+function meshClientAnimate(idx as integer, animName as string, loopPlay as boolean)
+
+   local retval as integer
+   local mydbpid as integer
+   local frameStart as integer
+   local frameEnd as integer
+   local mymeshdata as string
+   local caseAnimName as string
+
+   retval = MESH_FUNCTION_FAIL
+   if animName = "" then exitfunction retval
+   mymeshdata = dataObject(idx).meshdata
+   if mymeshdata = "" then exitfunction retval
+   if playerObjectExist(idx) = PLAYER_FUNCTION_FAIL then exitfunction retval
+   mydbpid = dataObject(idx).dbpid
+
+   REM IF REQUESTING idle CHECK IF TIME TO SWITCH
+   if fast right$(animName,1)="1"
+      caseAnimName = replace$(animName,"1",str$(dataObject(idx).animSwitchCase))
+      if systemGameTimeMilliseconds > dataObject(idx).animSwitchTime
+         dataObject(idx).animSwitchTime = systemGameTimeMilliseconds + intval(dataSharedGetField(mymeshdata, MESH_ANIMDATA_PREFIX + caseAnimName + MESH_ANIMDATA_SWITCH, DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+         inc dataObject(idx).animSwitchCase
+         caseAnimName = replace$(animName,"1",str$(dataObject(idx).animSwitchCase))
+      endif
+     if dataSharedGetField(mymeshdata, MESH_ANIMDATA_PREFIX + caseAnimName + MESH_ANIMDATA_START, DATA_KEY_UNDEFINED, DATA_NO_CREATE) = DATA_KEY_UNDEFINED
+        dataObject(idx).animSwitchCase = 1
+     else
+        animName = caseAnimName
+     endif
+   else
+      dataObject(idx).animSwitchCase = 1
+   endif
+
+   temp$ = dataSharedGetField(mymeshdata, MESH_ANIMDATA_PREFIX + animName + MESH_ANIMDATA_START, DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+   if temp$ <> DATA_KEY_UNDEFINED
+      frameStart = intval(temp$)
+      temp$ = dataSharedGetField(mymeshdata, MESH_ANIMDATA_PREFIX + animName + MESH_ANIMDATA_STOP, DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+      if temp$ <> DATA_KEY_UNDEFINED
+         frameEnd = intval(temp$)
+         retval = MESH_FUNCTION_OK
+         temp$ = dataSharedGetField(mymeshdata, MESH_ANIMDATA_PREFIX + animName + MESH_ANIMDATA_SPEED, DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+
+         REM ONLY LOOP OR PLAY IF NOT ALREADY
+         REM PLAYING REQUESTED ANIMATION
+         temp = object frame(mydbpid)
+         if temp < frameStart or temp > frameEnd
+
+            REM SET SPEED IF AVAILABLE
+            if temp$ = DATA_KEY_UNDEFINED
+               dataObject(idx).animspeed = 1.0
+            else
+               dataObject(idx).animspeed =  floatval(temp$)
+            endif
+
+            if loopPlay = MESH_ANIM_LOOP
+               loop object mydbpid, frameStart, frameEnd
+            else
+               play object mydbpid, frameStart, frameEnd
+            endif
+
+         endif
+      endif
+   endif
+
+endfunction retval
+
+function meshClientStopAnimation(idx)
+
+   REM STOP ALL ANIMATIONS
+   local mydbpid as integer
+   if playerObjectExist(idx) = PLAYER_FUNCTION_FAIL then exitfunction
+   mydbpid = dataObject(idx).dbpid
+
+   stop object mydbpid
+   set object frame mydbpid, 1
+
+endfunction
+
+function meshClientRegulate(idx as integer)
+
+   REM REGULATE THE ANIMATION SPEED
+   local mydbpid as integer
+   if playerObjectExist(idx) = PLAYER_FUNCTION_FAIL then exitfunction
+   mydbpid = dataObject(idx).dbpid
+
+   REM MESHES ARE SAVED WITH MESH_DEFAULT_FPS ANIMATION SPEED
+   speed# = (MESH_DEFAULT_FPS / systemGameFPS) * dataObject(idx).animSpeed * 100.0
+   speed# = clamp(speed#, 1.0, 100.0)
+   set object speed mydbpid, speed#
+
+endfunction
+
+
