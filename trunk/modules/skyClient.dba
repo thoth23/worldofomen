@@ -26,7 +26,7 @@ function skyClientLoad(skyboxID)
    dataObject(idxSkybox).class = DATA_CLASS_SKYBOX
 
    if dataObject(idxSkybox).dbpid = 0
-      mydbpid = dataSharedSetKeys(idxSkybox, 0, 0)
+      mydbpid = dataSharedSetKeys(idxSkybox, 0, 0, 0)
       debugWrite(DEBUGINFO,"skyboxClientLoad: dbpid found for skybox " + str$(mydbpid))
    else
       if object exist(dataObject(idxSkybox).dbpid)

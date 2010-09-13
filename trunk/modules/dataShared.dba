@@ -11,12 +11,18 @@ dataSharedSetup:
    REM RPGID IS THE ROLE-PLAY ID - THIS IS THE UNIQUE ID OF THE PLAYER CONTROLLED BY THE SERVER
    REM DBPID IS THE DARKBASIC PRO ID - THIS IS THE UNIQUE ID OF THE DBP OBJECT THE PLAYER IS ASSOCIATED WITH ON THE CLIENT
    REM KEY IS THE UNIQUE SESSION KEY FOR THE PLAYER SESSION ASSIGNED AND MAINTAINED BY THE SERVER
+   REM MESHID IS THE SOURCE MESH DBPID THAT THE CURRENT ASSET WAS CLONED FROM
 
    type dataObjectType
       dirty as boolean
       rpgid as integer
       dbpid as integer
       clientid as integer
+      meshid as integer
+      meshdata as string
+      animSpeed as float
+      animSwitchTime as integer
+      animSwitchCase as integer
       inUse as boolean
       class as integer
       key as string
@@ -109,6 +115,20 @@ dataSharedSetup:
    dataSharedUpdateField(DATA_TABLE_PIDX, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_PIDX,DATA_ARGSEP)
 
+   REM ...AND A TABLE TO KEEP TRACK OF ALL
+   REM RPGIDS FOR ALL ASSETS, PROVIDES LOOKUP
+   REM OF PATH BY RPGID
+   #constant DATA_TABLE_LIBRARY "library"
+   dataSharedUpdateField(DATA_TABLE_LIBRARY, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
+
+   REM ...AND A TABLE TO KEEP TRACK OF
+   REM CURRENTLY-LOADED ASSETS, PROVIDES LOOKUP
+   REM OF ASSETID (DBPID FOR MESHES FOR EXAMPLE)
+   REM BY RPGID
+   #constant DATA_TABLE_ASSETS "assets"
+   dataSharedUpdateField(DATA_TABLE_ASSETS, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
+   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_ASSETS,DATA_ARGSEP)
+
    #constant DATA_FUNCTION_FAIL -1
    #constant DATA_FUNCTION_OK 1
    #constant DATA_KEY_DIRTY "dirty"
@@ -116,6 +136,54 @@ dataSharedSetup:
    #constant DATA_CLEAN 0
 
 return
+
+function dataSharedGetLibraryPath(rpgid as integer)
+
+   local retval$ as string
+
+   retval$ = dataSharedGetField(DATA_TABLE_LIBRARY, str$(rpgid), DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+   if retval$ = DATA_KEY_UNDEFINED
+      debugWrite(DEBUGWARN,"dataSharedGetLibraryPath: AssetID Not Found " + str$(rpgidAsset))
+   endif
+
+endfunction retval$
+
+function dataSharedGetAssetID(rpgid as integer)
+
+   local retval$ as string
+   local retval as integer
+
+   retval$ = dataSharedGetField(DATA_TABLE_ASSETS,str$(rpgid), DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+   if retval$ = DATA_KEY_UNDEFINED
+
+      REM ASSET HAS NOT ALREADY BEEN LOADED
+      REM CALL THE APPROPRIATE FUNCTION TO
+      REM DO LOADING BY ASSET EXTENSION
+
+      REM FIRST GET PATH WHERE ASSET IS
+      REM IS SUPPOSED TO BE
+      myPath$ = dataSharedGetLibraryPath(rpgid)
+
+      REM IF ASSET IS WHERE IT IS SUPPOSED
+      REM TO BE THEN LOAD IT
+      if file exist(myPath$)
+         ext$ = fast right$(myPath$,3)
+         select ext$
+            case "dbo"
+               mydbpid = systemSharedGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)
+               meshClientLoad(myPath$,mydbpid)
+               dataSharedUpdateField(DATA_TABLE_ASSETS, str$(rpgid), str$(mydbpid))
+               retval = mydbpid
+            endcase
+         endselect
+      else
+         debugWrite(DEBUGWARN,"dataSharedGetAssetID: Invalid Asset Path " + myPath$)
+      endif
+   else
+      retval = intval(retval$)
+   endif
+
+endfunction retval
 
 function dataSharedApply(tableName$ as string, idx as integer)
 
@@ -129,7 +197,7 @@ function dataSharedApply(tableName$ as string, idx as integer)
 
    first lookup tableid
    while lookup is valid(tableid)
-      key$ = lookup current key$(tableid)
+      key$ = fast lower$(lookup current key$(tableid))
       value$ = lookup current value$(tableid)
       valint = intval(value$)
       valflt = floatval(value$)
@@ -140,12 +208,17 @@ function dataSharedApply(tableName$ as string, idx as integer)
          case "rpgid" : dataobject(idx).rpgid = valint : endcase
          case "dbpid" : dataobject(idx).dbpid = valint : endcase
          case "clientid" : dataobject(idx).clientid = valint : endcase
-         case "inUse" : dataobject(idx).inUse = valbol : endcase
+         case "meshid" : dataobject(idx).meshid = valint : endcase
+         case "meshdata" : dataobject(idx).meshdata = value$ : endcase
+         case "animspeed" : dataobject(idx).animspeed = valflt : endcase
+         case "animswitchtime" : dataobject(idx).animswitchtime = valint : endcase
+         case "animswitchcase" : dataobject(idx).animswitchcase = valint : endcase
+         case "inuse" : dataobject(idx).inUse = valbol : endcase
          case "class" : dataobject(idx).class = valint : endcase
          case "key" : dataobject(idx).key = value$ : endcase
-         case "accountName" : dataobject(idx).accountName = value$ : endcase
-         case "avatarName" : dataobject(idx).avatarName = value$ : endcase
-         case "listenChannels" : dataobject(idx).listenChannels = value$ : endcase
+         case "accountname" : dataobject(idx).accountName = value$ : endcase
+         case "avatarname" : dataobject(idx).avatarName = value$ : endcase
+         case "listenchannels" : dataobject(idx).listenChannels = value$ : endcase
          case "posx" : dataobject(idx).posx = valflt : endcase
          case "posy" : dataobject(idx).posy = valflt : endcase
          case "posz" : dataobject(idx).posz = valflt : endcase
@@ -159,16 +232,16 @@ function dataSharedApply(tableName$ as string, idx as integer)
          case "jumpy" : dataobject(idx).jumpy = valflt : endcase
          case "jumpz" : dataobject(idx).jumpz = valflt : endcase
          case "jumpry" : dataobject(idx).jumpry = valflt : endcase
-         case "atTarget" : dataobject(idx).atTarget = valbol : endcase
-         case "jumpReady" : dataobject(idx).jumpReady = valbol : endcase
+         case "attarget" : dataobject(idx).atTarget = valbol : endcase
+         case "jumpready" : dataobject(idx).jumpReady = valbol : endcase
          case "velxz" : dataobject(idx).velxz = valflt : endcase
          case "speed" : dataobject(idx).speed = valflt : endcase
          case "vely" : dataobject(idx).vely = valflt : endcase
          case "veljump" : dataobject(idx).veljump = valflt : endcase
          case "ground" : dataobject(idx).ground = valbol : endcase
          case "gravity" : dataobject(idx).gravity = valbol : endcase
-         case "collisionType" : dataobject(idx).collisionType = valint : endcase
-         case "collisionGroup" : dataobject(idx).collisionGroup = valint : endcase
+         case "collisiontype" : dataobject(idx).collisionType = valint : endcase
+         case "collisiongroup" : dataobject(idx).collisionGroup = valint : endcase
 
       endselect
 
@@ -202,6 +275,11 @@ function dataSharedReset(idx as integer)
    dataObject(idx).rpgid = 0
    dataObject(idx).dbpid = 0
    dataObject(idx).clientid = 0
+   dataObject(idx).meshid = 0
+   dataObject(idx).meshdata = ""
+   dataObject(idx).animspeed = 1.0
+   dataObject(idx).animswitchtime = 0
+   dataObject(idx).animswitchcase = 1
    dataObject(idx).inUse = 0
    dataObject(idx).class = 0
    dataObject(idx).key = ""
@@ -275,7 +353,7 @@ function dataSharedGetFree(mySearch as integer)
 
 endfunction retval
 
-function dataSharedSetKeys(idx as integer, rpgid as integer, dbpid as integer)
+function dataSharedSetKeys(idx as integer, rpgid as integer, dbpid as integer, meshid as integer)
 
    if idx <1 or idx> array count(dataObject()) then exitfunction SYSTEM_INVALID_ID
 
@@ -285,6 +363,7 @@ function dataSharedSetKeys(idx as integer, rpgid as integer, dbpid as integer)
 
    dataObject(idx).rpgid=rpgid
    dataObject(idx).dbpid=dbpid
+   dataObject(idx).meshid=meshid
 
    if rpgid <> 0
       dataSharedUpdateField(DATA_TABLE_PIDX, str$(rpgid), str$(idx))
@@ -426,7 +505,7 @@ function dataSharedLoadTable(filename$, table$)
                   read string SYSTEM_FILE_DATA, dat$
                   split string dat$, DATA_NAMEVALSEP
                   dataSharedUpdateField(originalTable$, get split word$(1), get split word$(2))
-                  debugWrite(DEBUGINFO,"dataSharedLoad Template Applied: " + get split word$(1) + " from table " + filename$ + " added to table " + originalTable$)
+                  debugWrite(DEBUGINFO,"dataSharedLoad template: " + get split word$(1) + " from table " + filename$ + " added to table " + originalTable$)
                   templateLoaded = 1
                endwhile
             close file SYSTEM_FILE_DATA
@@ -478,7 +557,7 @@ function dataSharedSave()
                open to write SYSTEM_FILE_DATA, filename$
                FIRST LOOKUP myTable
                while lookup is valid(myTable)
-                  if LOOKUP CURRENT KEY$(myTable) <> "" AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_DIRTY
+                  if LOOKUP CURRENT KEY$(myTable) <> "" AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_DIRTY  AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_UNDEFINED
                      dat$ = LOOKUP CURRENT KEY$(myTable) + DATA_NAMEVALSEP + LOOKUP CURRENT VALUE$(myTable)
                      write string SYSTEM_FILE_DATA, dat$
                   endif

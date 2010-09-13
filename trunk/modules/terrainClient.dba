@@ -30,7 +30,7 @@ function terrainClientLoad(terrainID, detailID)
    dataObject(idxTerrain).class = DATA_CLASS_TERRAIN
 
    if dataObject(idxTerrain).dbpid = 0
-      mydbpid = dataSharedSetKeys(idxTerrain, 0, 0)
+      mydbpid = dataSharedSetKeys(idxTerrain, 0, 0, 0)
       debugWrite(DEBUGINFO,"terrainLoad: dbpid found for terrain " + str$(mydbpid))
    else
       if object exist(dataObject(idxTerrain).dbpid)
