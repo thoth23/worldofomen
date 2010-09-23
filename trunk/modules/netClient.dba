@@ -266,6 +266,9 @@ function netClientChangeChannels(operationID as integer, channel$ as string)
 
 endfunction
 
+function netClientRequestDetails(myrpgid as integer)
+endfunction
+
 function netClientParseTCP()
 
     length = mn Get Int(RecvPacket)
@@ -285,9 +288,7 @@ function netClientParseTCP()
           REM TURN ON CHAT WHEN WE RECEIVE A MESSAGE
           REM ON A CHANNEL WE ARE LISTENING TO
           systemSharedGameModeAdd(SYSTEM_MODE_CHAT_ACTIVE)
-          keyboardUpdateChatReceive(message$)
-          `guiUpdateChatReceive(message$)
-          rem not yet
+          guiClientUpdateChatRcv(message$)
        endcase
 
        case NETS_RPGID
@@ -295,12 +296,15 @@ function netClientParseTCP()
          debugWrite(DEBUGINFO,"Local Player RPGID received: " + str$(temp))
 
          idxPlayer = playerClientCreate(temp,0,1)
+         guiClientShowWindow(GUI_WINDOW_MAIN)
          REM WE ARE TEMPORARILY CHEATING HERE - THE SERVER
          REM WILL NEED TO SEND THE BASE MESH RPGID BY THIS
          REM POINT AS WELL - WE'LL USE A WELL-KNOWN VALUE
          REM FOR NOW (1 for the player_base.dbo)
 
          systemSharedGameModeAdd(SYSTEM_MODE_LOGON_COMPLETE)
+         systemSharedGameModeAdd(SYSTEM_MODE_GUI)
+         
        endcase
 
     endselect

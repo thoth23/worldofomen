@@ -10,6 +10,10 @@ playerClientSetup:
    REM THIS IS THE DATAOBJECT ARRAY INDEX
    REM FOR THE LOCAL PLAYER OBJECT
 
+   global idxTarget as integer
+   REM THIS IS THE DATAOBJECT ARRAY INDEX
+   REM FOR THE LOCAL PLAYER'S TARGET
+
    global playerMoveX as float
    global playerMoveZ as float
    global playerJumping as boolean
@@ -283,5 +287,11 @@ function playerClientRotateY(mydbpid as integer, angle# as float)
          rotate object mydbpid, 0.0, angle#, 0.0
       endif
    endif
+
+endfunction
+
+function playerClientTeleport(idx as integer)
+   REM WLL TELEPORT A PLAYER TO THEIR
+   REM PRE-ESTABLISHED TEL COORDINATES
 
 endfunction

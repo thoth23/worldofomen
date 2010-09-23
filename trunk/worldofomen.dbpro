@@ -1,52 +1,75 @@
 ; **** Dark BASIC Professional Project File ****
+; **** Written by Synergy Editor ****
 version=DBP1.00
 project name=World of OMEN
 
-
-
 ; **** source file information ****
 main=modules\worldofomen.dba
-include1=modules\debugShared.dba
-include2=modules\debugClient.dba
-include3=modules\systemShared.dba
-include4=modules\systemClient.dba
+LineMain=63
+include1=modules\cameraClient.dba
+LineInclude1=0
+include2=modules\collisionClient.dba
+LineInclude2=0
+include3=modules\collisionShared.dba
+LineInclude3=0
+include4=modules\commandClient.dba
+LineInclude4=31
 include5=modules\commandShared.dba
-include6=modules\commandClient.dba
-include7=modules\encryptShared.dba
-include8=modules\netShared.dba
-include9=modules\netClient.dba
-include10=modules\dataShared.dba
-include11=modules\dataClient.dba
-include12=modules\mouseClient.dba
-include13=modules\keyboardShared.dba
-include14=modules\keyboardClient.dba
-include15=modules\guiClient.dba
-include16=modules\cameraClient.dba
+LineInclude5=64
+include6=modules\dataClient.dba
+LineInclude6=0
+include7=modules\dataShared.dba
+LineInclude7=117
+include8=modules\debugClient.dba
+LineInclude8=0
+include9=modules\debugShared.dba
+LineInclude9=0
+include10=modules\effectClient.dba
+LineInclude10=0
+include11=modules\encryptShared.dba
+LineInclude11=0
+include12=modules\goalShared.dba
+LineInclude12=0
+include13=modules\guiClient.dba
+LineInclude13=3069
+include14=modules\inventoryShared.dba
+LineInclude14=0
+include15=modules\keyboardClient.dba
+LineInclude15=54
+include16=modules\keyboardShared.dba
+LineInclude16=0
 include17=modules\meshClient.dba
-include18=modules\collisionShared.dba
-include19=modules\collisionClient.dba
-include20=modules\terrainClient.dba
-include21=modules\skyClient.dba
+LineInclude17=0
+include18=modules\mouseClient.dba
+LineInclude18=61
+include19=modules\netClient.dba
+LineInclude19=298
+include20=modules\netShared.dba
+LineInclude20=0
+include21=modules\playerClient.dba
+LineInclude21=0
 include22=modules\playerShared.dba
-include23=modules\playerClient.dba
-include24=modules\abilityShared.dba
-include25=modules\inventoryShared.dba
-include26=modules\goalShared.dba
-include27=modules\effectClient.dba
-include28=modules\soundClient.dba
-; The compiler only needs to read the final source from this entry - the editor
-; handles include files, concatenation, etc.
-final source=_Temp.dbsource
-
-; The editor will replace any references to %temp in the EXE path/filename
-executable=World of OMEN.exe
+LineInclude22=0
+include23=modules\skillShared.dba
+LineInclude23=0
+include24=modules\skyClient.dba
+LineInclude24=0
+include25=modules\soundClient.dba
+LineInclude25=0
+include26=modules\systemClient.dba
+LineInclude26=8
+include27=modules\systemShared.dba
+LineInclude27=29
+include28=modules\terrainClient.dba
+LineInclude28=25
 
 ; **** Executable Information  ***
-; build types: exe, media, installer,alone
+; build types: exe, media, installer, alone
+executable=World of OMEN.exe
 build type=exe
-
 ; ** Media file compression **
 compression=NO
+
 ; ** Media file encryption **
 encryption=NO
 ; ** Display the card options screen window? **
@@ -55,19 +78,23 @@ card options window=NO
 ; **** debugger information ****
 ; If the editor sets this to yes, it is running in debug mode
 CLI=NO
+CommandLineArguments=
 
 ; **** display mode information ****
 app title=World of OMEN
-; graphics mode options: fullscreen, window, desktop,fulldesktop, hidden
+
+; graphics mode options: fullscreen, window, desktop, fulldesktop, hidden
 graphics mode=window
 fullscreen resolution=640x480x32
+
 ; arbitrary sizes are valid for windowed mode
 window resolution=640x480
 
 ; **** External Files Information ****
+
 ; **** Media ****
+; Example entries: media1=graphics\*.jpg
 media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\
-; example entries: media1=graphics\*.jpg
 
 ; **** Icons ****
 
@@ -77,10 +104,21 @@ media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Proje
 VerComments=
 VerCompany=
 VerFileDesc=
-VerFileNumber=
-VerInternal=
+VerFileNumber=v1.0
+VerInternal=v1.0
 VerCopyright=
 VerTrademark=
 VerFilename=
 VerProduct=
 VerProductNumber=v1.0
+
+; **** To Do ****
+
+; **** Comments ****
+comments1=
+
+; **** Advanced (setup.ini) configuration ****
+RemoveSafetyCode=NO
+SafeArrays=YES
+LocalTempFolder=NO
+ExternaliseDLLS=NO

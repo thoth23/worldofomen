@@ -6,48 +6,75 @@ REM
 
 systemSharedSetup:
 
-    #constant SYSTEM_TYPE_FILE     1
-    #constant SYSTEM_TYPE_LOOKUP   2
-    #constant SYSTEM_TYPE_TICKER   3
-    #constant SYSTEM_TYPE_OBJECT   4
-    #constant SYSTEM_TYPE_IMAGE    5
-    #constant SYSTEM_TYPE_SPRITE   6
-    #constant SYSTEM_TYPE_SOUND    7
-    #constant SYSTEM_TYPE_MUSIC    8
-    #constant SYSTEM_TYPE_VECTOR3  9
-    #constant SYSTEM_TYPE_VECTOR4  10
+   global systemGameTitle$ as string
+   systemGameTitle$ = "World of OMEN (FROST), Lakehome Games, 2010-2011"
+   
+   
+   #constant SYSTEM_TYPE_FILE     1
+   #constant SYSTEM_TYPE_LOOKUP   2
+   #constant SYSTEM_TYPE_TICKER   3
+   #constant SYSTEM_TYPE_OBJECT   4
+   #constant SYSTEM_TYPE_IMAGE    5
+   #constant SYSTEM_TYPE_SPRITE   6
+   #constant SYSTEM_TYPE_SOUND    7
+   #constant SYSTEM_TYPE_MUSIC    8
+   #constant SYSTEM_TYPE_VECTOR3  9
+   #constant SYSTEM_TYPE_VECTOR4  10
+   
+   #constant SYSTEM_TYPE_MAX      10
+   
+   global dim systemNextID(SYSTEM_TYPE_MAX) as integer
+   
+   #constant SYSTEM_SEARCH_FAST    1
+   #constant SYSTEM_SEARCH_REUSE   2
+      
+   REM RESERVED FILE ID MANAGEMENT
+   global SYSTEM_FILE_DATA_SERVERID as integer
+   SYSTEM_FILE_DATA_SERVERID = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+   global SYSTEM_FILE_DATA_GUID as integer
+   SYSTEM_FILE_DATA_GUID = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+   global SYSTEM_FILE_TABLE as integer
+   SYSTEM_FILE_TABLE = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+   global SYSTEM_FILE_DATA as integer
+   SYSTEM_FILE_DATA = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+   global SYSTEM_FILE_NET as integer
+   SYSTEM_FILE_NET = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
+   global SYSTEM_FILE_GUI as integer
+   SYSTEM_FILE_GUI = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
 
-    #constant SYSTEM_TYPE_MAX      10
 
-    global dim systemNextID(SYSTEM_TYPE_MAX) as integer
+   REM SYSTEM MODES
+   global systemMode as integer
+   global systemModeLast as integer
+   #constant SYSTEM_MODE_CHAT_ACTIVE      %1
+   #constant SYSTEM_MODE_QUITTING         %10
+   #constant SYSTEM_MODE_NET_TCP          %100
+   #constant SYSTEM_MODE_LOGON_COMPLETE   %1000
+   #constant SYSTEM_MODE_TERRAIN          %10000
+   #constant SYSTEM_MODE_GUI              %100000
+   #constant SYSTEM_MODE_GUI_DRAG         %1000000
+   #constant SYSTEM_MODE_DROPDOWN         %10000000
+   #constant SYSTEM_MODE_CAMERA           %100000000
+   #constant SYSTEM_MODE_MOVE             %1000000000
+   #constant SYSTEM_MODE_NET_UDP          %10000000000
+   #constant SYSTEM_MODE_NET_KEYBOARD     %100000000000
+   #constant SYSTEM_MODE_MESSAGE_BOX      %1000000000000
+   #constant SYSTEM_MODE_EDIT             %10000000000000
+   #constant SYSTEM_MODE_ZONE_TRY         %100000000000000
+   #constant SYSTEM_MODE_ZONING           %1000000000000000
+   #constant SYSTEM_MODE_ZONE_SERVER      %10000000000000000
+   #constant SYSTEM_MODE_METRICS          %100000000000000000
+   #constant SYSTEM_MODE_USING_OBJECT     %1000000000000000000
+   #constant SYSTEM_MODE_GUI_TRACK        %10000000000000000000
+   #constant SYSTEM_MODE_NO_CULL          %100000000000000000000
+   #constant SYSTEM_MODE_SHOW_ALL         %1000000000000000000000
+   #constant SYSTEM_MODE_AREA_TERRAIN     %10000000000000000000000
+   #constant SYSTEM_MODE_AV_SELECT        %100000000000000000000000
+   
+   REM PLAYER STATUS MODES
+   #constant PLAYER_STATUS_NO_KEY         1
+   #constant PLAYER_STATUS_OK            99
 
-    #constant SYSTEM_SEARCH_FAST    1
-    #constant SYSTEM_SEARCH_REUSE   2
-
-    global systemNextFileID as integer
-    global systemNextFreeLookup as integer
-    global systemNextFreeTicker as integer
-
-    REM RESERVED FILE ID MANAGEMENT
-    global SYSTEM_FILE_DATA_SERVERID as integer
-    SYSTEM_FILE_DATA_SERVERID = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
-    global SYSTEM_FILE_DATA_GUID as integer
-    SYSTEM_FILE_DATA_GUID = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
-    global SYSTEM_FILE_TABLE as integer
-    SYSTEM_FILE_TABLE = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
-    global SYSTEM_FILE_DATA as integer
-    SYSTEM_FILE_DATA = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
-    global SYSTEM_FILE_NET as integer
-    SYSTEM_FILE_NET = systemSharedGetFree(SYSTEM_TYPE_FILE,SYSTEM_SEARCH_FAST)
-
-    REM SYSTEM MODES
-    global systemMode as integer
-    global systemModeLast as integer
-    #constant SYSTEM_MODE_CHAT_ACTIVE         %1
-    #constant SYSTEM_MODE_QUITTING            %10
-    #constant SYSTEM_MODE_NET_TCP             %100
-    #constant SYSTEM_MODE_LOGON_COMPLETE      %1000
-    #constant SYSTEM_MODE_TERRAIN             %10000
 
     #constant SYSTEM_INVALID_ID  -1
     #constant SYSTEM_FUNCTION_FAILED -1

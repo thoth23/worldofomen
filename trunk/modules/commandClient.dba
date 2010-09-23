@@ -28,7 +28,7 @@ function commandRun(cmd$ as string)
          cmdFound = 1
          if playerObjectExist(idxPlayer)
             msg$="x:" + systemSharedRound$(object position x(dataObject(idxPlayer).dbpid),2) + ",y:" + systemSharedRound$(object position y(dataObject(idxPlayer).dbpid),2) + ",z:" + systemSharedRound$(object position z(dataObject(idxPlayer).dbpid),2)
-            keyboardUpdateChatReceive(msg$)
+            guiClientUpdateChatRcv(msg$)
          endif
       endcase
 
@@ -48,6 +48,27 @@ function commandRun(cmd$ as string)
          cmdfound = 1
          netClientCurrentChannel = upper$(get split word$(2))
       endcase
+      
+      case "/switchtowindow"
+         cmdfound = 1
+         guiClientSwitchToWindow(get split word$(2))
+      endcase
+
+      case "/hidewindow"
+         cmdfound = 1
+         guiClientKillWindow(get split word$(2))
+      endcase
+
+      case "/showwindow"
+         cmdfound = 1
+         guiClientShowWindow(get split word$(2))
+      endcase
+
+      case "/togglewindow"
+         cmdfound = 1
+         guiClientToggleWindow(get split word$(2))
+      endcase
+
 
    endselect
 
