@@ -6,6 +6,7 @@ Rem ***** Main Source File *****
 sync on : sync rate 0
 
 gosub systemSharedSetup
+gosub systemClientSetup
 gosub debugSharedSetup
 gosub debugClientSetup
 debugStart()
@@ -43,20 +44,30 @@ terrainClientLoad(2,2)
 
 gosub meshClientSetup
 gosub playerClientSetup
+gosub skillSharedSetup
+
+gosub guiClientSetup
 
 REM Parse the command line for commands
 commandSharedParseStartup()
 
 repeat
+   
+   systemDragMode = 0
 
    systemSharedUpdateGameTime()
 
-   keyboardClientPollTop()
+   
+   if (systemMode && SYSTEM_MODE_GUI)
+      mouseClientGetMove()
+      mouseClientProcessClicks()
+      guiClientUpdateGUI()
+   endif
 
    if (systemMode && SYSTEM_MODE_LOGON_COMPLETE)
-      mouseClientGetMove()
+      keyboardClientPoll()
       playerClientControl()
-      cameraClientFollow()
+      cameraClientFollow()      
    endif
 
    netClientMaintain()
@@ -67,9 +78,7 @@ repeat
 
    sync
 
-   keyboardClientPollBottom()
-   keyboardClientShowChat()
-
+   
 until (systemMode && SYSTEM_MODE_QUITTING) <> 0
 
 REM STOP FUNCTION HERE

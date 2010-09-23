@@ -2,4 +2,138 @@ REM *** Include File: modules\encryptShared.dba ***
 REM Created: 7/4/2010 11:00:52 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+REM
+
+FUNCTION DecryptString(aString$)
+  sLen = len (aString$)
+  for i = 1 to sLen step 16
+    ssLen = len (aString$)
+    hexPair$ = right$(aString$,16)
+    aString$ = left$(aString$,ssLen-16)
+    decryptedString$ = DecryptChars(hexPair$) + decryptedString$
+  next i
+  decryptedString$ = trimright$(decryptedString$," ")
+ENDFUNCTION decryptedString$
+
+
+FUNCTION EncryptString(aString$)
+  sLen = len (aString$)
+  for i = 1 to sLen
+    l$ = mid$(aString$,i)
+    inc i
+    r$ = mid$(aString$,i)
+    if r$ = ""
+      r$ = " "
+    endif
+    encryptedString$ = encryptedString$ + EncryptChars(l$,r$)
+  next i
+ENDFUNCTION encryptedString$
+
+
+FUNCTION EncryptChars(charL$, charR$)
+
+  asciNumL as DWORD
+  asciNumR as DWORD
+
+  randL = (rnd(8)+1)
+  randR = (rnd(8)+1)
+
+  asciNumL$ = str$(randL) + str$(asc(charL$))
+  asciNumR$ = str$(randR) + str$(asc(charR$))
+
+  asciNumL = val(asciNumL$)
+  asciNumR = val(asciNumR$)
+
+  if DF_EncryptDirectSet (asciNumL,asciNumR)
+    lEncrypt as dword
+    lEncrypt = DF_EncryptDirectGetL()
+
+    lEncryptString$ = hex$(lEncrypt)
+    while len(lEncryptString$) < 8
+      lEncryptString$ = lEncryptString$ + "#"
+    endwhile
+
+    rEncrypt as dword
+    rEncrypt = DF_EncryptDirectGetR()
+
+    rEncryptString$ = hex$(rEncrypt)
+    while len(rEncryptString$) < 8
+      rEncryptString$ = rEncryptString$ + "#"
+    endwhile
+
+    lrEncrypted$ = lEncryptString$ + rEncryptString$
+  endif
+ENDFUNCTION lrEncrypted$
+
+
+
+FUNCTION DecryptChars(encryptedPair$)
+
+  lEncrypted as dword
+  rEncrypted as dword
+
+  lEncrypted$=fast left$(encryptedPair$,8)
+
+  hashCheck = 8
+  isLHashed$=mid$(lEncrypted$,hashCheck)
+  while isLHashed$ = "#" and hashCheck > 0
+    dec hashCheck
+    lEncrypted$ = fast left$(lEncrypted$,hashCheck)
+    isLHashed$=mid$(lEncrypted$,hashCheck)
+  endwhile
+
+  rEncrypted$=fast right$(encryptedPair$,8)
+
+  hashCheck = 8
+  isRHashed$=mid$(rEncrypted$,hashCheck)
+  while isRHashed$ = "#" and hashCheck > 0
+    dec hashCheck
+    rEncrypted$ = fast left$(rEncrypted$,hashCheck)
+    isRHashed$=mid$(rEncrypted$,hashCheck)
+  endwhile
+
+  lEncrypted = hex2dec(lEncrypted$)
+  rEncrypted = hex2dec(rEncrypted$)
+
+  if DF_DecryptDirectSet (lEncrypted,rEncrypted)
+
+    lDecrypt as dword
+    lDecrypt$ = str$(DF_DecryptDirectGetL())
+    lDecrypt$ = fast right$(lDecrypt$,len(lDecrypt$)-1)
+    lDecrypt = val(lDecrypt$)
+
+    rDecrypt as dword
+    rDecrypt$ = str$(DF_DecryptDirectGetR())
+    rDecrypt$ = fast right$(rDecrypt$,len(rDecrypt$)-1)
+    rDecrypt = val(rDecrypt$)
+
+    lrDecrypted$ = chr$(lDecrypt) + chr$(rDecrypt)
+  endif
+ENDFUNCTION lrDecrypted$
+
+
+FUNCTION Hex2Dec(s$)
+  p as DWORD
+  n as DWORD
+  d as DWORD
+  for p = 0 to len(s$) - 1
+    n = asc(upper$(mid$(s$, len(s$) - p))) - 48
+    d = d + (n - (n > 9) * 7) * 16 ^ p
+  next p
+ENDFUNCTION d
+
+FUNCTION encryptCreateKey()
+
+    local key$ as string
+    i=rnd(16)+16
+    for j = 1 to i
+        key$ = key$ + chr$((rnd(25)+65))
+    next j
+    key$ = remove all$(key$,"\")
+
+ENDFUNCTION key$
+
+FUNCTION encryptSetKey(key$ as string)
+   DF_SetPass (key$)
+ENDFUNCTION
+

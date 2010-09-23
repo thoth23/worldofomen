@@ -24,6 +24,8 @@ dataSharedSetup:
       animSwitchTime as integer
       animSwitchCase as integer
       inUse as boolean
+      noSave as boolean
+      alwaysHide as boolean
       class as integer
       key as string
       accountName as string
@@ -52,6 +54,14 @@ dataSharedSetup:
       gravity as boolean
       collisionType as integer
       collisionGroup as integer
+      level as integer
+      rank as integer
+      gadgetIDNameTag as integer
+      healthCurrent as float
+      manaCurrent as float
+      healthMax as float
+      manaMax as float
+      goalMask as string
    endtype
 
    global dim dataObject() as dataObjectType
@@ -77,7 +87,9 @@ dataSharedSetup:
    #constant DATA_CLASS_PLAYER_LOCAL   3
    #constant DATA_CLASS_PLAYER_REMOTE  4
    #constant DATA_CLASS_NPC            5
-   #constant DATA_CASSS_PROP           6
+   #constant DATA_CLASS_ENEMY          6
+   #constant DATA_CLASSS_PROP          7
+   #constant DATA_CLASS_GUI            8
 
 
    REM LOOKUP LOOP STATE CANT BE EVALUATED, SO IT CANNOT
@@ -102,8 +114,10 @@ dataSharedSetup:
 
    REM NOW LET'S SET THE LOCALIZATION
    REM AND SET IT TO NOSAVE
+   #constant DATA_TABLE_GUI "gui"
+   #constant DATA_TABLE_GUIDATA "guidata"
    global DATA_LANGUAGE as string
-   DATA_LANGUAGE = dataSharedGetField("gui", "language", "language/english",DATA_CREATE)
+   DATA_LANGUAGE = dataSharedGetField(DATA_TABLE_GUI, "language", "language/english",DATA_CREATE)
    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_LANGUAGE,DATA_ARGSEP)
 
    REM ...AND A TABLE TO ALLOW FAST LOOKUPS
@@ -185,7 +199,88 @@ function dataSharedGetAssetID(rpgid as integer)
 
 endfunction retval
 
+function dataSharedEval(key$ as string, value$ as string, idx as integer)
+
+   valint = intval(value$)
+   valflt = floatval(value$)
+   valbol = clamp(valint,0,1)
+
+   select key$
+
+      case "rpgid" : dataobject(idx).rpgid = valint : endcase
+      case "dbpid" : dataobject(idx).dbpid = valint : endcase
+      case "clientid" : dataobject(idx).clientid = valint : endcase
+      case "meshid" : dataobject(idx).meshid = valint : endcase
+      case "meshdata" : dataobject(idx).meshdata = value$ : endcase
+      case "animspeed" : dataobject(idx).animspeed = valflt : endcase
+      case "animswitchtime" : dataobject(idx).animswitchtime = valint : endcase
+      case "animswitchcase" : dataobject(idx).animswitchcase = valint : endcase
+      case "inuse" : dataobject(idx).inUse = valbol : endcase
+      case "nosave" : dataobject(idx).noSave = valbol : endcase
+      case "alwayshide" : dataobject(idx).alwaysHide = valbol : endcase
+      case "class" : dataobject(idx).class = valint : endcase
+      case "key" : dataobject(idx).key = value$ : endcase
+      case "accountname" : dataobject(idx).accountName = value$ : endcase
+      case "avatarname" : dataobject(idx).avatarName = value$ : endcase
+      case "listenchannels" : dataobject(idx).listenChannels = value$ : endcase
+      case "posx" : dataobject(idx).posx = valflt : endcase
+      case "posy" : dataobject(idx).posy = valflt : endcase
+      case "posz" : dataobject(idx).posz = valflt : endcase
+      case "rotx" : dataobject(idx).rotx = valflt : endcase
+      case "roty" : dataobject(idx).roty = valflt : endcase
+      case "rotz" : dataobject(idx).rotz = valflt : endcase
+      case "sclx" : dataobject(idx).sclx = valflt : endcase
+      case "scly" : dataobject(idx).scly = valflt : endcase
+      case "sclz" : dataobject(idx).sclz = valflt : endcase
+      case "jumpx" : dataobject(idx).jumpx = valflt : endcase
+      case "jumpy" : dataobject(idx).jumpy = valflt : endcase
+      case "jumpz" : dataobject(idx).jumpz = valflt : endcase
+      case "jumpry" : dataobject(idx).jumpry = valflt : endcase
+      case "attarget" : dataobject(idx).atTarget = valbol : endcase
+      case "jumpready" : dataobject(idx).jumpReady = valbol : endcase
+      case "velxz" : dataobject(idx).velxz = valflt : endcase
+      case "speed" : dataobject(idx).speed = valflt : endcase
+      case "vely" : dataobject(idx).vely = valflt : endcase
+      case "veljump" : dataobject(idx).veljump = valflt : endcase
+      case "ground" : dataobject(idx).ground = valbol : endcase
+      case "gravity" : dataobject(idx).gravity = valbol : endcase
+      case "collisiontype" : dataobject(idx).collisionType = valint : endcase
+      case "collisiongroup" : dataobject(idx).collisionGroup = valint : endcase
+      case "level" : dataobject(idx).level = valint : endcase
+      case "rank" : dataobject(idx).rank = valint : endcase
+      case "gadgetidnametag" : dataObject(idx).gadgetIDNameTag = valueint : endcase
+      case "healthcurrent" : dataObject(idx).healthCurrent = valueflt : endcase
+      case "manacurrent" : dataObject(idx).manaCurrent = valueflt : endcase
+      case "healthmax" : dataObject(idx).healthMax = valueflt : endcase
+      case "manamax" : dataObject(idx).manaMax = valueflt : endcase
+      case "goalmask" : dataObject(idx).goalMask = value$ : endcase
+
+   endselect
+
+endfunction
+
+function dataSharedParse(attributes$ as string, idx as integer)
+
+      REM PARSE A SPACE-DELIMITED ATTRIBUTE LIST
+      REM AND APPY IT TO AN ARRAY
+
+      split string attributes$, " "
+      local dim dat$(split count())
+      for i = 1 to split count()
+         dat$(i) = get split word$(i)
+      next
+      for i = 1 to array count(dat$())
+         split string dat$(i), "="
+         key$ = get split word$(1)
+         value$ = get split word$(2)
+         dataSharedEval(key$, value$, idx)
+      next
+
+endfunction
+
 function dataSharedApply(tableName$ as string, idx as integer)
+
+   REM APPLY A TABLE TO AN ARRAY
 
    local tableid as integer
    local retval as integer
@@ -199,51 +294,8 @@ function dataSharedApply(tableName$ as string, idx as integer)
    while lookup is valid(tableid)
       key$ = fast lower$(lookup current key$(tableid))
       value$ = lookup current value$(tableid)
-      valint = intval(value$)
-      valflt = floatval(value$)
-      valbol = clamp(valint,0,1)
 
-      select key$
-
-         case "rpgid" : dataobject(idx).rpgid = valint : endcase
-         case "dbpid" : dataobject(idx).dbpid = valint : endcase
-         case "clientid" : dataobject(idx).clientid = valint : endcase
-         case "meshid" : dataobject(idx).meshid = valint : endcase
-         case "meshdata" : dataobject(idx).meshdata = value$ : endcase
-         case "animspeed" : dataobject(idx).animspeed = valflt : endcase
-         case "animswitchtime" : dataobject(idx).animswitchtime = valint : endcase
-         case "animswitchcase" : dataobject(idx).animswitchcase = valint : endcase
-         case "inuse" : dataobject(idx).inUse = valbol : endcase
-         case "class" : dataobject(idx).class = valint : endcase
-         case "key" : dataobject(idx).key = value$ : endcase
-         case "accountname" : dataobject(idx).accountName = value$ : endcase
-         case "avatarname" : dataobject(idx).avatarName = value$ : endcase
-         case "listenchannels" : dataobject(idx).listenChannels = value$ : endcase
-         case "posx" : dataobject(idx).posx = valflt : endcase
-         case "posy" : dataobject(idx).posy = valflt : endcase
-         case "posz" : dataobject(idx).posz = valflt : endcase
-         case "rotx" : dataobject(idx).rotx = valflt : endcase
-         case "roty" : dataobject(idx).roty = valflt : endcase
-         case "rotz" : dataobject(idx).rotz = valflt : endcase
-         case "sclx" : dataobject(idx).sclx = valflt : endcase
-         case "scly" : dataobject(idx).scly = valflt : endcase
-         case "sclz" : dataobject(idx).sclz = valflt : endcase
-         case "jumpx" : dataobject(idx).jumpx = valflt : endcase
-         case "jumpy" : dataobject(idx).jumpy = valflt : endcase
-         case "jumpz" : dataobject(idx).jumpz = valflt : endcase
-         case "jumpry" : dataobject(idx).jumpry = valflt : endcase
-         case "attarget" : dataobject(idx).atTarget = valbol : endcase
-         case "jumpready" : dataobject(idx).jumpReady = valbol : endcase
-         case "velxz" : dataobject(idx).velxz = valflt : endcase
-         case "speed" : dataobject(idx).speed = valflt : endcase
-         case "vely" : dataobject(idx).vely = valflt : endcase
-         case "veljump" : dataobject(idx).veljump = valflt : endcase
-         case "ground" : dataobject(idx).ground = valbol : endcase
-         case "gravity" : dataobject(idx).gravity = valbol : endcase
-         case "collisiontype" : dataobject(idx).collisionType = valint : endcase
-         case "collisiongroup" : dataobject(idx).collisionGroup = valint : endcase
-
-      endselect
+      dataSharedEval(key$, value$, idx)
 
       next lookup tableid
    endwhile
@@ -281,6 +333,7 @@ function dataSharedReset(idx as integer)
    dataObject(idx).animswitchtime = 0
    dataObject(idx).animswitchcase = 1
    dataObject(idx).inUse = 0
+   dataObject(idx).noSave = 0
    dataObject(idx).class = 0
    dataObject(idx).key = ""
    dataObject(idx).accountName = ""
@@ -309,6 +362,13 @@ function dataSharedReset(idx as integer)
    dataObject(idx).gravity = 1
    dataObject(idx).collisionType = COLLISION_TYPE_BOX
    dataObject(idx).collisionGroup = COLLISION_GROUP_WORLD
+   dataObject(idx).level = 0
+   dataObject(idx).rank = 0
+   dataObject(idx).healthCurrent = 1.0
+   dataObject(idx).manaCurrent = 1.0
+   dataObject(idx).healthMax = 1.0
+   dataObject(idx).manaMax = 1.0
+
 
    REM ARRAY STARTS LIFE CLEAN
    dataObject(idx).dirty = DATA_CLEAN
@@ -505,7 +565,7 @@ function dataSharedLoadTable(filename$, table$)
                   read string SYSTEM_FILE_DATA, dat$
                   split string dat$, DATA_NAMEVALSEP
                   dataSharedUpdateField(originalTable$, get split word$(1), get split word$(2))
-                  debugWrite(DEBUGINFO,"dataSharedLoad template: " + get split word$(1) + " from table " + filename$ + " added to table " + originalTable$)
+                  `debugWrite(DEBUGINFO,"dataSharedLoad template: " + get split word$(1) + " from table " + filename$ + " added to table " + originalTable$)
                   templateLoaded = 1
                endwhile
             close file SYSTEM_FILE_DATA

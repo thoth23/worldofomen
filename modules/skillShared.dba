@@ -1,0 +1,18 @@
+REM *** Include File: modules\skillShared.dba ***
+REM Created: 9/18/2010 11:22:35 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
+REM
+
+skillSharedSetup:
+
+   type skillType
+      name as string
+      graphic as string
+      skillID as integer
+      skillSetID as integer
+   endtype
+   global dim skill() as skillType
+   add to queue skill()
+
+return

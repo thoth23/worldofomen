@@ -32,7 +32,7 @@ function commandSharedParse(dat$ as string)
    endif
 
    if instr(dat$, COMMAND_CHAR_CMDSEP) = 0
-      commandTranspose(dat$)
+      commandSharedTranspose(dat$)
       exitfunction
    endif
 
@@ -46,7 +46,7 @@ function commandSharedParse(dat$ as string)
    REM QUEUES ARE FIFO, SO ALWAYS RUN COMMAND 1
    REM AND THEN REMOVE FROM QUEUE
    while array count(commandList()) > 0
-      commandTranspose(commandList(1))
+      commandSharedTranspose(commandList(1))
       remove from queue commandList()
    endwhile
 
@@ -64,14 +64,14 @@ function commandSharedParseStartup()
 
 endfunction
 
-function commandTranspose(cmd$ as string)
+function commandSharedTranspose(cmd$ as string)
 
    REM WE NEED TO SEE IF THE COMMAND CONTAINS ANY FIELD NAMES
    REM AND IF SO, REPLACE THE FIELD NAMES WITH THE VALUES OF THE
    REM FIELDS.  FIELD VALUES WILL BE IN THE INPUT TABLE IN THE DATA
    REM SYSTEM.  ALSO CHECK TO SEE IF THE FIELD IS A MEMBER OF THE
    REM COMMAND_MASKED_FIELDS, AND IF SO, IT SHOULD BE MASKED IN THE LOG
-
+   
    if cmd$ = ""
       exitfunction
    endif
@@ -92,12 +92,21 @@ function commandTranspose(cmd$ as string)
          cmd$ = replace all$(cmd$,myKey$,myVal$)
       endif
    next
-
-   debugWrite(DEBUGINFO,"Command Run: " + log$)
-
+   
+   debugWrite(DEBUGINFO,"commandRun: " + log$)
    commandRun(cmd$)
 
 
 endfunction
+
+function commandSharedUnMask(cmd$)
+   cmd$ = replace all$(cmd$," ","_")
+   cmd$ = replace all$(cmd$,"\"," ")
+endfunction cmd$
+
+function commandSharedMask(cmd$)
+   cmd$ = replace all$(cmd$," ","\")
+   cmd$ = replace all$(cmd$,"_"," ")
+endfunction cmd$
 
 

@@ -28,6 +28,12 @@ mouseClientSetup:
 
    global mouseInvert as boolean
    mouseInvert = 0
+   
+   #constant MOUSE_PICK_INTERVAL 200
+   global mouseTickerPick as integer
+   mouseTickerPick = systemSharedGetFree(SYSTEM_TYPE_TICKER, SYSTEM_SEARCH_FAST)
+   MAKE TICKER mouseTickerPick, MOUSE_PICK_INTERVAL
+
 
 return
 
@@ -37,6 +43,39 @@ function mouseClientGetMove()
     mouseMoveY# = mouseMoveY()
     mouseMoveZ# = mouseMoveZ()
     mouseMoveMax# = max(abs(mouseMoveX#),abs(mouseMoveY#))
+
+endfunction
+
+function mouseClientProcessClicks()
+
+    if mouseButtonDown = 1
+        if mouseClick() = 0
+            REM THIS IS A MOUSE_BUTTON_UP EVENT
+
+            mouseButtonDown = 0
+            mousePickGadget = 0
+            mousePickWindow = 0
+            guiButtonPressed = 0
+
+            systemSharedGameModeRemove(SYSTEM_MODE_GUI_DRAG)
+            if systemGuiController = 0
+                systemSharedGameModeRemove(SYSTEM_MODE_CHAT_ACTIVE)
+                GUI_ACTIVE_GADGET = 0
+            endif
+        else
+            exitfunction
+        endif
+    else
+        if mouseClick() <> 0
+            REM THIS IS A MOUSE_BUTTON_DOWN EVENT
+            mouseButtonDown = 1
+        endif
+    endif
+
+endfunction
+
+
+function mouseChange(mouseType as integer)
 
 endfunction
 
