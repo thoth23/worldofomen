@@ -191,14 +191,14 @@ function systemSharedGetFree(myType as integer, mySearch as integer)
 
 endfunction retval
 
-function systemSharedPushFree(myType as integer)
+function systemSharedPushFree(myType as integer,amount as integer)
 
    if myType < 1 or myType > SYSTEM_TYPE_MAX
       debugWrite(DEBUGERROR,"systemSharedPushFree: Invalid Type Specified: " + str$(myType))
       exitfunction
    endif
 
-   inc systemNextID(myType)
+   inc systemNextID(myType), amount
 
 endfunction
 
@@ -318,26 +318,6 @@ function systemSharedRound$(myFloat as float, places as integer)
    endif
 
 endfunction retval$
-
-function floatval(float$ as string)
-
-   local retval as float
-   local a as integer
-   local b as float
-   local c as float
-
-   a = instr(float$,".")
-   if a > 0
-      sd = len(float$) - a
-      b = intval(float$)
-      c = intval(fast right$(float$,sd))
-      c = c / (10^sd)
-      retval = b + c
-   else
-      retval = intval(float$)
-   endif
-
-endfunction retval
 
 function systemSharedPercentBetween(i as float, j as float, pct as float)
 

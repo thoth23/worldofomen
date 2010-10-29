@@ -6,67 +6,7 @@ REM
 
 dataSharedSetup:
 
-   REM ARRAY DOCUMENTATION
-
-   REM RPGID IS THE ROLE-PLAY ID - THIS IS THE UNIQUE ID OF THE PLAYER CONTROLLED BY THE SERVER
-   REM DBPID IS THE DARKBASIC PRO ID - THIS IS THE UNIQUE ID OF THE DBP OBJECT THE PLAYER IS ASSOCIATED WITH ON THE CLIENT
-   REM KEY IS THE UNIQUE SESSION KEY FOR THE PLAYER SESSION ASSIGNED AND MAINTAINED BY THE SERVER
-   REM MESHID IS THE SOURCE MESH DBPID THAT THE CURRENT ASSET WAS CLONED FROM
-
-   type dataObjectType
-      dirty as boolean
-      rpgid as integer
-      dbpid as integer
-      clientid as integer
-      meshid as integer
-      meshdata as string
-      animSpeed as float
-      animSwitchTime as integer
-      animSwitchCase as integer
-      inUse as boolean
-      noSave as boolean
-      alwaysHide as boolean
-      class as integer
-      key as string
-      accountName as string
-      avatarName as string
-      listenChannels as string
-      posx as float
-      posy as float
-      posz as float
-      rotx as float
-      roty as float
-      rotz as float
-      sclx as float
-      scly as float
-      sclz as float
-      jumpx as float
-      jumpy as float
-      jumpz as float
-      jumpry as float
-      atTarget as boolean
-      jumpReady as boolean
-      velxz as float
-      speed as float
-      vely as float
-      veljump as float
-      ground as boolean
-      gravity as boolean
-      collisionType as integer
-      collisionGroup as integer
-      level as integer
-      rank as integer
-      gadgetIDNameTag as integer
-      healthCurrent as float
-      manaCurrent as float
-      healthMax as float
-      manaMax as float
-      goalMask as string
-   endtype
-
-   global dim dataObject() as dataObjectType
-   add to queue dataObject()
-
+   
    #constant DATA_NO_CREATE   0
    #constant DATA_CREATE      1
 
@@ -82,28 +22,15 @@ dataSharedSetup:
    #constant DATA_FILE_EXT          ".ini"
    #constant DATA_TEMPLATE_KEY      "inherit"
 
-   #constant DATA_CLASS_SKYBOX         1
-   #constant DATA_CLASS_TERRAIN        2
-   #constant DATA_CLASS_PLAYER_LOCAL   3
-   #constant DATA_CLASS_PLAYER_REMOTE  4
-   #constant DATA_CLASS_NPC            5
-   #constant DATA_CLASS_ENEMY          6
-   #constant DATA_CLASSS_PROP          7
-   #constant DATA_CLASS_GUI            8
-
-
-   REM LOOKUP LOOP STATE CANT BE EVALUATED, SO IT CANNOT
-   REM BE PERSISTED, SO WE NEED TO USE A CSV LIST FOR
-   REM MAINTAINING TABLES THAT SHOULD NOT BE SAVED
    global DATA_NOSAVE_TABLES as string
 
    REM BASE TABLE MUST BE BUILT MANUALLY
    REM AND SET IT TO NOSAVE
-   #constant DATA_TABLES            1
+   #constant DATA_TABLES            99
    #constant DATA_TNAME_TABLES      "tables"
    make lookup DATA_TABLES
    set lookup DATA_TABLES, DATA_TNAME_TABLES, str$(DATA_TABLES)
-   systemSharedPushFree(SYSTEM_TYPE_LOOKUP)
+   systemSharedPushFree(SYSTEM_TYPE_LOOKUP,99)
    debugWrite(DEBUGINFO,"dataSharedSetup: root table set to name " + DATA_TNAME_TABLES + " with tableid: " + str$(DATA_TABLES))
    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TNAME_TABLES,DATA_ARGSEP)
 
@@ -120,14 +47,6 @@ dataSharedSetup:
    DATA_LANGUAGE = dataSharedGetField(DATA_TABLE_GUI, "language", "language/english",DATA_CREATE)
    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_LANGUAGE,DATA_ARGSEP)
 
-   REM ...AND A TABLE TO ALLOW FAST LOOKUPS
-   REM OF PLAYER ARRAY INDEX BY RPGID - THIS
-   REM IS FOR FAST REVERSE-LOOKUPS
-   REM AND SET IT TO NOSAVE
-   #constant DATA_TABLE_PIDX "pidx"
-   #constant DATA_TABLE_DIDX "didx"
-   dataSharedUpdateField(DATA_TABLE_PIDX, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
-   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_PIDX,DATA_ARGSEP)
 
    REM ...AND A TABLE TO KEEP TRACK OF ALL
    REM RPGIDS FOR ALL ASSETS, PROVIDES LOOKUP
@@ -174,7 +93,7 @@ function dataSharedGetAssetID(rpgid as integer)
       REM CALL THE APPROPRIATE FUNCTION TO
       REM DO LOADING BY ASSET EXTENSION
 
-      REM FIRST GET PATH WHERE ASSET IS
+      REM FIRST GET PATH WHERE ASSET
       REM IS SUPPOSED TO BE
       myPath$ = dataSharedGetLibraryPath(rpgid)
 
@@ -199,70 +118,10 @@ function dataSharedGetAssetID(rpgid as integer)
 
 endfunction retval
 
-function dataSharedEval(key$ as string, value$ as string, idx as integer)
-
-   valint = intval(value$)
-   valflt = floatval(value$)
-   valbol = clamp(valint,0,1)
-
-   select key$
-
-      case "rpgid" : dataobject(idx).rpgid = valint : endcase
-      case "dbpid" : dataobject(idx).dbpid = valint : endcase
-      case "clientid" : dataobject(idx).clientid = valint : endcase
-      case "meshid" : dataobject(idx).meshid = valint : endcase
-      case "meshdata" : dataobject(idx).meshdata = value$ : endcase
-      case "animspeed" : dataobject(idx).animspeed = valflt : endcase
-      case "animswitchtime" : dataobject(idx).animswitchtime = valint : endcase
-      case "animswitchcase" : dataobject(idx).animswitchcase = valint : endcase
-      case "inuse" : dataobject(idx).inUse = valbol : endcase
-      case "nosave" : dataobject(idx).noSave = valbol : endcase
-      case "alwayshide" : dataobject(idx).alwaysHide = valbol : endcase
-      case "class" : dataobject(idx).class = valint : endcase
-      case "key" : dataobject(idx).key = value$ : endcase
-      case "accountname" : dataobject(idx).accountName = value$ : endcase
-      case "avatarname" : dataobject(idx).avatarName = value$ : endcase
-      case "listenchannels" : dataobject(idx).listenChannels = value$ : endcase
-      case "posx" : dataobject(idx).posx = valflt : endcase
-      case "posy" : dataobject(idx).posy = valflt : endcase
-      case "posz" : dataobject(idx).posz = valflt : endcase
-      case "rotx" : dataobject(idx).rotx = valflt : endcase
-      case "roty" : dataobject(idx).roty = valflt : endcase
-      case "rotz" : dataobject(idx).rotz = valflt : endcase
-      case "sclx" : dataobject(idx).sclx = valflt : endcase
-      case "scly" : dataobject(idx).scly = valflt : endcase
-      case "sclz" : dataobject(idx).sclz = valflt : endcase
-      case "jumpx" : dataobject(idx).jumpx = valflt : endcase
-      case "jumpy" : dataobject(idx).jumpy = valflt : endcase
-      case "jumpz" : dataobject(idx).jumpz = valflt : endcase
-      case "jumpry" : dataobject(idx).jumpry = valflt : endcase
-      case "attarget" : dataobject(idx).atTarget = valbol : endcase
-      case "jumpready" : dataobject(idx).jumpReady = valbol : endcase
-      case "velxz" : dataobject(idx).velxz = valflt : endcase
-      case "speed" : dataobject(idx).speed = valflt : endcase
-      case "vely" : dataobject(idx).vely = valflt : endcase
-      case "veljump" : dataobject(idx).veljump = valflt : endcase
-      case "ground" : dataobject(idx).ground = valbol : endcase
-      case "gravity" : dataobject(idx).gravity = valbol : endcase
-      case "collisiontype" : dataobject(idx).collisionType = valint : endcase
-      case "collisiongroup" : dataobject(idx).collisionGroup = valint : endcase
-      case "level" : dataobject(idx).level = valint : endcase
-      case "rank" : dataobject(idx).rank = valint : endcase
-      case "gadgetidnametag" : dataObject(idx).gadgetIDNameTag = valueint : endcase
-      case "healthcurrent" : dataObject(idx).healthCurrent = valueflt : endcase
-      case "manacurrent" : dataObject(idx).manaCurrent = valueflt : endcase
-      case "healthmax" : dataObject(idx).healthMax = valueflt : endcase
-      case "manamax" : dataObject(idx).manaMax = valueflt : endcase
-      case "goalmask" : dataObject(idx).goalMask = value$ : endcase
-
-   endselect
-
-endfunction
-
-function dataSharedParse(attributes$ as string, idx as integer)
+function dataSharedParse(tablename$ as string, attributes$ as string)
 
       REM PARSE A SPACE-DELIMITED ATTRIBUTE LIST
-      REM AND APPY IT TO AN ARRAY
+      REM AND APPY IT TO A TABLE
 
       split string attributes$, " "
       local dim dat$(split count())
@@ -273,166 +132,54 @@ function dataSharedParse(attributes$ as string, idx as integer)
          split string dat$(i), "="
          key$ = get split word$(1)
          value$ = get split word$(2)
-         dataSharedEval(key$, value$, idx)
+         dataSharedUpdateField(tablename$, key$, value$)
       next
+      
+      dataSharedUpdateField(tablename$, DATA_KEY_DIRTY, str$(DATA_DIRTY))
+      
+      undim dat$()
 
 endfunction
 
-function dataSharedApply(tableName$ as string, idx as integer)
 
-   REM APPLY A TABLE TO AN ARRAY
+function dataSharedCopyTable(sourceTableid as integer, targetTableid as integer)
 
-   local tableid as integer
+   REM COPY ALL THE ATTRIBUTES
+   REM FOR ONE TABLE INTO ANOTHER
+   REM TABLE
+
    local retval as integer
    retval = DATA_FUNCTION_OK
 
-   if idx < 1 or idx > array count(dataObject()) then exitfunction SYSTEM_INVALID_ID
-   tableid = dataSharedTableExist(tableName$)
-   if tableid = DATA_FUNCTION_FAIL then exitfunction DATA_FUNCTION_FAIL
+   if sourceTableid = DATA_FUNCTION_FAIL then exitfunction DATA_FUNCTION_FAIL
+   if targetTableid = DATA_FUNCTION_FAIL then exitfunction DATA_FUNCTION_FAIL
+   
+   first lookup sourceTableid
+   while lookup is valid(sourceTableid)
+      key$ = fast lower$(lookup current key$(sourceTableid))
+      value$ = lookup current value$(sourceTableid)
 
-   first lookup tableid
-   while lookup is valid(tableid)
-      key$ = fast lower$(lookup current key$(tableid))
-      value$ = lookup current value$(tableid)
+      dataSharedUpdateFieldFast(targetTableid, key$, value$)
 
-      dataSharedEval(key$, value$, idx)
-
-      next lookup tableid
+      next lookup sourceTableid
    endwhile
 
-   REM TABLE IS NOW CLEAN, BUT ARRAY IS DIRTY
-   set lookup tableid, DATA_KEY_DIRTY, str$(DATA_CLEAN)
-   dataObject(idx).dirty = DATA_DIRTY
-
+   set lookup targetTableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
+   
 endfunction retval
 
-function dataSharedReset(idx as integer)
+function dataSharedResetTable(tableid as integer)
+   
+      delete lookup tableid
+   
+endfunction
 
-   local tableid as integer
+function dataSharedDeleteRecord(tableid as integer, key$ as string)
 
-   if idx <1 or idx> array count(dataObject()) then exitfunction SYSTEM_INVALID_ID
+      delete lookup tableid, key$
+      
+endfunction
 
-   REM DELETE RPGID REVERSE LOOKUP
-   tableid = dataSharedTableExist(DATA_TABLE_PIDX)
-   if tableid > 0
-      delete lookup tableid, str$(dataObject(idx).rpgid)
-   endif
-
-   REM DELETE DARKNET CLIENTID REVERSE LOOKUP
-   tableid = dataSharedTableExist(DATA_TABLE_DIDX)
-   if tableid > 0
-      delete lookup tableid, str$(dataObject(idx).clientid)
-   endif
-
-   dataObject(idx).rpgid = 0
-   dataObject(idx).dbpid = 0
-   dataObject(idx).clientid = 0
-   dataObject(idx).meshid = 0
-   dataObject(idx).meshdata = ""
-   dataObject(idx).animspeed = 1.0
-   dataObject(idx).animswitchtime = 0
-   dataObject(idx).animswitchcase = 1
-   dataObject(idx).inUse = 0
-   dataObject(idx).noSave = 0
-   dataObject(idx).class = 0
-   dataObject(idx).key = ""
-   dataObject(idx).accountName = ""
-   dataObject(idx).avatarName = ""
-   dataObject(idx).listenChannels = NET_LISTEN_CHANNELS_DEFAULT
-   dataObject(idx).posx = 0.0
-   dataObject(idx).posy = 0.0
-   dataObject(idx).posz = 0.0
-   dataObject(idx).rotx = 0.0
-   dataObject(idx).roty = 0.0
-   dataObject(idx).rotz = 0.0
-   dataObject(idx).sclx = 1.0
-   dataObject(idx).scly = 1.0
-   dataObject(idx).sclz = 1.0
-   dataObject(idx).jumpx = 0.0
-   dataObject(idx).jumpy = 0.0
-   dataObject(idx).jumpz = 0.0
-   dataObject(idx).jumpry = 0.0
-   dataObject(idx).atTarget = 0
-   dataObject(idx).jumpReady = 0
-   dataObject(idx).velxz = 0.0
-   dataObject(idx).speed = 14.0
-   dataObject(idx).vely = 0.0
-   dataObject(idx).veljump = 0.0
-   dataObject(idx).ground = 0
-   dataObject(idx).gravity = 1
-   dataObject(idx).collisionType = COLLISION_TYPE_BOX
-   dataObject(idx).collisionGroup = COLLISION_GROUP_WORLD
-   dataObject(idx).level = 0
-   dataObject(idx).rank = 0
-   dataObject(idx).healthCurrent = 1.0
-   dataObject(idx).manaCurrent = 1.0
-   dataObject(idx).healthMax = 1.0
-   dataObject(idx).manaMax = 1.0
-
-
-   REM ARRAY STARTS LIFE CLEAN
-   dataObject(idx).dirty = DATA_CLEAN
-
-endfunction 0
-
-function dataSharedGetFree(mySearch as integer)
-
-   local retval as integer
-   retval = SYSTEM_INVALID_ID
-
-   mySearch=clamp(mySearch, DATA_SEARCH_FAST, DATA_SEARCH_REUSE)
-
-   select mySearch
-      case DATA_SEARCH_FAST
-         add to queue dataObject()
-         retval = array count(dataObject())
-      endcase
-      case DATA_SEARCH_REUSE
-         found = 0
-         ctr = 0
-         while ctr < array count(dataObject()) and found = 0
-            inc ctr
-            if dataObject(ctr).inUse=0
-               found = 1
-               retval = ctr
-            endif
-         endwhile
-
-         if found = 0
-            debugWrite(DEBUGWARN,"dataSharedGetFree Optimization: method Search requested with Fast result")
-            add to queue dataObject()
-            retval = array count(dataObject())
-         else
-            retval = ctr
-         endif
-      endcase
-   endselect
-
-   dataSharedReset(retval)
-   dataObject(retval).inUse = 1
-
-endfunction retval
-
-function dataSharedSetKeys(idx as integer, rpgid as integer, dbpid as integer, meshid as integer)
-
-   if idx <1 or idx> array count(dataObject()) then exitfunction SYSTEM_INVALID_ID
-
-   if dbpid = 0
-      dbpid = systemSharedGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)
-   endif
-
-   dataObject(idx).rpgid=rpgid
-   dataObject(idx).dbpid=dbpid
-   dataObject(idx).meshid=meshid
-
-   if rpgid <> 0
-      dataSharedUpdateField(DATA_TABLE_PIDX, str$(rpgid), str$(idx))
-   endif
-
-   REM CHANGING ANY ATTRIBUTE MAKES ARRAY DIRTY
-   dataObject(idx).dirty = DATA_DIRTY
-
-endfunction dbpid
 
 function dataSharedGetField(tableName$, key$, default$,createFlag as boolean)
 
@@ -453,56 +200,80 @@ function dataSharedGetField(tableName$, key$, default$,createFlag as boolean)
          else
             `debugWrite(DEBUGINFO,"dataSharedGetField lookup not found for table: " + str$(tableid) + " and key: " + key$ + ", using default: " + default$)
             if createFlag = 1
-               dataSharedUpdateField(tablename$,key$,default$)
+               dataSharedUpdateField(tableName$,key$,default$)
             endif
             retval$ = default$
          endif
       else
-         debugWrite(DEBUGWARN,"dataSharedGetField table lookup invalid for table: " + tablename$)
+         debugWrite(DEBUGWARN,"dataSharedGetField table lookup invalid for table: " + tableName$)
       endif
    else
       `debugWrite(DEBUGWARN,"dataSharedGetField table lookup not found for table,key,value: " + tablename$ + "," + key$ + "," + default$)
       if createFlag = 1
-         tableID = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
-         make lookup tableID
-         set lookup DATA_TABLES, tablename$, str$(tableID)
+         tableid = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
+         make lookup tableid
+         set lookup DATA_TABLES, tableName$, str$(tableid)
          set lookup tableid, key$, default$
 
-         REM CHANGING ANY ATTRIBUTE MAKES TABLE DIRTY
          set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
 
-         debugWrite(DEBUGINFO,"dataSharedGetField created table    " + str$(tableID) + ". " + tableName$)
+         debugWrite(DEBUGINFO,"dataSharedGetField created table    " + str$(tableid) + ". " + tableName$)
       endif
       retval$ = default$
    endif
 
 endfunction retval$
 
+function dataSharedGetFieldFast(tableid, key$)
+   
+   local retval$ as string
+   retval$ = DATA_KEY_UNDEFINED
+   
+   if search lookup(tableid, key$) = 1
+         if lookup is valid(tableid)
+            retval$ = lookup current value$(tableid)
+         endif      
+   endif
+   
+endfunction retval$
+
+function dataSharedUpdateFieldFast(tableid as integer, key$, value$)
+
+   if lookup exist(tableid) = 0
+      make lookup tableid
+   endif
+   
+   set lookup tableid, key$, value$
+   set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
+      
+endfunction
+
+
 
 function dataSharedUpdateField(tableName$, key$, value$)
    local tableid as integer
 
+   if tableName$ = "" then exitfunction DATA_FUNCTION_FAIL
    rem first find the tableID
    if search lookup (DATA_TABLES, tableName$) = 1
       if lookup is valid(DATA_TABLES)
          tableid = intval(LOOKUP CURRENT VALUE$(DATA_TABLES))
       endif
    else
-      tableID = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
-      make lookup tableID
-      set lookup DATA_TABLES, tableName$, str$(tableID)
-      debugWrite(DEBUGINFO,"dataSharedUpdateField created table " + str$(tableID) + ". " + tableName$)
+      tableid = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
+      make lookup tableid
+      set lookup DATA_TABLES, tableName$, str$(tableid)
+      debugWrite(DEBUGINFO,"dataSharedUpdateField created table " + str$(tableid) + ". " + tableName$)
    endif
 
    rem now set the key/value pair in the table
    set lookup tableid, key$, value$
 
-   REM CHANGING ANY ATTRIBUTE MAKES TABLE DIRTY
    set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
 
    `debugWrite(DEBUGINFO,"dataSharedUpdateField updated key " + key$ + " to " + value$ + " in table " + str$(tableID) + ". " + tableName$)
 
-endfunction
+endfunction tableid
 
 function dataSharedLoadAllTables()
 

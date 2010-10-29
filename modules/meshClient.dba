@@ -18,7 +18,7 @@ meshClientSetup:
    #constant MESH_ANIM_PLAY 1
 
    global MESH_DEFAULT_FPS as float
-   MESH_DEFAULT_FPS = floatval(dataSharedGetField("meshClient", "meshDefaultFPS", "24.0", DATA_CREATE))
+   MESH_DEFAULT_FPS = val(dataSharedGetField("meshClient", "meshDefaultFPS", "24.0", DATA_CREATE))
 
 
 return
@@ -29,17 +29,39 @@ function meshClientLoad(myPath$, mydbpid)
 
    if file exist(myPath$) = 0 then exitfunction MESH_FUNCTION_FAIL
    load object myPath$, mydbpid, 1
-   hide object mydbpid
-   exclude object on mydbpid
+   `hide object mydbpid
+   `exclude object on mydbpid
 
 endfunction MESH_FUNCTION_OK
 
-function meshClientCreate(idx as integer,  rpgidMesh as integer)
+function meshClientDestroy(mytid as integer)
+
+   mydbpid = intval(dataSharedGetFieldFast(mytid, "dbpid"))
+   if mydbpid = 0 then exitfunction
+   if object exist(mydbpid) = 0 then exitfunction
+   
+   delete object mydbpid
+   
+   dataSharedUpdateFieldFast(mytid, "dbpid", DATA_KEY_UNDEFINED)
+
+endfunction
+
+function meshClientCreate(mytid as integer)
 
    REM INSTANTIATE A MESH INTO THE WORLD
+   REM ASSUMES THE TABLE HAS BEEN
+   REM PRE-POPULATED WITH rpgidmesh
 
-   mydbpid = dataObject(idx).dbpid
-   if mydbpid < 1 then exitfunction MESH_FUNCTION_FAIL
+   mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+   myrpgidmesh = intval(dataSharedGetFieldFast(mytid,"rpgidmesh"))
+   if mydbpid = 0
+      mydbpid = systemSharedGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)
+      dataSharedUpdateFieldFast(mytid, "dbpid", str$(mydbpid))
+   else
+      if object exist(mydbpid)
+         delete object mydbpid
+      endif
+   endif
 
    REM WE'RE GOING TO MAKE A "HOLDER" OBJECT TO
    REM GUARANTEE WE HAVE THIS OBJECT RESERVED
@@ -51,10 +73,10 @@ function meshClientCreate(idx as integer,  rpgidMesh as integer)
    scale object mydbpid, 100, 5000, 100
    color object mydbpid, rgb(255,0,128)
 
-   myPath$ = dataSharedGetLibraryPath(rpgidMesh)
-   mysourcedbpid = dataSharedGetAssetID(rpgidMesh)
-   `debugWrite(DEBUGINFO,"meshClientCreate: target dbpid found for cloning " + str$(mydbpid))
-   `debugWrite(DEBUGINFO,"meshClientCreate: source dbpid found for cloning " + str$(mysourcedbpid))
+   myPath$ = dataSharedGetLibraryPath(myrpgidmesh)
+   mysourcedbpid = dataSharedGetAssetID(myrpgidmesh)
+   debugWrite(DEBUGINFO,"meshClientCreate: target dbpid found for cloning " + str$(mydbpid))
+   debugWrite(DEBUGINFO,"meshClientCreate: source dbpid found for cloning " + str$(mysourcedbpid))
 
    if mysourcedbpid < 1 then exitfunction MESH_FUNCTION_FAIL
    if object exist(mysourcedbpid) = 0 then exitfunction MESH_FUNCTION_FAIL
@@ -80,20 +102,42 @@ function meshClientCreate(idx as integer,  rpgidMesh as integer)
 
       REM APPLY THE DATA FILE TO THE ASSOCIATED
       REM DATAOBJECT ARRAY
-      dataSharedApply(datafilename$, idx)
-      dataObject(idx).meshdata = datafilename$
+      mytemplatetid = dataSharedTableExist(datafilename$)
+      dataSharedCopyTable(mytemplatetid, mytid)
+      dataSharedUpdateFieldFast(mytid, "meshdata",datafilename$)
 
    endif
+   
+   REM APPLY TRANSFORMS
+   posx# = val(dataSharedGetFieldFast(mytid,"posx"))
+   posy# = val(dataSharedGetFieldFast(mytid,"posy"))
+   posz# = val(dataSharedGetFieldFast(mytid,"posz"))
 
-   position object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
-   if dataObject(idx).sclx <> 1.0 or dataObject(idx).scly <> 1.0 or dataObject(idx).sclz <> 1.0
-      scale object mydbpid, (dataObject(idx).sclx * 100.0),(dataObject(idx).scly * 100.0),(dataObject(idx).sclz * 100.0)
+   rotx# = val(dataSharedGetFieldFast(mytid,"rotx"))
+   roty# = val(dataSharedGetFieldFast(mytid,"roty"))
+   rotz# = val(dataSharedGetFieldFast(mytid,"rotz"))
+   
+   sclx# = val(dataSharedGetFieldFast(mytid,"sclx"))
+   scly# = val(dataSharedGetFieldFast(mytid,"scly"))
+   sclz# = val(dataSharedGetFieldFast(mytid,"sclz"))
+   
+   colType = intval(dataSharedGetFieldFast(mytid,"collisiontype"))
+   colGroup = intval(dataSharedGetFieldFast(mytid,"collisiongroup"))
+   debugWrite(DEBUGINFO,"collisionType found to be " + str$(colType))
+   debugWrite(DEBUGINFO,"collisionGroup found to be " + str$(colGroup))
+
+   position object mydbpid, posx#,posy#,posz#
+   if sclx# <> 1 or scly# <> 1 or sclz# <> 1
+      if sclx# > 0 and scly# > 0 and sclz# > 0
+         scale object mydbpid, (sclx# * 100.0),(scly# * 100.0),(sclz# * 100.0)
+      endif
    endif
-   collisionClientSet(mydbpid,dataObject(idx).collisionType,dataObject(idx).collisionGroup)
+   myval = collisionClientSet(mydbpid,colType,colGroup)
+   debugWrite(DEBUGINFO,"collision Setup Result: " + str$(myval))
 
 endfunction MESH_FUNCTION_OK
 
-function meshClientAnimate(idx as integer, animName as string, loopPlay as boolean)
+function meshClientAnimate(mytid as integer, animName as string, loopPlay as boolean)
 
    local retval as integer
    local mydbpid as integer
@@ -104,26 +148,33 @@ function meshClientAnimate(idx as integer, animName as string, loopPlay as boole
 
    retval = MESH_FUNCTION_FAIL
    if animName = "" then exitfunction retval
-   mymeshdata = dataObject(idx).meshdata
-   if mymeshdata = "" then exitfunction retval
-   if playerObjectExist(idx) = PLAYER_FUNCTION_FAIL then exitfunction retval
-   mydbpid = dataObject(idx).dbpid
+   mymeshdata = dataSharedGetFieldFast(mytid,"meshdata")
+   if mymeshdata = "" or mymeshdata = DATA_KEY_UNDEFINED then exitfunction retval
+   
+   mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+   if mydbpid = 0 then exitfunction retval
+   if object exist(mydbpid) = 0 then exitfunction retval
+   
+   myAnimSwitchCase = intval(dataSharedGetFieldFast(mytid,"animSwitchCase"))
+   myAnimSwitchTime = intval(dataSharedGetFieldFast(mytid,"animSwitchTime"))
 
-   REM IF REQUESTING idle CHECK IF TIME TO SWITCH
+   REM IF REQUESTING AN ANIMATION GROUP, CHECK IF TIME TO SWITCH
    if fast right$(animName,1)="1"
-      caseAnimName = replace$(animName,"1",str$(dataObject(idx).animSwitchCase))
-      if systemGameTimeMilliseconds > dataObject(idx).animSwitchTime
-         dataObject(idx).animSwitchTime = systemGameTimeMilliseconds + intval(dataSharedGetField(mymeshdata, MESH_ANIMDATA_PREFIX + caseAnimName + MESH_ANIMDATA_SWITCH, DATA_KEY_UNDEFINED, DATA_NO_CREATE))
-         inc dataObject(idx).animSwitchCase
-         caseAnimName = replace$(animName,"1",str$(dataObject(idx).animSwitchCase))
+      caseAnimName = replace$(animName,"1",str$(myAnimSwitchCase))
+      if systemGameTimeMilliseconds > myAnimSwitchTime
+         myAnimSwitchTime = systemGameTimeMilliseconds + intval(dataSharedGetField(mymeshdata, MESH_ANIMDATA_PREFIX + caseAnimName + MESH_ANIMDATA_SWITCH, DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+         inc myAnimSwitchCase
+         caseAnimName = replace$(animName,"1",str$(myAnimSwitchCase))
+         dataSharedUpdateFieldFast(mytid, "animSwitchCase", str$(myAnimSwitchCase))
+         dataSharedUpdateFieldFast(mytid, "animSwitchTime", str$(myAnimSwitchTime))
       endif
      if dataSharedGetField(mymeshdata, MESH_ANIMDATA_PREFIX + caseAnimName + MESH_ANIMDATA_START, DATA_KEY_UNDEFINED, DATA_NO_CREATE) = DATA_KEY_UNDEFINED
-        dataObject(idx).animSwitchCase = 1
+        dataSharedUpdateFieldFast(mytid, "animSwitchCase", "1")
      else
         animName = caseAnimName
      endif
    else
-      dataObject(idx).animSwitchCase = 1
+      dataSharedUpdateFieldFast(mytid, "animSwitchCase", "1")
    endif
 
    temp$ = dataSharedGetField(mymeshdata, MESH_ANIMDATA_PREFIX + animName + MESH_ANIMDATA_START, DATA_KEY_UNDEFINED, DATA_NO_CREATE)
@@ -142,9 +193,9 @@ function meshClientAnimate(idx as integer, animName as string, loopPlay as boole
 
             REM SET SPEED IF AVAILABLE
             if temp$ = DATA_KEY_UNDEFINED
-               dataObject(idx).animspeed = 1.0
+               dataSharedUpdateFieldFast(mytid, "animspeed", "1.0")
             else
-               dataObject(idx).animspeed =  floatval(temp$)
+               dataSharedUpdateFieldFast(mytid, "animspeed", temp$)
             endif
 
             if loopPlay = MESH_ANIM_LOOP
@@ -160,29 +211,33 @@ function meshClientAnimate(idx as integer, animName as string, loopPlay as boole
 endfunction retval
 
 function meshClientStopAnimation(idx)
-
-   REM STOP ALL ANIMATIONS
+   
    local mydbpid as integer
-   if playerObjectExist(idx) = PLAYER_FUNCTION_FAIL then exitfunction
-   mydbpid = dataObject(idx).dbpid
-
+  
+   mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+   if mydbpid = 0 then exitfunction MESH_FUNCTION_FAIL
+   if object exist(mydbpid) = 0 then exitfunction MESH_FUNCTION_FAIL
    stop object mydbpid
    set object frame mydbpid, 1
 
-endfunction
+endfunction MESH_FUNCTION_OK
 
-function meshClientRegulate(idx as integer)
+function meshClientRegulate(mytid as integer)
 
    REM REGULATE THE ANIMATION SPEED
    local mydbpid as integer
-   if playerObjectExist(idx) = PLAYER_FUNCTION_FAIL then exitfunction
-   mydbpid = dataObject(idx).dbpid
-
+   local myanimspeed as float
+  
+   mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+   if mydbpid = 0 then exitfunction MESH_FUNCTION_FAIL
+   if object exist(mydbpid) = 0 then exitfunction MESH_FUNCTION_FAIL
+   myanimspeed = val(dataSharedGetFieldFast(mytid,"animspeed"))
+   
    REM MESHES ARE SAVED WITH MESH_DEFAULT_FPS ANIMATION SPEED
-   speed# = (MESH_DEFAULT_FPS / systemGameFPS) * dataObject(idx).animSpeed * 100.0
+   speed# = (MESH_DEFAULT_FPS / systemGameFPS) * myanimspeed * 100.0
    speed# = clamp(speed#, 1.0, 100.0)
    set object speed mydbpid, speed#
 
-endfunction
+endfunction MESH_FUNCTION_OK
 
 

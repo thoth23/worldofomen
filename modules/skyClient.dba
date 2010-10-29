@@ -6,7 +6,7 @@ REM
 
 skyClientSetup:
 
-   global idxSkybox as integer
+   global dbpidSkybox as integer
    #constant SKYBOX_PATH "media/skybox/"
 
 return
@@ -18,42 +18,34 @@ function skyClientLoad(skyboxID)
    if skyboxID = 0 then exitfunction -1
    meshName$ = "skybox"+str$(skyboxID)+".x"
 
-   if idxSkybox = 0
-      idxSkybox = dataSharedGetFree(DATA_SEARCH_REUSE)
-      debugWrite(DEBUGINFO,"skyboxClientLoad: idxSkybox set to " + str$(idxSkybox))
+   if dbpidSkybox = 0
+      dbpidSkybox = systemSharedGetFree(SYSTEM_TYPE_OBJECT,SYSTEM_SEARCH_REUSE)
+      debugWrite(DEBUGINFO,"skyboxClientLoad: dbpidSkybox set to " + str$(dbpidSkybox))
    endif
 
-   dataObject(idxSkybox).class = DATA_CLASS_SKYBOX
-
-   if dataObject(idxSkybox).dbpid = 0
-      mydbpid = dataSharedSetKeys(idxSkybox, 0, 0, 0)
-      debugWrite(DEBUGINFO,"skyboxClientLoad: dbpid found for skybox " + str$(mydbpid))
-   else
-      if object exist(dataObject(idxSkybox).dbpid)
-         delete object dataObject(idxSkybox).dbpid
-      endif
-      mydbpid = dataObject(idxSkybox).dbpid
+   if object exist(dbpidSkybox)
+      delete object dbpidSkybox
    endif
-
+   
    filename$ = SKYBOX_PATH + meshName$
 
    if file exist(filename$)
-      load object filename$, mydbpid
-      set object light mydbpid, 0
-      set object texture mydbpid, 3, 1
-      position object mydbpid, 1000, 2000, 4000
-      scale object mydbpid, 30000, 30000, 30000
+      load object filename$, dbpidSkybox
+      set object light dbpidSkybox, 0
+      set object texture dbpidSkybox, 3, 1
+      position object dbpidSkybox, 1000, 2000, 4000
+      scale object dbpidSkybox, 30000, 30000, 30000
    else
       debugWrite(DEBUGWARN,"skyboxClientLoad: Skybox not found: " + filename$)
    endif
 
-endfunction idxSkybox
+endfunction dbpidSkybox
 
 function skyClientUnload()
 
-   if idxSkybox = 0 then exitfunction -1
-   if object exist(dataObject(idxSkybox).dbpid) = 0 then exitfunction -2
-   delete object dataObject(idxSkybox).dbpid
+   if dbpidSkybox = 0 then exitfunction -1
+   if object exist(dbpidSkybox) = 0 then exitfunction -2
+   delete object dbpidSkybox
 
 endfunction 0
 

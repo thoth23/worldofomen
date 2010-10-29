@@ -35,10 +35,11 @@ return
 
 
 function cameraClientFollow()
-
-   if playerObjectExist(idxPlayer) = 0 then exitfunction
-   mydbpid = dataObject(idxPlayer).dbpid
-
+   
+   mydbpid = intval(dataSharedGetFieldFast(tidPlayer, "dbpid"))
+   if mydbpid = 0 then exitfunction
+   if object exist(mydbpid) = 0 then exitfunction
+   
    position camera 0, object position x(mydbpid), object position y(mydbpid) + 1, object position z(mydbpid)
 
    if (mouseclick() && MOUSE_BUTTON_RIGHT)

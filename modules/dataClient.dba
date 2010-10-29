@@ -7,5 +7,29 @@ REM
 dataClientSetup:
 
    #constant DATA_PATH "data/"
-
+   global dataClientNextTableID as integer
+   
+   #constant DATA_CLIENT_RPGID "RPGIDLookup"
+   global DATA_CLIENT_RTABLEID as integer
+      
 return
+
+function dataClientCreateRPGIDLookup()
+    
+   dataSharedUpdateField(DATA_CLIENT_RPGID, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
+   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_CLIENT_RPGID,DATA_ARGSEP)   
+   DATA_CLIENT_RTABLEID = dataSharedTableExist(DATA_CLIENT_RPGID)
+   debugWrite(DEBUGINFO,"netClientSetup: rpgid table set to name " + DATA_CLIENT_RPGID + " with tableid: " + str$(DATA_CLIENT_RTABLEID))
+   
+endfunction
+
+function dataClientGetFreeTableid(searchType as integer)
+   
+   REM ALL CLIENT TABLES ARE IN DOMAIN 0
+   REM AND ARE TEMPORARY, SO WE CAN
+   REM SIMPLIFY THE PROCESS OF GETTING 
+   REM A CLIENT GUID
+   
+   inc dataClientNextTableID
+   
+endfunction dataClientNextTableID

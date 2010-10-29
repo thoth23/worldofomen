@@ -57,9 +57,9 @@ function keyboardClientPoll()
    REM DO NOT ACCEPT KEYBOARD INPUT
    REM AS MOVEMENT WHEN EDITING TEXT
    if (systemMode && SYSTEM_MODE_CHAT_ACTIVE) = 0
-      playerMoveZ = keystate(keyboardMoveForward) - keystate(keyboardMoveBackward)
-      playerMoveX = keystate(keyboardStrafeLeft) - keystate(keyboardStrafeRight)
-      playerJumping = keystate(keyboardJump)
+      playerMoveZ = keystate(KEYBOARD_MOVE_FORWARD) - keystate(KEYBOARD_MOVE_BACKWARD)
+      playerMoveX = keystate(KEYBOARD_STRAFE_LEFT) - keystate(KEYBOARD_STRAFE_RIGHT)
+      playerJumping = keystate(KEYBOARD_JUMP)
    endif
 
    if keyboardKeyDown = 1

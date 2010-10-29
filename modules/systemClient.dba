@@ -8,4 +8,9 @@ systemClientSetup:
 
    global systemGuiController as boolean
    
+   REM SET REFRESH AT 60 FRAMES/SEC
+   global systemTickerSync as integer
+   systemTickerSync = systemSharedGetFree(SYSTEM_TYPE_TICKER,SYSTEM_SEARCH_FAST)
+   MAKE TICKER systemTickerSync,  16
+      
 return
