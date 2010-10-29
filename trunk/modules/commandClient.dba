@@ -26,10 +26,11 @@ function commandRun(cmd$ as string)
 
       case "/loc"
          cmdFound = 1
-         if playerObjectExist(idxPlayer)
-            msg$="x:" + systemSharedRound$(object position x(dataObject(idxPlayer).dbpid),2) + ",y:" + systemSharedRound$(object position y(dataObject(idxPlayer).dbpid),2) + ",z:" + systemSharedRound$(object position z(dataObject(idxPlayer).dbpid),2)
+            mydbpid = intval(dataSharedGetFieldFast(tidPlayer, "dbpid"))
+            if mydbpid = 0 then exitfunction
+            if object exist(mydbpid) = 0 then exitfunction
+            msg$="x:" + systemSharedRound$(object position x(mydbpid),2) + ",y:" + systemSharedRound$(object position y(mydbpid),2) + ",z:" + systemSharedRound$(object position z(mydbpid),2)
             guiClientUpdateChatRcv(msg$)
-         endif
       endcase
 
       case "/listen"
@@ -45,12 +46,12 @@ function commandRun(cmd$ as string)
       endcase
 
       case "/setchannel"
-         cmdfound = 1
+         cmdFound = 1
          netClientCurrentChannel = upper$(get split word$(2))
       endcase
       
       case "/switchtowindow"
-         cmdfound = 1
+         cmdFound = 1
          guiClientSwitchToWindow(get split word$(2))
       endcase
 
@@ -60,12 +61,12 @@ function commandRun(cmd$ as string)
       endcase
 
       case "/showwindow"
-         cmdfound = 1
+         cmdFound = 1
          guiClientShowWindow(get split word$(2))
       endcase
 
       case "/togglewindow"
-         cmdfound = 1
+         cmdFound = 1
          guiClientToggleWindow(get split word$(2))
       endcase
 

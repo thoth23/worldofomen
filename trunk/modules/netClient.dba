@@ -36,7 +36,6 @@ netClientSetup:
    `encryptSetKey(systemGameTitle$)
    rem not yet
 
-
 return
 
 
@@ -163,7 +162,7 @@ function netClientMaintain()
             debugWrite(DEBUGINFO,"Net Disconnected.")
 
             `areaUnload()
-            `playerUnload(idxPlayer)
+            `playerUnload(tidPlayer)
 
             systemSharedGameModeRemove(SYSTEM_MODE_NET_TCP)
             netClientStop()
@@ -295,12 +294,18 @@ function netClientParseTCP()
          temp = mn Get Int(RecvPacket)
          debugWrite(DEBUGINFO,"Local Player RPGID received: " + str$(temp))
 
-         idxPlayer = playerClientCreate(temp,0,1)
-         guiClientShowWindow(GUI_WINDOW_MAIN)
          REM WE ARE TEMPORARILY CHEATING HERE - THE SERVER
          REM WILL NEED TO SEND THE BASE MESH RPGID BY THIS
          REM POINT AS WELL - WE'LL USE A WELL-KNOWN VALUE
          REM FOR NOW (1 for the player_base.dbo)
+         tidPlayer = playerClientCreate(temp,1)
+         
+         REM WE DON'T WANT TO SAVE A TABLE FOR OUR OWN
+         REM PLAYER - THAT IS HANDLED BY THE SERVER
+         DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,str$(temp),DATA_ARGSEP)
+                  
+         
+         guiClientShowWindow(GUI_WINDOW_MAIN)
 
          systemSharedGameModeAdd(SYSTEM_MODE_LOGON_COMPLETE)
          systemSharedGameModeAdd(SYSTEM_MODE_GUI)
@@ -316,59 +321,62 @@ function netClientParseUDP(clientID as integer,OperationID as integer)
    REM GET UDP MESSAGES
 
    RPGIDRemotePlayer = mn Get Int(RecvPacket)
-   idRemotePlayer = playerSharedGetIndex(RPGIDRemotePlayer)
+   
+   tidRemotePlayer = dataSharedTableExist(str$(RPGIDRemotePlayer))
 
-   if idRemotePlayer = SYSTEM_INVALID_ID and RPGIDRemotePlayer <> 0
+   if tidRemotePlayer = DATA_FUNCTION_FAIL and RPGIDRemotePlayer <> 0
 
       REM THIS PLAYER IS NEW TO THIS CLIENT
-
-      idRemotePlayer = playerClientCreate(RPGIDRemotePlayer, 0,1)
-      REM TEMPORARILY CHEATING HERE AS WELL
-      dataObject(idRemotePlayer).rpgid = RPGIDRemotePlayer
-
-      REM CLIENTS DO NOT NEED TO KNOW THE CLIENTID OF OTHER PLAYERS
-      dataObject(idRemotePlayer).clientID = 0
-
+      dataSharedUpdateField(str$(RPGIDRemotePlayer),"rpgid",str$(RPGIDRemotePlayer))
+      playerClientCreate(RPGIDRemotePlayer,1)
+      
+      REM WE DON'T WANT TO SAVE TABLES FOR
+      REM THE TEMPORARY DATA USED FOR 
+      REM REMOTE PLAYERS
+      DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,str$(RPGIDRemotePlayer),DATA_ARGSEP)
+     
    endif
 
-   select OperationID
-
-      case NETS_MOVE
-
-        dataObject(idRemotePlayer).posx = mn Get Float(RecvPacket)
-        dataObject(idRemotePlayer).posy = mn Get Float(RecvPacket)
-        dataObject(idRemotePlayer).posz = mn Get Float(RecvPacket)
-        dataObject(idRemotePlayer).roty = mn Get Float(RecvPacket)
-        dataObject(idRemotePlayer).atTarget = 0
-
-      endcase
-
-      case NETS_JUMP
-
-        dataObject(idRemotePlayer).jumpx = mn Get Float(RecvPacket)
-        dataObject(idRemotePlayer).jumpy = mn Get Float(RecvPacket)
-        dataObject(idRemotePlayer).jumpz = mn Get Float(RecvPacket)
-        dataObject(idRemotePlayer).jumpry = mn Get Float(RecvPacket)
-        dataObject(idRemotePlayer).jumpReady = 1
-        dataObject(idRemotePlayer).atTarget = 0
-
-      endcase
-
-
-   endselect
+   if tidRemotePlayer <> DATA_FUNCTION_FAIL
+      select OperationID
+   
+         case NETS_MOVE
+           dataSharedUpdateFieldFast(tidRemotePlayer,"posx",str$(mn Get Float(RecvPacket)))
+           dataSharedUpdateFieldFast(tidRemotePlayer,"posy",str$(mn Get Float(RecvPacket)))
+           dataSharedUpdateFieldFast(tidRemotePlayer,"posz",str$(mn Get Float(RecvPacket)))
+           dataSharedUpdateFieldFast(tidRemotePlayer,"roty",str$(mn Get Float(RecvPacket)))
+           dataSharedUpdateFieldFast(tidRemotePlayer,"attarget","0")
+         endcase
+   
+         case NETS_JUMP
+           dataSharedUpdateFieldFast(tidRemotePlayer,"jumpx",str$(mn Get Float(RecvPacket)))
+           dataSharedUpdateFieldFast(tidRemotePlayer,"jumpy",str$(mn Get Float(RecvPacket)))
+           dataSharedUpdateFieldFast(tidRemotePlayer,"jumpz",str$(mn Get Float(RecvPacket)))
+           dataSharedUpdateFieldFast(tidRemotePlayer,"jumpry",str$(mn Get Float(RecvPacket)))
+           dataSharedUpdateFieldFast(tidRemotePlayer,"jumpready","1")
+           dataSharedUpdateFieldFast(tidRemotePlayer,"attarget","0")
+         endcase
+   
+      endselect
+   endif
 
 endfunction
 
 function netClientMove()
+  
+      if tidPlayer < 1 then exitfunction      
+      mydbpid = intval(dataSharedGetFieldFast(tidPlayer, "dbpid"))
+      if mydbpid = 0 then exitfunction
+      if object exist(mydbpid) = 0 then exitfunction
 
-   mn Clear Packet SendPacket
-   mn Add Int SendPacket, NETC_MOVE
-   mn Add Int SendPacket, dataObject(idxPlayer).rpgid
-   mn Add Float SendPacket, object position x(idxPlayer)
-   mn Add Float SendPacket, object position y(idxPlayer)
-   mn Add Float SendPacket, object position z(idxPlayer)
-   mn Add Float SendPacket, object angle y(idxPlayer)
-   mn Send UDP 0, SendPacket, NULL, 0, 1
-   `debugWrite(DEBUGINFO,"Sent Movement Update")
+      mn Clear Packet SendPacket
+      mn Add Int SendPacket, NETC_MOVE
+      mn Add Int SendPacket, intval(dataSharedGetFieldFast(tidPlayer,"rpgid"))
+      mn Add Float SendPacket, object position x(mydbpid)
+      mn Add Float SendPacket, object position y(mydbpid)
+      mn Add Float SendPacket, object position z(mydbpid)
+      mn Add Float SendPacket, object angle y(mydbpid)
+      mn Send UDP 0, SendPacket, NULL, 0, 1
+      `debugWrite(DEBUGINFO,"Sent Movement Update")
 
 endfunction

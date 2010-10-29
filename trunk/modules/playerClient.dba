@@ -6,8 +6,8 @@ REM
 
 playerClientSetup:
 
-   global idxPlayer as integer
-   REM THIS IS THE DATAOBJECT ARRAY INDEX
+   global tidPlayer as integer
+   REM THIS IS THE TABLE ID
    REM FOR THE LOCAL PLAYER OBJECT
 
    global idxTarget as integer
@@ -19,74 +19,49 @@ playerClientSetup:
    global playerJumping as boolean
 
    global PLAYER_MOVE_PRECISION as float
-   PLAYER_MOVE_PRECISION = floatval(dataSharedGetField("playerClient", "playerMovePrecision", "0.25", DATA_CREATE))
+   PLAYER_MOVE_PRECISION = val(dataSharedGetField("playerClient", "playerMovePrecision", "0.25", DATA_CREATE))
 
    global PLAYER_CURVE_SPEED as float
-   PLAYER_CURVE_SPEED = floatval(dataSharedGetField("playerClient", "playerCurveSpeed", "1.0", DATA_CREATE))
+   PLAYER_CURVE_SPEED = val(dataSharedGetField("playerClient", "playerCurveSpeed", "1.0", DATA_CREATE))
 
    global PLAYER_JUMP_VELOCITY as float
-   PLAYER_JUMP_VELOCITY = floatval(dataSharedGetField("playerClient", "playerJumpVelocity", "40.0", DATA_CREATE))
+   PLAYER_JUMP_VELOCITY = val(dataSharedGetField("playerClient", "playerJumpVelocity", "40.0", DATA_CREATE))
 
    REM INERTIA MUST ALWAYS BE LESS THAN MOVEMENT PRECISION
    global PLAYER_MAX_INERTIA as float
-   PLAYER_MAX_INERTIA = floatval(dataSharedGetField("playerClient", "playerMaxInertia", "0.10", DATA_CREATE))
+   PLAYER_MAX_INERTIA = val(dataSharedGetField("playerClient", "playerMaxInertia", "0.10", DATA_CREATE))
 
    #constant PLAYER_FUNCTION_FAIL 0
    #constant PLAYER_FUNCTION_OK 1
 
 return
 
-function playerObjectExist(idx as integer)
 
-   local retval as boolean
-   retval = PLAYER_FUNCTION_FAIL
+function playerClientCreate(rpgid as integer, rpgidmesh as integer)
 
-   REM ARRAY INDEX MUST BE VALID
-   if idx > 0 and idx <= array count(dataObject())
-      REM DBPRO ID MUST BE VALID
-      if dataObject(idx).dbpid > 0
-         if object exist(dataObject(idx).dbpid) then retval = PLAYER_FUNCTION_OK
-      endif
-   endif
+   
+   tid = dataSharedUpdateField(str$(rpgid),"rpgid",str$(rpgid))
+   dataSharedUpdateField(str$(rpgid),"rpgidmesh",str$(rpgidmesh))
+   dataSharedUpdateFieldFast(DATA_CLIENT_RTABLEID,str$(rpgid),str$(tid))
+   meshClientCreate(tid)
+   
+endfunction tid
 
-endfunction retval
+function playerClientDestroy(tid as integer)
 
-function playerClientCreate(rpgid as integer, dbpid as integer, meshid as integer)
-
-   local mydbpid as integer
-
-   idx = dataSharedGetFree(DATA_SEARCH_REUSE)
-   debugWrite(DEBUGINFO,"playerClientCreate: idx found " + str$(idx))
-
-   if idx > 0
-      mydbpid = dataSharedSetKeys(idx, rpgid, dbpid, meshid)
-      meshClientCreate(idx, meshid)
-   endif
-
-endfunction idx
-
-function playerClientDestroy(rpgid as integer)
-
-   local mydbpid as integer
-   local idx as integer
-   local retval as boolean
-   retval = PLAYER_FUNCTION_FAIL
-
-   idx = playerSharedGetIndex(rpgid)
-   if idx > 0
-      mydbpid = dataObject(idx).dbpid
-      if mydbpid > 0
-         if object exist(mydbpid)
-            delete object mydbpid
-            retval = PLAYER_FUNCTION_OK
-         else
-            debugWrite(DEBUGWARN,"playerClientDestory: player " + str$(rpgid) + " had valid dbpid " + str$(mydbpid) + " but no object.")
-         endif
-      else
-         debugWrite(DEBUGWARN,"playerClientDestory: player " + str$(rpgid) + " had dbpid with value 0")
-      endif
-   else
-   endif
+   local rpgid$ as string
+   rpgid$ = dataSharedGetFieldFast(tid, "rpgid")
+   
+   REM REMOVE THE MESH
+   meshClientDestroy(tid)
+   
+   REM REMOVE THE REVERSE LOOKUP
+   dataSharedDeleteRecord(DATA_CLIENT_RTABLEID,rpgid$)
+   
+   REM BECAUSE PLAYER IS CURRENTLY THE HIGHEST
+   REM LEVEL OF ABSTRACTION, WE DELETE THE 
+   REM TABLE AT THIS LEVEL
+   dataSharedResetTable(tid)
 
 endfunction retval
 
@@ -99,49 +74,63 @@ function playerClientControl()
    local x# as float
    local y# as float
    local z# as float
+   local myvelxz as float
+   local myvely as float
+   local myveljump as float
 
    REM NOW WE'RE GOING TO GO THROUGH THE LIST OF
    REM PLAYERS WE ARE AWARE OF AND UPDATE EACH ONE
 
-   mytableid = dataSharedTableExist(DATA_TABLE_PIDX)
+   mytableid = DATA_CLIENT_RTABLEID
    if mytableid > 0
       FIRST LOOKUP mytableid
       while lookup is valid(mytableid)
-         if LOOKUP CURRENT KEY$(mytableid) <> "" AND LOOKUP CURRENT KEY$(mytableid) <> DATA_KEY_DIRTY
-            myidx = intval(LOOKUP CURRENT VALUE$(mytableid))
-
-            if playerObjectExist(myidx) = PLAYER_FUNCTION_OK
-
-               mydbpid = dataObject(myidx).dbpid
-
-               REM IF PLAYER IS NOT MOVING, AND GRAVITY IS ON FOR PLAYER
-               REM THEN APPLY SIMPLE GRAVITY
-               if dataObject(myidx).gravity <> 0 AND dataObject(myidx).velxz <= 0.0
-                  x# = object position x(mydbpid)
-                  y# = object position y(mydbpid)
-                  z# = object position z(mydbpid)
-                  dataObject(myidx).ground = collisionClientFall(mydbpid,COLLISIONGROUPWORLD,x#,y#,z#,x#,y#,z#,1)
-               endif
-
-               REM IF PLAYER HAS POSITIVE Y VELOCITY
-               REM THEN REGULATE JUMPING
-               if dataObject(myidx).vely > 0.0
-                  move object up mydbpid, systemSharedFrameMoved(dataObject(myidx).vely)
-                  dataObject(myidx).vely = dataObject(myidx).vely - systemSharedFrameMoved((dataObject(myidx).veljump * 0.5))
-                  dataObject(myidx).vely = max(0.0, dataObject(myidx).vely)
-               endif
-
-               if myidx = idxPlayer
-                  REM REGULATE LOCAL PLAYER
-                  playerClientControlLocal(myidx)
-               else
-                  REM REGULATE REMOTE PLAYERS
-                  playerClientControlRemote(myidx)
-               endif
-
-              REM MAINTAIN PITCH AND ROLL AT 0 WHEN NOT FLYING
-               if dataObject(myidx).gravity <> 0
-                  rotate object mydbpid, 0.0, object angle y(mydbpid), 0.0
+         if LOOKUP CURRENT KEY$(mytableid) <> "" AND LOOKUP CURRENT KEY$(mytableid) <> DATA_KEY_DIRTY AND LOOKUP CURRENT KEY$(mytableid) <> DATA_KEY_UNDEFINED
+            myrpgid = intval(LOOKUP CURRENT KEY$(mytableid))
+            mytid = intval(LOOKUP CURRENT VALUE$(mytableid))
+            mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+            
+            if mydbpid <> 0 
+               
+               if object exist(mydbpid)
+               
+                  mygravity = intval(dataSharedGetFieldFast(mytid,"gravity"))
+                  myvelxz = val(dataSharedGetFieldFast(mytid,"velxz"))
+                  myvely = val(dataSharedGetFieldFast(mytid,"vely"))
+                  myveljump = val(dataSharedGetFieldFast(mytid,"veljump"))
+                  
+                  REM IF PLAYER IS NOT MOVING, AND GRAVITY IS ON FOR PLAYER
+                  REM THEN APPLY SIMPLE GRAVITY
+                  if mygravity <> 0 AND myvelxz <= 0.0
+                     x# = object position x(mydbpid)
+                     y# = object position y(mydbpid)
+                     z# = object position z(mydbpid)
+                     myground = collisionClientFall(mydbpid,COLLISION_GROUP_WORLD,x#,y#,z#,x#,y#,z#,1)
+                     dataSharedUpdateFieldFast(mytid,"ground",str$(myground))                     
+                  endif
+   
+                  REM IF PLAYER HAS POSITIVE Y VELOCITY
+                  REM THEN REGULATE JUMPING
+                  if myvely > 0.0
+                     move object up mydbpid, systemSharedFrameMoved(myvely)
+                     myvely = myvely - systemSharedFrameMoved((myveljump * 0.5))
+                     myvely = max(0.0, myvely)
+                     dataSharedUpdateFieldFast(mytid,"vely",str$(myvely))                     
+                  endif
+   
+                  if mytid = tidPlayer
+                     REM REGULATE LOCAL PLAYER
+                     playerClientControlLocal(mytid)
+                  else
+                     REM REGULATE REMOTE PLAYERS
+                     playerClientControlRemote(mytid)
+                  endif
+   
+                 REM MAINTAIN PITCH AND ROLL AT 0 WHEN NOT FLYING
+                  if mygravity <> 0
+                     rotate object mydbpid, 0.0, object angle y(mydbpid), 0.0
+                  endif
+                  
                endif
 
             endif
@@ -155,24 +144,27 @@ function playerClientControl()
 
 endfunction
 
-function playerClientControlLocal(idx as integer)
+function playerClientControlLocal(mytid as integer)
 
    local mydbpid as integer
-
-   mydbpid = dataObject(idx).dbpid
+   local myvelxz as float
+   
+   mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+   if mydbpid = 0 then exitfunction
+   if object exist(mydbpid) = 0 then exitfunction
 
    if playerMoveX = 0 AND playerMoveZ = 0
 
       REM PLAYER DID NOT MOVE
-      dataObject(idx).velxz = 0.0
-      meshClientAnimate(idx, "idle1", MESH_ANIM_PLAY)
-      meshClientRegulate(idx)
+      dataSharedUpdateFieldFast(mytid, "velxz","0")
+      meshClientAnimate(mytid, "idle1", MESH_ANIM_PLAY)
+      meshClientRegulate(mytid)
 
    else
 
       REM PLAYER DID MOVE
 
-      dataObject(idx).velxz = systemSharedFrameMoved(dataObject(idx).speed)
+      myvelxz = systemSharedFrameMoved(val(dataSharedGetFieldFast(mytid,"speed")))
 
       netUpdateMode = 1
 
@@ -180,18 +172,19 @@ function playerClientControlLocal(idx as integer)
       oldy# = object position y(mydbpid)
       oldz# = object position z(mydbpid)
 
-      move object mydbpid, (dataObject(idx).velxz * playerMoveZ)
-      move object left mydbpid, (dataObject(idx).velxz * playerMoveX)
+      move object mydbpid, (myvelxz * playerMoveZ)
+      move object left mydbpid, (myvelxz * playerMoveX)
 
       x# = object position x(mydbpid)
       y# = object position y(mydbpid)
       z# = object position z(mydbpid)
 
       REM APPLY GRAVITY AND SLIDING COLLISION
-      dataObject(idx).ground = collisionClientSlide(mydbpid,COLLISIONGROUPWORLD,oldx#,oldy#,oldz#,x#,y#,z#,1)
+      myground = collisionClientSlide(mydbpid,COLLISION_GROUP_WORLD,oldx#,oldy#,oldz#,x#,y#,z#,1)
+      dataSharedUpdateFieldFast(mytid,"ground",str$(myground))
 
-      meshClientAnimate(idx, "run", MESH_ANIM_LOOP)
-      meshClientRegulate(idx)
+      meshClientAnimate(mytid, "run", MESH_ANIM_LOOP)
+      meshClientRegulate(mytid)
 
    endif
 
@@ -199,8 +192,9 @@ function playerClientControlLocal(idx as integer)
    REM JUMP AND IF SO, SEE IF JUMP IS VALID
    REM AND IF SO, THEN START JUMP
    if playerJumping = 1
-      if dataObject(idx).ground = 1
-         dataObject(idx).vely = dataObject(idx).veljump
+      if intval(dataSharedGetFieldFast(mytid,"ground")) = 1
+         myveljump = intval(dataSharedGetFieldFast(mytid,"veljump"))
+         dataSharedUpdateFieldFast(mytid,"vely",str$(myveljump))
          REM IMMEDIATELY SEND A JUMP PACKET
          `netClientJump()
          rem not yet
@@ -211,71 +205,94 @@ function playerClientControlLocal(idx as integer)
 endfunction
 
 
-function playerClientControlRemote(idx as integer)
+function playerClientControlRemote(mytid as integer)
 
    local mydbpid as integer
    local distCategory as integer
    local deltaVelocity as float
    local tempy as float
 
-   mydbpid = dataObject(idx).dbpid
+   mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+   if mydbpid = 0 then exitfunction
+   if object exist(mydbpid) = 0 then exitfunction
 
-   REM REGULATE MOVEMENT
-   dist# = systemSharedGetDistance3D(dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz,object position x(mydbpid),object position y(mydbpid),object position z(mydbpid))
-   distCategory = int(dist#/PLAYER_MOVE_PRECISION)
-   deltaVelocity = systemSharedFrameMoved(dataObject(idx).speed)
+   posx# = val(dataSharedGetFieldFast(mytid,"posx"))
+   posy# = val(dataSharedGetFieldFast(mytid,"posy"))
+   posz# = val(dataSharedGetFieldFast(mytid,"posz"))
+   myspeed# = val(dataSharedGetFieldFast(mytid,"speed"))
+   myvelxz# = val(dataSharedGetFieldFast(mytid,"velxz"))
    oldx# = object position x(mydbpid)
    oldy# = object position y(mydbpid)
    oldz# = object position z(mydbpid)
+
+   
+   REM REGULATE MOVEMENT
+   dist# = systemSharedGetDistance3D(posx#,posy#,posz#,oldx#,oldy#,oldz#)
+   distCategory = int(dist#/PLAYER_MOVE_PRECISION)
+   deltaVelocity# = systemSharedFrameMoved(myspeed#)
 
    REM MOVE
 
    select distCategory
       case 0
          REM LESS THAN MOVE PRECISION
-         dataObject(idx).velxz = 0
+         dataSharedUpdateFieldFast(mytid,"velxz","0")
       endcase
+      
       case 1
          REM BETWEEN 1x AND 2x MOVE PRECISION
 
          REM START SLOWING DOWN OVER 1 SECOND
-         if dataObject(idx).velxz > 0
-            dataObject(idx).velxz = max(dataObject(idx).velxz - deltaVelocity,0)
+         if myvelxz# > 0.0
+            myvelxz# = max(myvelxz# - deltaVelocity#,0)
+            dataSharedUpdateFieldFast(mytid,"velxz",str$(myvelxz#))
          endif
 
-         point object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
-         move object mydbpid, systemSharedFrameMoved(dataObject(idx).velxz)
+         point object mydbpid, posx#,posy#,posz#
+         move object mydbpid, systemSharedFrameMoved(myvelxz#)
 
       endcase
+      
       case default
          REM GREATER THAN 3x MOVE PRECISION
 
-         if dataObject(idx).velxz < dataObject(idx).speed
+         if myvelxz# < myspeed#
             REM START SPEEDING UP OVER 1 SECOND
-            dataObject(idx).velxz = min(dataObject(idx).velxz + deltaVelocity,dataObject(idx).speed)
+            myvelxz# = min(myvelxz# + deltaVelocity#,myspeed#)
          endif
 
          REM THE LARGER THE CURVEANGLE SPEED VALUE, THE MORE PRECISION, THE SMALLER THE CHANGE PER FRAME
          starty = object angle y(mydbpid)
-         point object mydbpid, dataObject(idx).posx,dataObject(idx).posy,dataObject(idx).posz
+         point object mydbpid, posx#, posy#, posz#
          endy = object angle y(mydbpid)
          rotate object mydbpid, object angle x(mydbpid),curveangle(starty, endy, (systemGameFPS * PLAYER_CURVE_SPEED)),object angle z(mydbpid)
 
-         move object mydbpid, systemSharedFrameMoved(dataObject(idx).velxz)
+         move object mydbpid, systemSharedFrameMoved(myvelxz#)
+         dataSharedUpdateFieldFast(mytid,"velxz",str$(myvelxz#))
 
       endcase
    endselect
 
-   REM HANDLE COLLISION IF MOVING
-   if distCategory > 0
-      x# = object position x(mydbpid)
-      y# = object position y(mydbpid)
-      z# = object position z(mydbpid)
-      dataObject(idx).ground = collisionClientSlide(mydbpid,COLLISIONGROUPWORLD,oldx#,oldy#,oldz#,x#,y#,z#,1)
-      if object playing(mydbpid)
-         meshClientRegulate(idx)
-      endif
+   REM HANDLE COLLISION
+   x# = object position x(mydbpid)
+   y# = object position y(mydbpid)
+   z# = object position z(mydbpid)
+
+   if distCategory < 1
+      REM APPLY GRAVITY COLLISION ONLY
+      myground = collisionClientFall(mydbpid,COLLISION_GROUP_WORLD,x#,y#,z#,x#,y#,z#,1)
+      dataSharedUpdateFieldFast(mytid,"ground",str$(myground)) 
+   else  
+      REM APPLY GRAVITY AND SLIDING COLLISION
+      myground = collisionClientSlide(mydbpid,COLLISION_GROUP_WORLD,oldx#,oldy#,oldz#,x#,y#,z#,1)
+      dataSharedUpdateFieldFast(mytid,"ground",str$(myground))
    endif
+   
+   REM REGULATE ANIMATION IF NECESSARY
+   if object playing(mydbpid)
+      meshClientRegulate(mytid)
+   endif
+  
 
 endfunction
 

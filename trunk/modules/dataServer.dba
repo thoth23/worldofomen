@@ -14,48 +14,39 @@ dataServerSetup:
    REM CALCULATE OUR CRITICAL FILE PATHS
    global dataguidfilename as string
    global dataserveridfilename as string
-   dataguidfilename = DATA_ID_PATH + "guid.txt"
    dataserveridfilename = DATA_ID_PATH + "serverid.txt"
-
-   REM DOMAIN 0: Client Temp IDs
-   REM DOMAIN 1 through 127: Game Server Instance Temp IDs
-   REM DOMAIN 128: Master Player Account IDs
-   REM DOMAIN 129 - 255:  Game/Architecture specific domains
 
    REM PARTITION OUR BITS
    #constant DATA_GUID_BITS_TOTAL 30
-   #constant DATA_GUID_BITS_SERVERS 8
-   #constant DATA_GUID_BITS_OBJECTS 22
-
-   global dataServerID as integer
-   global dataNextGUID as integer
+   #constant DATA_GUID_BITS_SERVERS 4
+   #constant DATA_GUID_BITS_AFTER_SERVER 26
+   #constant DATA_GUID_BITS_DOMAINS 4
+   #constant DATA_GUID_BITS_AFTER_DOMAIN 22
+   rem this gives us over 4 million different objects per domain per server
+   
+   REM ASSIGN OUR DOMAINS
+   #constant DATA_DOMAIN_CLIENT 0
+   #constant DATA_DOMAIN_ACCOUNT 1
+   #constant DATA_DOMAIN_AVATAR 2
+   #constant DATA_DOMAIN_NPC 3
+   #constant DATA_DOMAIN_PROP 4
+  
+   REM SETUP OUR DOMAIN COUNTERS
+   REM AND SET THE MAX DOMAIN GUID
+   global dim dataNextGUID((2^DATA_GUID_BITS_DOMAINS)) as integer
    global dataMaxGUID as integer
-   global dataNextRPGID as integer
-
-
-   dataServerID = 1
-   dataMaxGUID = (2^DATA_GUID_BITS_OBJECTS)-1
-   dataNextGUID = 1
-
+   dataMaxGUID = (2^DATA_GUID_BITS_AFTER_DOMAIN)-1
+   
    REM GET OUR SERVER ID
+   global dataServerID as integer
+   dataServerID = 1
    dataServerID = dataServerLoadServerID()
    debugWrite(DEBUGINFO,"SERVER ID FOUND : " + str$(dataServerID))
-
-   REM GET OUR REAL NEXT GUID
-   dataNextGUID = dataServerLoadNextGUID()
-   debugWrite(DEBUGINFO, "NEXT GUID FOUND : " + str$(dataNextGUID))
-
-   REM THIS IS A FAST LOOKUP TABLE TO FIND
-   REM THE DATAOBJECT ARRAY INDEX BY THE
-   REM DARKNET CLIENT ID - IT IS ONLY NEEDED
-   REM BY THE SERVER
-   dataSharedUpdateField(DATA_TABLE_DIDX, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
-   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_DIDX,DATA_ARGSEP)
-
 
 return
 
 function dataServerLoadServerID()
+
    local retval as integer
    retval = dataServerID
 
@@ -73,14 +64,16 @@ function dataServerLoadServerID()
 
 endfunction retval
 
-function dataServerLoadNextGUID()
+function dataServerLoadNextGUID(domainID as integer)
+   
    local retval as integer
-   retval = dataNextGUID
+   retval = dataNextGUID(domainID)
+   dataguidfilename = DATA_ID_PATH + "guid_" + str$(domainID) + ".txt"
 
    if file exist(dataguidfilename) = 0
       debugWrite(DEBUGWARN, "NO GUID FILE FOUND, CREATING NEW")
       open to write SYSTEM_FILE_DATA_GUID, dataguidfilename
-      write string SYSTEM_FILE_DATA_GUID, str$(dataNextGUID)
+      write string SYSTEM_FILE_DATA_GUID, str$(dataNextGUID(domainID))
       close file SYSTEM_FILE_DATA_GUID
    else
       open to read SYSTEM_FILE_DATA_GUID, dataguidfilename
@@ -91,47 +84,63 @@ function dataServerLoadNextGUID()
 
    if retval > dataMaxGUID
       debugWrite(DEBUGERROR, "MAX GUID REACHED, INCREASE DATA_GUID_BITS_OBJECTS, STOPPING")
-      `systemGameModeAdd(SYSTEM_MODE_QUITTING)
+      systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
    endif
 
 endfunction retval
 
-function dataServerSaveNextGUID()
+function dataServerSaveNextGUID(domainID as integer)
 
+     dataguidfilename = DATA_ID_PATH + "guid_" + str$(domainID) + ".txt"
+     
      if file exist(dataguidfilename) = 1
-        delete file dataguidfilename
+      delete file dataguidfilename
       open to write SYSTEM_FILE_DATA_GUID, dataguidfilename
-      write string SYSTEM_FILE_DATA_GUID, str$(dataNextGUID)
+      write string SYSTEM_FILE_DATA_GUID, str$(dataNextGUID(domainID))
       close file SYSTEM_FILE_DATA_GUID
    else
       debugWrite(DEBUGERROR, "GUID FILE DELETED AFTER STARTUP, STOPPING")
-      `systemGameModeAdd(SYSTEM_MODE_QUITTING)
+      systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
    endif
 
 endfunction
 
-function dataServerGetNextRPGID()
+function dataServerGetNextRPGID(domainID as integer)
 
-   inc dataNextGUID
-   dataServerSaveNextGUID()
-   dataNextRPGID = (dataServerID << DATA_GUID_BITS_OBJECTS) + dataNextGUID
+   local retval as integer
+   
+   if domainID < 0 or domainID > (2^DATA_GUID_BITS_DOMAINS) then
+      debugWrite(DEBUGERROR, "INVALID DOMAIN REQUESTED, STOPPING: " + str$(domainID))
+      systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
+   else
+      inc dataNextGUID(domainID)
+      dataServerSaveNextGUID(domainID)
+      retval = (dataServerID << DATA_GUID_BITS_AFTER_SERVER) + (domainID << DATA_GUID_BITS_AFTER_DOMAIN) + dataNextGUID(domainID)
+   endif
+   
+endfunction retval
 
-endfunction dataNextRPGID
+function dataServerGetNextClientID()
+   local retval as integer
+   retval = dataServerGetNextRPGID(DATA_DOMAIN_CLIENT)
+endfunction retval
 
-function dataServerSetClient(idx as integer, client as integer)
+function dataServerGetNextAccountID()
+   local retval as integer
+   retval = dataServerGetNextRPGID(DATA_DOMAIN_ACCOUNT)
+endfunction retval
 
-   if idx <1 or idx> array count(dataObject()) then exitfunction -1
-   dataObject(idx).clientid = client
-   dataSharedUpdateField(DATA_TABLE_DIDX, str$(client), str$(idx))
+function dataServerGetNextAvatarID()
+   local retval as integer
+   retval = dataServerGetNextRPGID(DATA_DOMAIN_AVATAR)
+endfunction retval
 
-endfunction dbpid
+function dataServerGetNextNPCID()
+   local retval as integer
+   retval = dataServerGetNextRPGID(DATA_DOMAIN_NPC)
+endfunction retval
 
-function dataServerSetRPGID(idx as integer, rpgid as integer)
-
-   if idx <1 or idx> array count(dataObject()) then exitfunction -1
-   dataObject(idx).rpgid = rpgid
-   dataSharedUpdateField(DATA_TABLE_PIDX, str$(rpgid), str$(idx))
-
-endfunction dbpid
-
-
+function dataServerGetNextPropID()
+   local retval as integer
+   retval = dataServerGetNextRPGID(DATA_DOMAIN_PROP)
+endfunction retval

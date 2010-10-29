@@ -21,6 +21,7 @@ REM CONSTANT
 gosub dataClientSetup
 gosub dataSharedSetup
 dataSharedLoadAllTables()
+dataClientCreateRPGIDLookup()
 
 gosub commandSharedSetup
 gosub netSharedSetup
@@ -52,11 +53,10 @@ REM Parse the command line for commands
 commandSharedParseStartup()
 
 repeat
+
+   systemSharedUpdateGameTime()   
    
    systemDragMode = 0
-
-   systemSharedUpdateGameTime()
-
    
    if (systemMode && SYSTEM_MODE_GUI)
       mouseClientGetMove()
@@ -75,9 +75,10 @@ repeat
    if (systemMode && SYSTEM_MODE_TERRAIN)
       terrainClientUpdate()
    endif
-
+   
+   
    sync
-
+      
    
 until (systemMode && SYSTEM_MODE_QUITTING) <> 0
 

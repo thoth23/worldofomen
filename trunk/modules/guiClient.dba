@@ -194,7 +194,7 @@ guiClientSetup:
       state as integer
       killed as boolean
       popuptext as string
-      objectAttachIDX as integer
+      objectAttachTID as integer
       displayPercent as float
       gadgetidcontrols as integer
       slidertype as integer
@@ -357,48 +357,49 @@ function guiClientCreateScreenVirtualWindow()
 
 endfunction
 
-function guiClientCreateNameTag(idx as integer)
+function guiClientCreateNameTag(tid as integer)
    
    local textColor as dword
    local colorIDX as integer
 
    REM NAMETAGS ARE PART OF THE SCREEN VIRTUAL WINDOW
-   if idx > 0 and idx <= array count(dataObject())
-      if object exist(idx)
-         position object idxCrosshair, object position x(idx), object position y(idx) + (object size y(idx,1) * 0.5), object position z(idx)
+   mydbpid = intval(dataSharedGetFieldFast(tid, "dbpid"))
+   if mydbpid = 0 then exitfunction
+   if object exist(mydbpid) = 0 then exitfunction
+   
+   myrank$ = dataSharedGetFieldFast(tid, "rank")
+   myavatarname$ = dataSharedGetFieldFast(tid, "avatarname")
 
-         `colorIDX = guiGetConColor(idx)
-         `textColor = guicolors(colorIDX).color
+   position object idxCrosshair, object position x(mydbpid), object position y(mydbpid) + (object size y(mydbpid,1) * 0.5), object position z(mydbpid)
 
-         mygadget = guiClientCreateTextArea(guiClientGetLanguageField("rankname"+str$(dataObject(idx).rank)) + " " + dataObject(idx).avatarname,object screen x(idxCrosshair)-(guiskins(guiSkinIDX).nametagwidth * 0.5),object screen y(idxCrosshair)-(guiskins(guiSkinIDX).nametagheight * 0.25),guiskins(guiSkinIDX).nametagwidth,guiskins(guiSkinIDX).nametagheight,1,guiScreenWindowID,"nameTag_" + dataObject(idx).avatarname,1,1,1,textColor,0.75)
-         guigadgets(mygadget).gadgettype = GUI_NAMETAG
-         guigadgets(mygadget).objectAttachIDX = idx
-         dataObject(idx).gadgetIDNameTag = mygadget
+   `colorIDX = guiGetConColor(idx)
+   `textColor = guicolors(colorIDX).color
 
-      endif
-   endif
-
+   mygadget = guiClientCreateTextArea(guiClientGetLanguageField("rankname"+myrank$) + " " + myavatarname$,object screen x(idxCrosshair)-(guiskins(guiSkinIDX).nametagwidth * 0.5),object screen y(idxCrosshair)-(guiskins(guiSkinIDX).nametagheight * 0.25),guiskins(guiSkinIDX).nametagwidth,guiskins(guiSkinIDX).nametagheight,1,guiScreenWindowID,"nameTag_" + myavatarname$,1,1,1,textColor,0.75)
+   guigadgets(mygadget).gadgettype = GUI_NAMETAG
+   guigadgets(mygadget).objectAttachTID = tid
+   
+   dataSharedUpdateFieldFast(tid,"gadgetIDNameTag",str$(mygadget))
+   
 endfunction mygadget
 
-function guiClientDeleteNameTag(idx as integer)
-   if idx > 0 and idx <= array count(dataObject())
-      if object exist(idx)
-         i = dataObject(idx).gadgetIDNameTag
-         if i > 0 and i <= array count(guigadgets())
-            if guigadgets(i).imageid <> 0
-               if sprite exist(guigadgets(i).imageid)
-                  delete sprite guigadgets(i).imageid
-               endif
-               if image exist(guigadgets(i).imageid)
-                  delete image guigadgets(i).imageid
-               endif
-               guigadgets(i).imageid = 0
-               guigadgets(i).guiid = ""
-               guigadgets(i).killed = 1
-            endif
+function guiClientDeleteNameTag(tid)
+   
+   i = intval(dataSharedGetFieldFast(tid,"gadgetIDNameTag"))
+   if i > 0 and i <= array count(guigadgets())
+      if guigadgets(i).imageid <> 0
+         if sprite exist(guigadgets(i).imageid)
+            delete sprite guigadgets(i).imageid
          endif
+         if image exist(guigadgets(i).imageid)
+            delete image guigadgets(i).imageid
+         endif
+         guigadgets(i).imageid = 0
+         guigadgets(i).guiid = ""
+         guigadgets(i).killed = 1
       endif
    endif
+         
 endfunction
 
 function guiClientRebuildFrontDrop(areaID)
@@ -1613,8 +1614,6 @@ function guiClientCenterText(text$ as string, width as integer, height as float,
    undim textLine()
    undim textFixed()
 
-   rem Text Update TextFixedLines: 192 of height 2090 into 223 %Show 0.106698565185 next line at 253 sl 174 el 192
-
 endfunction
 
 function guiClientMinWindow(windowid as integer)
@@ -1992,11 +1991,10 @@ function guiUpdateFrontDrop()
                guiFadeState = GUI_FADE_FROM_BLACK
 
                guiClientSwitchToWindow(GUI_WINDOW_MAIN)
-               playerClientTeleport(idxPlayer)
-               `playerClientShow(idxPlayer)
-               cameraClientToPlayer(idxPlayer)
-               dataObject(idxPlayer).gravity = 1
-
+               playerClientTeleport(tidPlayer)
+               `playerClientShow(tidPlayer)
+               cameraClientToPlayer(tidPlayer)
+               dataSharedUpdateFieldFast(tidPlayer,"gravity","1")
                debugWrite(DEBUGINFO,"GUI Fade State set to GUI_FADE_FROM_BLACK")
 
             else
@@ -2183,6 +2181,7 @@ function guiClientUpdateGadgets()
 
 local i
 for i = 1 to array count(guigadgets())
+   
 if guigadgets(i).killed = 0 and guigadgets(i).imageid > 0
 
 windowid = guigadgets(i).parent.windowid
@@ -2472,17 +2471,20 @@ if guiwindows(windowid).hiddenflag=0 and guiwindows(windowid).closed=0 and guiwi
          endcase
          case GUI_NAMETAG
             rem special positioning required
-            attachIDX = guigadgets(i).objectAttachIDX
-            if attachIDX >0 and attachIDX <= array count(dataObject())
-               if object exist(attachIDX)
-                  if object in screen(attachIDX) and ((dataObject(attachIDX).class < DATA_CLASS_ENEMY) or (attachIDX = idxTarget))
-                     position object idxCrosshair, object position x(attachIDX), object position y(attachIDX) + (object size y(attachIDX,1) * 0.5), object position z(attachIDX)
-                     guigadgets(i).x = object screen x(idxCrosshair) - (guiskins(guiSkinIDX).nametagwidth * 0.5)
-                     guigadgets(i).y = object screen y(idxCrosshair) - (guiskins(guiSkinIDX).nametagheight + 8)
-                     sprite guigadgets(i).imageid,guigadgets(i).x,guigadgets(i).y,sprite image(guigadgets(i).imageid)
-                  else
-                     REM HIDE NAMETAG
-                     hide sprite guigadgets(i).imageid
+            tid = guigadgets(i).objectAttachTID
+            if tid >0
+               mydbpid = intval(dataSharedGetFieldFast(tid, "dbpid"))
+               if mydbpid > 0
+                  if object exist(mydbpid)
+                     if object in screen(mydbpid)
+                        position object idxCrosshair, object position x(mydbpid), object position y(mydbpid) + (object size y(mydpbid,1) * 0.5), object position z(mydbpid)
+                        guigadgets(i).x = object screen x(idxCrosshair) - (guiskins(guiSkinIDX).nametagwidth * 0.5)
+                        guigadgets(i).y = object screen y(idxCrosshair) - (guiskins(guiSkinIDX).nametagheight + 8)
+                        sprite guigadgets(i).imageid,guigadgets(i).x,guigadgets(i).y,sprite image(guigadgets(i).imageid)
+                     else
+                        REM HIDE NAMETAG
+                        hide sprite guigadgets(i).imageid
+                     endif
                   endif
                endif
             endif
@@ -2595,11 +2597,14 @@ if guiwindows(windowid).hiddenflag=0 and guiwindows(windowid).closed=0 and guiwi
       REM AGAIN IF IT IS NOT VISIBLE BUT ITS ATTACHED OBJECT IS
       REM ON SCREEN
       if guigadgets(i).gadgettype = GUI_NAMETAG
-         attachIDX = guigadgets(i).objectAttachIDX
-         if attachIDX >0 and attachIDX <= array count(dataObject())
-            if object exist(attachIDX)
-               if object in screen(attachIDX) and ((dataObject(attachIDX).class < DATA_CLASS_ENEMY) or (attachIDX = idxTarget))
-                  show sprite guigadgets(i).imageid
+        tid = guigadgets(i).objectAttachTID
+         if tid >0
+            mydbpid = intval(dataSharedGetFieldFast(tid, "dbpid"))
+            if mydbpid > 0
+               if object exist(mydbpid)
+                  if object in screen(mydpbid)
+                     show sprite guigadgets(i).imageid
+                  endif
                endif
             endif
          endif
