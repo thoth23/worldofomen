@@ -50,13 +50,21 @@ function commandRun(cmd$ as string)
          netClientCurrentChannel = upper$(get split word$(2))
       endcase
       
+      case "/createaccount"
+         cmdFound = 1
+         accountName$ = dataSharedGetField( DATA_TABLE_INPUT, "inputCreateAccountName", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+         password$ = EncryptString(dataSharedGetField( DATA_TABLE_INPUT, "inputCreateAccountPassword", DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+         netClientSendCreateAccount(accountName$, password$) : accountName$ = "" : password$ = ""
+         dataSharedUpdateField(DATA_TABLE_INPUT, "inputCreateAccountPassword", DATA_KEY_UNDEFINED)
+      endcase
+      
       case "/switchtowindow"
          cmdFound = 1
          guiClientSwitchToWindow(get split word$(2))
       endcase
 
       case "/hidewindow"
-         cmdfound = 1
+         cmdFound = 1
          guiClientKillWindow(get split word$(2))
       endcase
 

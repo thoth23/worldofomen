@@ -105,6 +105,8 @@ systemSharedSetup:
 
    global SYSTEM_GRAVITY as float
    SYSTEM_GRAVITY = -25.0
+   
+   encryptSetKey(systemGameTitle$)
 
 return
 

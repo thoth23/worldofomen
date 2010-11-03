@@ -364,44 +364,45 @@ function dataSharedLoadTable(filename$, table$)
 endfunction
 
 
-function dataSharedSave()
+function dataSharedSaveAllTables()
 
    local myTable as integer
    myTable = 1
-
 
    if lookup exist(DATA_TABLES)
       FIRST LOOKUP DATA_TABLES
       while lookup is valid(DATA_TABLES)
          myKey$ = LOOKUP CURRENT KEY$(DATA_TABLES)
-
-         REM IF THE TABLE IS NOT IN DATA_NOSAVE_TABLES
-         REM THEN GO AHEAD AND SAVE TABLE - WE CANNOT
-         REM NEST A LOOKUP HERE, SO WE MUST USE A STRING
-         if instr(DATA_NOSAVE_TABLES,myKey$) = 0
+        if instr(DATA_NOSAVE_TABLES,myKey$) = 0
             filename$ = DATA_PATH + myKey$ + DATA_FILE_EXT
             myTable = intval(LOOKUP CURRENT VALUE$(DATA_TABLES))
             if lookup exist(myTable)
-               if file exist(filename$)
-                  delete file filename$
-               endif
-               open to write SYSTEM_FILE_DATA, filename$
-               FIRST LOOKUP myTable
-               while lookup is valid(myTable)
-                  if LOOKUP CURRENT KEY$(myTable) <> "" AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_DIRTY  AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_UNDEFINED
-                     dat$ = LOOKUP CURRENT KEY$(myTable) + DATA_NAMEVALSEP + LOOKUP CURRENT VALUE$(myTable)
-                     write string SYSTEM_FILE_DATA, dat$
-                  endif
-                  next lookup myTable
-               endwhile
-               close file SYSTEM_FILE_DATA
+               dataSharedSaveTable(myTable, filename$)
             endif
          endif
          next lookup DATA_TABLES
       endwhile
    endif
+   
+endfunction
 
-
+function dataSharedSaveTable(myTable as integer, filename$ as string)
+   
+   if file exist(filename$)
+      delete file filename$
+   endif
+   
+   open to write SYSTEM_FILE_DATA, filename$
+   FIRST LOOKUP myTable
+   while lookup is valid(myTable)
+      if LOOKUP CURRENT KEY$(myTable) <> "" AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_DIRTY  AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_UNDEFINED
+         dat$ = LOOKUP CURRENT KEY$(myTable) + DATA_NAMEVALSEP + LOOKUP CURRENT VALUE$(myTable)
+         write string SYSTEM_FILE_DATA, dat$
+      endif
+      next lookup myTable
+   endwhile
+   close file SYSTEM_FILE_DATA
+   
 endfunction
 
 function dataSharedTableExist(tableName$ as string)

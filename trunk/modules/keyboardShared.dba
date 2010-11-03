@@ -9,8 +9,24 @@ keyboardSharedSetup:
    global KEYBOARD_SAFE_KEYS as string
    KEYBOARD_SAFE_KEYS = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+{[}];:',./?|"
 
+   global KEYBOARD_SAFE_FILENAME_KEYS as string
+   KEYBOARD_SAFE_FILENAME_KEYS = "abcdefghijklmnopqrstuvwxyz0123456789"
+      
 return
 
+function keyboardSharedSanitizeFilename(in$)
+    i=0
+    while fast len(in$)> 0 and i < fast len(in$)
+        inc i
+        char$ = mid$(in$,i)
+        if instr(KEYBOARD_SAFE_FILENAME_KEYS,char$) = 0
+            REM FOUND AN UNSAFE CHARACTER
+            in$ = remove$(in$,char$)
+            dec i
+        endif
+    endwhile
+    out$ = in$
+endfunction out$
 
 function keyBoardSharedSanitizeCharacter(in$)
    if fast len(in$) = 1

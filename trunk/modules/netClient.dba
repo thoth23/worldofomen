@@ -265,7 +265,19 @@ function netClientChangeChannels(operationID as integer, channel$ as string)
 
 endfunction
 
-function netClientRequestDetails(myrpgid as integer)
+function netClientSendCreateAccount(accountName$ as string, password$ as string)
+
+   bytes = NET_HEADER_BYTES
+   inc bytes, len(accountName$)
+   inc bytes, len(password$)
+   
+   netSharedAddHeader(NETC_CREATE_ACCOUNT,bytes)
+   mn Add String SendPacket, accountName$, 0, 1 : accountName$ = ""
+   mn Add String SendPacket, password$, 0, 1 : password$ = ""
+   mn Send TCP 0,SendPacket,0,0,1
+   
+   debugWrite(DEBUGINFO, "Sent Create Account Request for " + accountName$)
+   
 endfunction
 
 function netClientParseTCP()
@@ -289,6 +301,13 @@ function netClientParseTCP()
           systemSharedGameModeAdd(SYSTEM_MODE_CHAT_ACTIVE)
           guiClientUpdateChatRcv(message$)
        endcase
+       
+       case NETS_CREATE_ACCOUNT
+            REM SERVER IS TELLING US THAT WE SUCCESSFULLY
+            REM CREATED AN ACCOUNT
+            guiClientSwitchtoWindow("windowLogon")
+            guiClientMessageBoxShow("Account creation successful.  You can now logon using the accountname and password you just created.",2,"","OK","","","/hidewindow\windowMessageBox","")
+       endcase
 
        case NETS_RPGID
          temp = mn Get Int(RecvPacket)
@@ -310,6 +329,10 @@ function netClientParseTCP()
          systemSharedGameModeAdd(SYSTEM_MODE_LOGON_COMPLETE)
          systemSharedGameModeAdd(SYSTEM_MODE_GUI)
          
+       endcase
+       
+       case NETS_CREATE_ACCOUNT_ERROR
+         guiClientMessageBoxShow("Account creation failed.  Account names and passwords must be at least 6 characters long or accountname already in use.",2,"","OK","","","/hidewindow\windowMessageBox","")
        endcase
 
     endselect
