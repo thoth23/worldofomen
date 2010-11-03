@@ -54,6 +54,12 @@ netSharedSetup:
    #constant NETC_LISTEN            3
    #constant NETC_MUTE              4
    #constant NETC_RPGID             5
+   #constant NETC_CREATE_ACCOUNT 6
+   #constant NETC_CREATE_AVATAR 7
+   #constant NETC_LOGON_ALPHA 8
+   REM BETA
+   REM GAMMA
+   REM DELTA
 
    REM SERVER TCP OPERATIONS
    #constant NETS_CHAT              1001
@@ -61,6 +67,21 @@ netSharedSetup:
    #constant NETS_LISTEN            1003
    #constant NETS_MUTE              1004
    #constant NETS_RPGID             1005
+   #constant NETS_CREATE_ACCOUNT 1006
+   #constant NETS_CREATE_AVATAR 1007
+   #constant NETS_LOGON_ALPHA 1008
+   
+   
+   REM SERVER ERROR TCP OPERATIONS
+   #constant NETS_CHAT_ERROR              -1001
+   #constant NETS_COMMAND_ERROR           -1002
+   #constant NETS_LISTEN_ERROR            -1003
+   #constant NETS_MUTE_ERROR              -1004
+   #constant NETS_RPGID_ERROR             -1005
+   #constant NETS_CREATE_ACCOUNT_ERROR -1006
+   #constant NETS_CREATE_AVATAR_ERROR -1007
+   #constant NETS_LOGON_ALPHA_ERROR -1008
+   
 
    REM CLIENT UDP OPERATIONS
    #constant NETC_MOVE 0
@@ -69,7 +90,7 @@ netSharedSetup:
    REM SERVER UDP OPERATIONS
    #constant NETS_MOVE 0
    #constant NETS_JUMP 1
-
+   
 return
 
 function netSharedAddHeader(msgID as integer,size as integer)

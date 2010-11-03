@@ -30,6 +30,8 @@ dataServerSetup:
    #constant DATA_DOMAIN_AVATAR 2
    #constant DATA_DOMAIN_NPC 3
    #constant DATA_DOMAIN_PROP 4
+   
+   #constant DATA_DOMAIN_MAX 4
   
    REM SETUP OUR DOMAIN COUNTERS
    REM AND SET THE MAX DOMAIN GUID
@@ -42,8 +44,120 @@ dataServerSetup:
    dataServerID = 1
    dataServerID = dataServerLoadServerID()
    debugWrite(DEBUGINFO,"SERVER ID FOUND : " + str$(dataServerID))
+   
+   REM LOAD OUR DOMAIN IDS
+   for i = 1 to DATA_DOMAIN_MAX
+      dataNextGUID(i) = dataServerLoadNextGUID(i)
+   next
+   
+   
+   global DATA_DEFAULT_AVATAR_COUNT as integer
+   DATA_DEFAULT_AVATAR_COUNT = intval(dataSharedGetField("dataServer", "dataDefaultAvatarCount", "8", DATA_CREATE))
+
 
 return
+
+function dataServerCreateAccount(myTable as integer, accountName$ as string, password$ as string)
+
+   local retval as integer
+   retval = DATA_FUNCTION_FAIL
+   lowerAccountName$ = fast lower$(accountName$)
+   test$ = keyboardSharedSanitizeFilename(lowerAccountName$)
+   if test$ = lowerAccountName$
+      REM PASSED TEST  1 - NO INVALID CHARACTERS FOUND
+      filename$ = DATA_ACCOUNT_PATH + lowerAccountName$
+      if fast len(lowerAccountName$) > 5 and fast len(password$) > 5
+         REM PASSED TEST 2 - BOTH MORE THAN 5 CHARACTERS
+         if file exist(filename$) = 0
+            REM PASSED TEST 3 - ACCOUNT DOES NOT ALREADY EXIST
+            retval = DATA_FUNCTION_OK
+            myaccountid = dataServerGetNextAccountID()
+            
+            REM UPDATE TABLE
+            dataSharedUpdateFieldFast(myTable,"accountname",accountName$)
+            dataSharedUpdateFieldFast(myTable,"password",password$)
+            dataSharedUpdateFieldFast(myTable,"accountid",str$(myaccountid))
+            REM AND SAVE TABLE
+            dataSharedSaveTable(myTable, filename$)
+            debugWrite(DEBUGINFO,"Account created successfuly: " + accountName$)
+            
+         else
+            debugWrite(DEBUGWARN,"Account already exists: " + lowerAccountName$)
+         endif
+      else
+         debugWrite(DEBUGWARN,"Account or password less than 6 characters: " + lowerAccountName$)
+      endif
+   else
+      debugWrite(DEBUGWARN,"Account name contains invalid characters: " + lowerAccountName$)
+   endif   
+   
+endfunction retval
+
+function dataServerAvatarFree(tableName$ as string)
+   
+   REM SEARCHES A TABLE FOR AN AVAILABLE
+   REM AVATARNAME ATTRIBUTE UP TO PRESET MAX
+   REM USED EXCLUSIVELY FOR ACCOUNT TABLES
+   
+   local ctr as integer
+   local found as boolean
+   ctr = 0
+   found = 0
+   
+   while ctr < DATA_DEFAULT_AVATAR_COUNT AND found = 0
+      inc ctr
+      if dataSharedGetField(tableName$, "avatarname"+str$(ctr),DATA_KEY_UNDEFINED,DATA_NO_CREATE) = DATA_KEY_UNDEFINED then found = 1
+   endwhile
+   
+   if found = 0 then ctr = DATA_FUNCTION_FAIL
+
+endfunction ctr
+
+
+function dataServerCreateAvatar(myTable as integer, accountName$ as string, avatarName$ as string)
+   
+   local retval as integer
+   retval = DATA_FUNCTION_FAIL
+   lowerAccountName$ = fast lower$(accountName$)
+   lowerAvatarName$ = fast lower$(avatarName$)
+   test1a$ = keyboardSharedSanitizeFilename(lowerAccountName$)
+   test1b$ = keyboardSharedSanitizeFilename(lowerAvatarName$)
+   if test1a$ = lowerAccountName$ AND test1b$ = lowerAvatarName$
+      REM PASSED TEST  1 - NO INVALID CHARACTERS FOUND
+      accountFilename$ = DATA_ACCOUNT_PATH + lowerAccountName$
+      if fast len(lowerAccountName$) > 5 AND fast len(lowerAvatarName$) > 5
+         REM PASSED TEST 2 - AvatarName MORE THAN 5 CHARACTERS
+         if file exist(accountFilename$) = 1
+            REM PASSED TEST 3 - ACCOUNT DOES EXIST
+            avatarFilename$ = DATA_AVATAR_PATH + lowerAvatarName$
+            if file exist(avatarFilename$) = 0
+               REM PASSED TEST 4 - AVATAR DOES NOT ALREADY EXIST
+               retval = DATA_FUNCTION_OK
+               myavatarid = dataServerGetNextAvatarID()
+             
+               REM UPDATE TABLE
+               dataSharedUpdateFieldFast(myTable,"accountname",accountName$)
+               dataSharedUpdateFieldFast(myTable,"avatarname",avatarName$)
+               dataSharedUpdateFieldFast(myTable,"avatarid",str$(myavatarid))
+               REM AND SAVE TABLE
+               dataSharedSaveTable(myTable, avatarFilename$)
+                      
+               debugWrite(DEBUGINFO,"Avatar created successfuly: " + avatarName$)
+            else
+               debugWrite(DEBUGWARN,"Avatar already exists: " + avatarFilename$)
+            endif
+         else
+            debugWrite(DEBUGWARN,"Account does not exist for avatar creation: " + lowerAccountName$)
+         endif
+      else
+         debugWrite(DEBUGWARN,"Avatar name less than 6 characters: " + lowerAvatarName$)
+      endif
+   else
+      debugWrite(DEBUGWARN,"Avatar name contains invalid characters: " + lowerAvatarName$)
+   endif
+   
+endfunction retval
+   
 
 function dataServerLoadServerID()
 
@@ -91,17 +205,15 @@ endfunction retval
 
 function dataServerSaveNextGUID(domainID as integer)
 
-     dataguidfilename = DATA_ID_PATH + "guid_" + str$(domainID) + ".txt"
+   dataguidfilename = DATA_ID_PATH + "guid_" + str$(domainID) + ".txt"
      
-     if file exist(dataguidfilename) = 1
+   if file exist(dataguidfilename) = 1
       delete file dataguidfilename
-      open to write SYSTEM_FILE_DATA_GUID, dataguidfilename
-      write string SYSTEM_FILE_DATA_GUID, str$(dataNextGUID(domainID))
-      close file SYSTEM_FILE_DATA_GUID
-   else
-      debugWrite(DEBUGERROR, "GUID FILE DELETED AFTER STARTUP, STOPPING")
-      systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
    endif
+   
+   open to write SYSTEM_FILE_DATA_GUID, dataguidfilename
+   write string SYSTEM_FILE_DATA_GUID, str$(dataNextGUID(domainID))
+   close file SYSTEM_FILE_DATA_GUID
 
 endfunction
 
@@ -109,7 +221,7 @@ function dataServerGetNextRPGID(domainID as integer)
 
    local retval as integer
    
-   if domainID < 0 or domainID > (2^DATA_GUID_BITS_DOMAINS) then
+   if domainID < 0 or domainID > (2^DATA_GUID_BITS_DOMAINS)
       debugWrite(DEBUGERROR, "INVALID DOMAIN REQUESTED, STOPPING: " + str$(domainID))
       systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
    else

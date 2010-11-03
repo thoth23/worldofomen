@@ -33,5 +33,5 @@ until (spacekey() > 0) OR ((systemMode && SYSTEM_MODE_QUITTING) <> 0)
 REM SYSTEM STOP
 
 netServerStop()
-dataSharedSave()
+dataSharedSaveAllTables()
 debugStop()

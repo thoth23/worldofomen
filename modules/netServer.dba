@@ -125,16 +125,12 @@ function netServerMaintain()
          temp$ = mn Get Client IP TCP(instance, joinID)
          temp = mn Get Client Port TCP(instance, joinID)
          
-         rndrpgid = rnd(2000)+1
-         
-         dataSharedUpdateFieldFast(NET_SERVER_CTABLEID, str$(rndrpgid), str$(joinID))
-         dataSharedUpdateFieldFast(joinID, "rpgid", str$(rndrpgid))
-          DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,str$(joinID),DATA_ARGSEP)
-
-         debugWrite(DEBUGINFO,"Connect from " + temp$ + ", port:" + str$(temp) + ", clientID:" + str$(joinID) + ", rpgid:" + str$(rndrpgid))
-
-         REM NOW TELL THE CLIENT WHAT THEIR RPGID IS
-         netServerRpgidSend(instance, joinID, rndrpgid)
+         REM GIVE NEW CONNECTIONS AN INVALID RPGID
+         REM BUT STILL PUT THEM IN THE CTABLE
+         dataSharedUpdateFieldFast(NET_SERVER_CTABLEID, str$(-joinID), str$(joinID))
+         dataSharedUpdateFieldFast(joinID, "rpgid", str$(-joinID))
+         DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,str$(joinID),DATA_ARGSEP)
+         debugWrite(DEBUGINFO,"Connect from " + temp$ + ", port:" + str$(temp) + ", clientID:" + str$(joinID))
 
       endif
 
@@ -145,8 +141,8 @@ function netServerMaintain()
 
          debugWrite(DEBUGINFO,"Connection dropped from clientID " + str$(leftID))
          rpgid$ = dataSharedGetFieldFast(leftID, "rpgid")
+         dataSharedResetTable(leftID)
          if rpgid$ <> DATA_KEY_UNDEFINED
-            dataSharedResetTable(leftID)
             dataSharedDeleteRecord(NET_SERVER_CTABLEID, rpgid$)
          endif
 
@@ -164,7 +160,7 @@ function netServerMaintain()
                   endif
                   for operationID = 0 to (NET_MAX_OPERATIONS - 1)
                      if mn Recv UDP(instance,RecvPacket,client,operationID) > 0
-                        debugWrite(DEBUGINFO,"UDP operation " + str$(operationID) + " received from clientID " + str$(client))
+                        `debugWrite(DEBUGINFO,"UDP operation " + str$(operationID) + " received from clientID " + str$(client))
                         netServerParseUDP(instance, client, operationID)
                      endif
                   next operationID
@@ -223,6 +219,17 @@ function netServerRpgidSend(instance as integer, client as integer, rpgid as int
    mn Send TCP instance, SendPacket, client, 0, 1
 
 endfunction
+
+function netServerSendOpCode(instance as integer, client as integer, code as integer)
+
+   REM SEND JUST THE OPERATION CODE
+   REM THIS IS USED FOR CONFIRMATIONS
+   REM AND ERRORS
+   netSharedAddHeader(code, NET_HEADER_BYTES)
+   mn Send TCP instance, SendPacket, client, 0, 1
+   
+endfunction
+   
 
 
 function netServerParseUDP(instance as integer, client as integer, operationID as integer)
@@ -314,7 +321,7 @@ function netServerUDPBroadcast(instance as integer, clientExclude as integer)
 
                   if systemSharedGetDistance3D(posx1,posy1,posz1,posx2,posy2,posz2) < NET_VISIBILITY_MOVE
                      mn Send UDP instance, SendPacket, client, 1, 1
-                     debugWrite(DEBUGINFO, "Sent UDP update for player " + str$(clientExclude) + " to player " + str$(client))
+                     `debugWrite(DEBUGINFO, "Sent UDP update for player " + str$(clientExclude) + " to player " + str$(client))
                   endif
                endif
             endif
@@ -385,6 +392,22 @@ function netServerParseTCP(instance as integer, client as integer)
          dataSharedUpdateFieldFast(client,"listenChannels",temp$)
          netServerChatSend(instance, "SYSTEM", "Listening on channels: " + temp$, client)
      endcase
+     
+     case NETC_CREATE_ACCOUNT
+         REM PASSWORD COMES OVER THE WIRE
+         REM ENCRYPTED, SO WE LEAVE IT AS IS
+         accountName$ = mn Get String(RecvPacket,0,1)
+         password$ = mn Get String(RecvPacket,0,1)
+         retval = dataServerCreateAccount(client,accountName$, password$)
+         if retval = DATA_FUNCTION_FAIL
+            netServerSendOpCode(instance, client, NETS_CREATE_ACCOUNT_ERROR)
+            debugWrite(DEBUGWARN,"Account Creation failed: " + accountName$)
+         else
+            netServerSendOpCode(instance, client, NETS_CREATE_ACCOUNT)
+            debugWrite(DEBUGINFO,"Account Creation success: " + accountName$)
+         endif
+     endcase
+     
 
    endselect
 
