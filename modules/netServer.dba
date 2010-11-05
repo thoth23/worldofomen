@@ -408,6 +408,65 @@ function netServerParseTCP(instance as integer, client as integer)
          endif
      endcase
      
+     case NETC_LOGON_ALPHA
+         debugWrite(DEBUGINFO,"NETC_LOGON_ALPHA received from client " + str$(client))
+         REM CLIENT IS SENDING ACCOUNT NAME FOR LOGON
+         encryptSetKey(systemGameTitle$)
+         accountName$ = DecryptString(mn Get String(RecvPacket,0,1))
+         retval = 1
+         
+         REM CHECK TO SEE IF DUPLICATE LOGON
+         rem not yet
+                  
+         REM CHECK TO SEE IF accountname IS VALID
+         if retval > 0
+            REM BEFORE LOADING THE TABLE, FORCE IT INTO EXISTANCE
+            REM USING THE client AS THE TABLEID
+            dataSharedUpdateFieldFast(client,"accountname",accountName$)
+            retval = dataSharedLoadTable(DATA_ACCOUNT_PATH + accountName$,str$(client))
+            if retval = DATA_FUNCTION_OK
+               temp$ = dataSharedGetFieldFast(client,"password")
+               temp$ = DecryptString(temp$)
+               encryptSetKey(temp$ + systemGameTitle$) : temp$ = ""
+               temp$ = encryptCreateKey() : dataSharedUpdateFieldFast(client,"key", temp$) : temp$ = EncryptString(temp$)
+               netSharedAddHeader(NETS_LOGON_ALPHA, NET_HEADER_BYTES + len(temp$))
+               mn Add String SendPacket, temp$, 0, 1
+               mn Send TCP instance,SendPacket,client,0,1
+               temp$ = ""
+               `debugWrite(DEBUGINFO,"Sent NETS_LOGON_ALPHA to client " + str$(client))
+            else
+               netServerSendOpCode(instance, client, NETS_LOGON_ALPHA_ERROR)
+               temp$ = ""
+               debugWrite(DEBUGHACK,"Logon accountname invalid: " + accountName$)
+            endif
+         endif
+      endcase
+      
+      case NETC_LOGON_BETA
+  
+         debugWrite(DEBUGINFO,"NETC_LOGON_BETA received from client " + str$(client))
+         temp$ = dataSharedGetFieldFast(client,"key")
+         encryptSetKey(temp$)
+         temp$ = DecryptString(mn Get String(RecvPacket,0,1))         
+         accountName$ = dataSharedGetFieldFast(client,"accountname")
+         
+         REM IF THE CLIENT WAS ABLE TO SUCCESSFULLY
+         REM DECRYPT THE KEY TO USE IT TO ENCRYPT
+         REM THE MESSAGE SENT BACK, THEN WE KNOW
+         REM THAT THE CLIENT KNEW THE ACCOUNT PASSWORD
+         if fast lower$(accountName$) = fast lower$(temp$)
+            temp$ = encryptCreateKey() : dataSharedUpdateFieldFast(client,"key",temp$)
+            temp$ = EncryptString(temp$)
+            netSharedAddHeader(NETS_LOGON_BETA, NET_HEADER_BYTES + len(temp$))
+            mn Add String SendPacket, temp$, 0, 1
+            mn Send TCP instance,SendPacket,client,0,1
+            temp$ = "" : debugWrite(DEBUGINFO,"Login SUCCESS for " + accountName$)
+         else
+            netServerSendOpCode(instance, client, NETS_LOGON_BETA_ERROR)
+            temp$ = "" : debugWrite(DEBUGINFO,"Login FAILED  for " + accountName$)
+         endif
+   
+      endcase
 
    endselect
 

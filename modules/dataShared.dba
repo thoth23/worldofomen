@@ -241,6 +241,7 @@ function dataSharedUpdateFieldFast(tableid as integer, key$, value$)
 
    if lookup exist(tableid) = 0
       make lookup tableid
+      set lookup DATA_TABLES, str$(tableid), str$(tableid)
    endif
    
    set lookup tableid, key$, value$
@@ -303,8 +304,12 @@ function dataSharedLoadAllTables()
 endfunction
 
 function dataSharedLoadTable(filename$, table$)
+   
+   retval = DATA_FUNCTION_FAIL
 
    if file exist(filename$)
+      
+      retval = DATA_FUNCTION_OK
 
       REM LOAD BASE
 
@@ -361,7 +366,7 @@ function dataSharedLoadTable(filename$, table$)
 
    endif
 
-endfunction
+endfunction retval
 
 
 function dataSharedSaveAllTables()
