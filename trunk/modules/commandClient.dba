@@ -53,9 +53,18 @@ function commandRun(cmd$ as string)
       case "/createaccount"
          cmdFound = 1
          accountName$ = dataSharedGetField( DATA_TABLE_INPUT, "inputCreateAccountName", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
-         password$ = EncryptString(dataSharedGetField( DATA_TABLE_INPUT, "inputCreateAccountPassword", DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+         password$ = dataSharedGetField( DATA_TABLE_INPUT, "inputCreateAccountPassword", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+         debugWrite(DEBUGINFO,"Create account for " + accountName$ + "/" + password$)
+         encryptSetKey(systemGameTitle$)
+         password$ = EncryptString(password$)
          netClientSendCreateAccount(accountName$, password$) : accountName$ = "" : password$ = ""
          dataSharedUpdateField(DATA_TABLE_INPUT, "inputCreateAccountPassword", DATA_KEY_UNDEFINED)
+      endcase
+      
+      case "/logon"
+         cmdFound = 1
+         accountName$ = dataSharedGetField( DATA_TABLE_INPUT, "inputLogonAccountName", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+         netClientSendLogonAlpha(accountName$)
       endcase
       
       case "/switchtowindow"

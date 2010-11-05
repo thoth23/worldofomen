@@ -280,6 +280,33 @@ function netClientSendCreateAccount(accountName$ as string, password$ as string)
    
 endfunction
 
+function netClientSendLogonAlpha(accountName$ as string)
+
+   bytes = NET_HEADER_BYTES
+   encryptSetKey(systemGameTitle$)
+   dat1$ = EncryptString(accountName$) : inc bytes, len(dat1$)
+   
+   netSharedAddHeader(NETC_LOGON_ALPHA,bytes)
+   mn Add String SendPacket, dat1$, 0, 1
+   mn Send TCP 0,SendPacket,0,0,1
+   `debugWrite(DEBUGINFO,"Sent NETC_LOGON_ALPHA")
+
+endfunction
+
+function netClientSendLogonBeta(testKey$ as string,accountName$ as string)
+
+   bytes = NET_HEADER_BYTES
+   encryptSetKey(testKey$)
+   dat1$ = EncryptString(accountName$) : inc bytes, len(dat1$)
+
+   netSharedAddHeader(NETC_LOGON_BETA, bytes)
+   mn Add String SendPacket, dat1$, 0, 1
+   mn Send TCP 0,SendPacket,0,0,1
+   `debugWrite(DEBUGINFO,"Sent NETC_LOGON_BETA")
+
+endfunction
+
+
 function netClientParseTCP()
 
     length = mn Get Int(RecvPacket)
@@ -308,6 +335,30 @@ function netClientParseTCP()
             guiClientSwitchtoWindow("windowLogon")
             guiClientMessageBoxShow("Account creation successful.  You can now logon using the accountname and password you just created.",2,"","OK","","","/hidewindow\windowMessageBox","")
        endcase
+       
+       case NETS_LOGON_ALPHA
+            REM SERVER IS SENDING BACK A TEST PACKET
+            REM FOR US TO DECRYPT TO SEE IF WE KNOW
+            REM THE PASSWORD FOR THE ACCOUNT
+            `debugWrite(DEBUGINFO,"NETS_LOGON_ALPHA received.")
+            accountName$ = dataSharedGetField( DATA_TABLE_INPUT, "inputLogonAccountName", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+            password$ = dataSharedGetField( DATA_TABLE_INPUT, "inputLogonPassword", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+            encryptSetKey(password$ + systemGameTitle$)
+            testKey$ = DecryptString(mn Get String(RecvPacket,0,1))
+            netClientSendLogonBeta(testKey$, accountName$)
+       endcase
+       
+       case NETS_LOGON_BETA
+            REM SERVER HAS ACCEPTED OUR TEST PACKET
+            REM AND IS SENDING US OUR UNIQUE KEY FOR
+            REM THIS GAME SESSION - LOGIN IS COMPLETE
+            debugWrite(DEBUGINFO,"LOGIN SUCCESS")
+            keySession$ = DecryptString(mn Get String(RecvPacket,0,1))
+            encryptSetKey(keySession$)
+            guiClientMessageBoxShow("Logon successful.  Next we will be building the avatar list..",2,"","OK","","","/hidewindow\windowMessageBox","")
+            `netClientSendAvatarList(keySession$)
+            rem not yet
+       endcase
 
        case NETS_RPGID
          temp = mn Get Int(RecvPacket)
@@ -333,6 +384,14 @@ function netClientParseTCP()
        
        case NETS_CREATE_ACCOUNT_ERROR
          guiClientMessageBoxShow("Account creation failed.  Account names and passwords must be at least 6 characters long or accountname already in use.",2,"","OK","","","/hidewindow\windowMessageBox","")
+       endcase
+       
+       case NETS_LOGON_ALPHA_ERROR
+         guiClientMessageBoxShow("Logon failed.  Password is case sensitive.  Please try again.",2,"","OK","","","/hidewindow\windowMessageBox","")
+       endcase
+       
+       case NETS_LOGON_BETA_ERROR
+         guiClientMessageBoxShow("Logon failed.  Password is case sensitive.  Please try again.",2,"","OK","","","/hidewindow\windowMessageBox","")
        endcase
 
     endselect
