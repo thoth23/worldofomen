@@ -58,6 +58,7 @@ netSharedSetup:
    #constant NETC_CREATE_AVATAR 7
    #constant NETC_LOGON_ALPHA 8
    #constant NETC_LOGON_BETA 9
+   #constant NETC_AVATAR_LIST 10
 
    REM SERVER TCP OPERATIONS
    #constant NETS_CHAT              1001
@@ -69,6 +70,7 @@ netSharedSetup:
    #constant NETS_CREATE_AVATAR 1007
    #constant NETS_LOGON_ALPHA 1008
    #constant NETS_LOGON_BETA 1009
+   #constant NETS_AVATAR_LIST 1010
    
    REM SERVER ERROR TCP OPERATIONS
    #constant NETS_CHAT_ERROR              -1001
@@ -80,6 +82,7 @@ netSharedSetup:
    #constant NETS_CREATE_AVATAR_ERROR -1007
    #constant NETS_LOGON_ALPHA_ERROR -1008
    #constant NETS_LOGON_BETA_ERROR -1009
+   #constant NETC_AVATAR_LIST_ERROR -1010
    
  
    REM CLIENT UDP OPERATIONS

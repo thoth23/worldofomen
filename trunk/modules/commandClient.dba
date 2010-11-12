@@ -52,6 +52,7 @@ function commandRun(cmd$ as string)
       
       case "/createaccount"
          cmdFound = 1
+         guiClientHideWindow("windowCreateAccount")
          accountName$ = dataSharedGetField( DATA_TABLE_INPUT, "inputCreateAccountName", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
          password$ = dataSharedGetField( DATA_TABLE_INPUT, "inputCreateAccountPassword", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
          debugWrite(DEBUGINFO,"Create account for " + accountName$ + "/" + password$)
@@ -63,8 +64,14 @@ function commandRun(cmd$ as string)
       
       case "/logon"
          cmdFound = 1
+         guiClientHideWindow("windowLogon")
          accountName$ = dataSharedGetField( DATA_TABLE_INPUT, "inputLogonAccountName", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
          netClientSendLogonAlpha(accountName$)
+      endcase
+      
+      case "/logoff"
+         guiClientSwitchToWindow("windowLogon")
+         REM MORE STATE MANAGEMENT WILL BE DONE HERE
       endcase
       
       case "/switchtowindow"

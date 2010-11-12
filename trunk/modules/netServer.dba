@@ -467,6 +467,39 @@ function netServerParseTCP(instance as integer, client as integer)
          endif
    
       endcase
+      
+      case NETC_AVATAR_LIST
+      
+         REM CLIENT IS REQUESTING THEIR AVATAR LIST
+         
+         encryptSetKey(dataSharedGetFieldFast(client,"key"))
+         temp$ = DecryptString(mn Get String(RecvPacket,0,1)) 
+         accountName$ = dataSharedGetFieldFast(client,"accountname")
+         
+         if temp$ = accountName$
+            REM THIS CLIENT OWNS THIS ACCOUNT
+            accountAvatarLimit = intval(dataSharedGetFieldFast(client,"accountavatarlimit"))
+            mylimit = max(accountAvatarLimit,PLAYER_AVATARS_PER_ACCOUNT_DEFAULT)
+            ctr = 0
+            while ctr < mylimit
+               inc ctr
+               myavatarname$ = dataSharedGetFieldFast(client,"avatar"+str$(ctr))
+               if myavatarname$ <> DATA_KEY_UNDEFINED
+                  myavatarlist$ = systemSharedFieldAdd(myavatarlist$,myavatarname$,DATA_ARGSEP)
+               endif
+            endwhile
+            netSharedAddHeader(NETS_AVATAR_LIST, NET_HEADER_BYTES + len(myavatarlist$))
+            mn Add String SendPacket, myavatarlist$, 0, 1
+            mn Send TCP instance,SendPacket,client,0,1
+            debugWrite(DEBUGINFO,"Sent avatar list for client " + str$(client) + ": " + myavatarlist$)
+         else
+            REM THIS CLIENT DOES NOT OWN THIS ACCOUNT
+            netServerSendOpCode(instance, client, NETC_AVATAR_LIST_ERROR)
+            temp$ = ""
+            debugWrite(DEBUGHACK,"Attempt to get avatars on unowned account, attacker: " + accountName$)
+         endif
+         
+      endcase
 
    endselect
 

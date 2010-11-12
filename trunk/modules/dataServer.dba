@@ -50,11 +50,6 @@ dataServerSetup:
       dataNextGUID(i) = dataServerLoadNextGUID(i)
    next
    
-   
-   global DATA_DEFAULT_AVATAR_COUNT as integer
-   DATA_DEFAULT_AVATAR_COUNT = intval(dataSharedGetField("dataServer", "dataDefaultAvatarCount", "8", DATA_CREATE))
-
-
 return
 
 function dataServerCreateAccount(myTable as integer, accountName$ as string, password$ as string)

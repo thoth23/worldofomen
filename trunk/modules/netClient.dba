@@ -306,6 +306,21 @@ function netClientSendLogonBeta(testKey$ as string,accountName$ as string)
 
 endfunction
 
+function netClientSendAvatarList()
+
+   REM MUST SEND ENCYPTED ACCOUNTNAME
+   REM USING UNIQUE SESSION KEY
+   bytes = NET_HEADER_BYTES
+   accountName$ = dataSharedGetField( DATA_TABLE_INPUT, "inputLogonAccountName", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+   dat1$ = EncryptString(accountName$) : inc bytes, len(dat1$)
+
+   netSharedAddHeader(NETC_AVATAR_LIST, bytes)
+   mn Add String SendPacket, dat1$, 0, 1
+   mn Send TCP 0,SendPacket,0,0,1
+   debugWrite(DEBUGINFO,"Sent NETC_AVATAR_LIST")
+
+endfunction
+
 
 function netClientParseTCP()
 
@@ -355,9 +370,24 @@ function netClientParseTCP()
             debugWrite(DEBUGINFO,"LOGIN SUCCESS")
             keySession$ = DecryptString(mn Get String(RecvPacket,0,1))
             encryptSetKey(keySession$)
-            guiClientMessageBoxShow("Logon successful.  Next we will be building the avatar list..",2,"","OK","","","/hidewindow\windowMessageBox","")
-            `netClientSendAvatarList(keySession$)
-            rem not yet
+            netClientSendAvatarList()
+       endcase
+       
+       case NETS_AVATAR_LIST 
+         REM SERVER IS SENDING AVATAR LIST
+         REM EXTRACT NAMES AND POPULATE GUI DATA TABLE
+         REM DYNAMICALLY CONSTRUCT BOTH THE avatarnameX
+         REM AND switchavatarX RECORDS, AND THEN SWITCH TO 
+         REM THE CHARACTER SELECTION WINDOW
+         myAvatarList$ = mn Get String(RecvPacket,0,1)
+         debugWrite(DEBUGINFO,"Avatar list received: " + myAvatarList$)
+         split string myAvatarList$, DATA_ARGSEP
+         for i = 1 to split count()
+            myAvatarName$ = get split word$(i)
+            guiClientSetGUIDataField("avatarname"+str$(i), myAvatarName$)
+            guiClientSetGUIDataField("switchavatar"+str$(i), "/switchavatar\"+myAvatarName$)
+         next i
+         guiClientSwitchToWindow("windowSelectAvatar")
        endcase
 
        case NETS_RPGID
@@ -383,15 +413,15 @@ function netClientParseTCP()
        endcase
        
        case NETS_CREATE_ACCOUNT_ERROR
-         guiClientMessageBoxShow("Account creation failed.  Account names and passwords must be at least 6 characters long or accountname already in use.",2,"","OK","","","/hidewindow\windowMessageBox","")
+         guiClientMessageBoxShow("Account creation failed.  Account names and passwords must be at least 6 characters long or accountname already in use.",2,"","OK","","","/switchtowindow\windowCreateAccount","")
        endcase
        
        case NETS_LOGON_ALPHA_ERROR
-         guiClientMessageBoxShow("Logon failed.  Password is case sensitive.  Please try again.",2,"","OK","","","/hidewindow\windowMessageBox","")
+         guiClientMessageBoxShow("Logon failed.  Password is case sensitive.  Please try again.",2,"","OK","","","/switchtowindow\windowLogon","")
        endcase
        
        case NETS_LOGON_BETA_ERROR
-         guiClientMessageBoxShow("Logon failed.  Password is case sensitive.  Please try again.",2,"","OK","","","/hidewindow\windowMessageBox","")
+         guiClientMessageBoxShow("Logon failed.  Password is case sensitive.  Please try again.",2,"","OK","","","/switchtowindow\windowLogon","")
        endcase
 
     endselect

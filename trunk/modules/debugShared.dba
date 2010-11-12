@@ -40,5 +40,5 @@ endfunction
 function debugWrite(level as integer, msg$ as string)
    tstamp$ = systemSharedGetRealDateTime("/"," ",":")
    WRITELN LOG level, "%s :: %s" , tstamp$, msg$
-   if debugMode = 1 then print tstamp$, " :: ", msg$
+   if debugMode = 1 then print tstamp$, " :: ", msg$ : sync
 endfunction
