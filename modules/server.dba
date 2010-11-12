@@ -2,6 +2,7 @@ Rem Project: server
 Rem Created: Saturday, July 03, 2010
 
 Rem ***** Main Source File *****
+sync on 
 
 REM SYSTEM SETUP
 gosub systemSharedSetup
@@ -13,6 +14,7 @@ debugStart()
 gosub collisionSharedSetup
 gosub dataSharedSetup
 gosub dataServerSetup
+gosub playerServerSetup
 gosub netSharedSetup
 gosub netServerSetup
 netServerStart()

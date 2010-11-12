@@ -665,6 +665,7 @@ function guiClientBuildWindow(skinName$ as string, windowName$ as string)
    local guisizeratiooverride as float
    local guinoborder as boolean
 
+
    REM GET OR CREATE THE SKIN
    skinName$ = guiClientGetGUIField("skinname", "default")
    mySkin = guiClientCreateSkin(skinName$)
@@ -777,6 +778,15 @@ function guiClientBuildWindow(skinName$ as string, windowName$ as string)
                         case "sizeratiooverride" : guisizeratiooverride = val(vl$) : endcase
                         case "progresscolorid" : guiprogresscolorid = intval(vl$) : endcase
                         case "noborder" : guinoborder = clamp(intval(vl$),0,1) : endcase
+                        case "guidatatitle"
+                           temp$ = guiClientGetGUIDataField(vl$,DATA_KEY_UNDEFINED)
+                           if temp$ <> DATA_KEY_UNDEFINED then guititle = temp$
+                        endcase
+                        case "guidatacommand"
+                           temp$ = guiClientGetGUIDataField(vl$,DATA_KEY_UNDEFINED)
+                           if temp$ <> DATA_KEY_UNDEFINED then guicommand = temp$
+                        endcase
+
                       endselect
 
                   endif

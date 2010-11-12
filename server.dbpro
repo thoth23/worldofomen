@@ -7,13 +7,13 @@ project name=server
 main=modules\server.dba
 LineMain=0
 include1=modules\debugShared.dba
-LineInclude1=0
+LineInclude1=42
 include2=modules\debugServer.dba
 LineInclude2=0
 include3=modules\systemShared.dba
-LineInclude3=12
+LineInclude3=249
 include4=modules\systemServer.dba
-LineInclude4=0
+LineInclude4=8
 include5=modules\commandShared.dba
 LineInclude5=14
 include6=modules\commandServer.dba
@@ -21,17 +21,17 @@ LineInclude6=25
 include7=modules\encryptShared.dba
 LineInclude7=0
 include8=modules\netShared.dba
-LineInclude8=59
+LineInclude8=84
 include9=modules\netServer.dba
-LineInclude9=456
+LineInclude9=484
 include10=modules\dataShared.dba
-LineInclude10=243
+LineInclude10=229
 include11=modules\dataServer.dba
-LineInclude11=7
+LineInclude11=51
 include12=modules\playerShared.dba
 LineInclude12=5
 include13=modules\playerServer.dba
-LineInclude13=0
+LineInclude13=8
 include14=modules\inventoryShared.dba
 LineInclude14=0
 include15=modules\goalShared.dba
@@ -79,6 +79,7 @@ window resolution=640x480
 media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\
 
 ; **** Icons ****
+icon1=media\cog.ico
 
 ; **** Cursors ****
 
