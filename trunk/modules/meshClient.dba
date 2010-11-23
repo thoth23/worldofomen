@@ -19,9 +19,60 @@ meshClientSetup:
 
    global MESH_DEFAULT_FPS as float
    MESH_DEFAULT_FPS = val(dataSharedGetField("meshClient", "meshDefaultFPS", "24.0", DATA_CREATE))
-
-
+   
+   global MESH_PATHS as string
+   
+   #constant MESH_AVATAR_PATH "media/avatar/"
+   
+   meshClientRegisterPath(MESH_AVATAR_PATH)
+   
 return
+
+function meshClientRegisterPath(path$ as string)
+   MESH_PATHS = systemSharedFieldAdd(MESH_PATHS,path$,DATA_ARGSEP)
+endfunction
+
+function meshClientRegisterNew()
+   
+   REM SEARCH MEDIA AREAS THAT CONTAIN MESHES
+   REM AND SEE IF THERE ARE ANY NEW ASSETS THAT
+   REM NEED TO BE REGISTERED
+   
+   REM FIRST WE NEED THE LIBRARY TABLE ID
+   libraryTableID = dataSharedTableExist(DATA_TABLE_LIBRARY)
+   
+   split string MESH_PATHS,  DATA_ARGSEP
+   debugWrite(DEBUGINFO,"meshClientRegisterNew: " + str$(split count()) + " mesh paths will be synchronized...")
+   for i = 1 to split count()
+      path$ = get split word$(i)
+      if path exist(path$)
+         cd path$
+            perform checklist for files
+               debugWrite(DEBUGINFO,"meshClientRegisterNew: checking " + str$(checklist quantity()) + " files under path " + path$)
+               for j = 1 to checklist quantity()
+                  filename$ = checklist string$(j)
+                  if fast right$(filename$,4) = ".dbo" OR fast right$(filename$,2) = ".x" OR fast right$(filename$,4) = ".tgt"
+                     
+                     REM MESH OR MORPH TARGET FOUND, CHECK TO SEE 
+                     REM IF IT IS ALREADY REGISTERED IN THE LOCAL LIBRARY
+                     
+                     pathfilename$ = path$ + filename$
+                     rpgid = dataClientGetLibraryRPGID(pathfilename$)
+                     if rpgid = DATA_FUNCTION_FAIL
+                     
+                        REM NOT REGISTERED YET, ASK THE SERVER FOR AN RPGID
+                        netClientSendAssetIDRequest(pathfilename$)
+                        
+                     endif
+                     
+                  endif
+               next
+            empty checklist
+         cd (dir exe())
+      endif
+   next
+   
+endfunction
 
 function meshClientLoad(myPath$, mydbpid)
 
@@ -29,8 +80,8 @@ function meshClientLoad(myPath$, mydbpid)
 
    if file exist(myPath$) = 0 then exitfunction MESH_FUNCTION_FAIL
    load object myPath$, mydbpid, 1
-   `hide object mydbpid
-   `exclude object on mydbpid
+   hide object mydbpid
+   exclude object on mydbpid
 
 endfunction MESH_FUNCTION_OK
 

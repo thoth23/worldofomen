@@ -8,6 +8,7 @@ skyClientSetup:
 
    global dbpidSkybox as integer
    #constant SKYBOX_PATH "media/skybox/"
+   meshClientRegisterPath(SKYBOX_PATH)
 
 return
 

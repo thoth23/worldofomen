@@ -19,7 +19,7 @@ function dataClientCreateRPGIDLookup()
    dataSharedUpdateField(DATA_CLIENT_RPGID, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_CLIENT_RPGID,DATA_ARGSEP)   
    DATA_CLIENT_RTABLEID = dataSharedTableExist(DATA_CLIENT_RPGID)
-   debugWrite(DEBUGINFO,"netClientSetup: rpgid table set to name " + DATA_CLIENT_RPGID + " with tableid: " + str$(DATA_CLIENT_RTABLEID))
+   debugWrite(DEBUGINFO,"RPGID table is " + DATA_CLIENT_RPGID + " with tableid: " + str$(DATA_CLIENT_RTABLEID))
    
 endfunction
 
@@ -33,3 +33,26 @@ function dataClientGetFreeTableid(searchType as integer)
    inc dataClientNextTableID
    
 endfunction dataClientNextTableID
+
+function dataClientGetLibraryRPGID(path$ as string)
+
+   REM PERFORM A REVERSE LOOKUP ON PATH
+   REM INTENSIVE - ONLY USED FOR REGISTERING
+   REM NEW ASSETS
+   
+   local retval as integer
+   retval = DATA_FUNCTION_FAIL
+   
+   tableid = dataSharedTableExist(DATA_TABLE_LIBRARY)
+   
+   first lookup tableid
+   found = 0
+   while lookup is valid(tableid) and found = 0
+      if lookup current value$(tableid) = path$
+         found = 1
+         retval = intval(lookup current key$(tableid))
+      endif
+      next lookup tableid
+   endwhile
+  
+endfunction retval

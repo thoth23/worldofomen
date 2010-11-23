@@ -169,9 +169,9 @@ function netClientMaintain()
             netClientStart()
             netClientConnectStart()
 
-            `guiSwitchToWindow("windowLogon")
-            `msg$ = "Lost connection to server... attempting to reconnect.  Press Cancel to stop."
-            `guiMessageBoxShow(msg$,2,"","Cancel","","","/exit","")
+            guiClientSwitchToWindow("windowLogon")
+            msg$ = "Lost connection to server... attempting to reconnect.  Press Cancel to stop and exit."
+            guiClientMessageBoxShow(msg$,2,"","Cancel","","","/exit","")
 
          endif
       endif
@@ -321,6 +321,28 @@ function netClientSendAvatarList()
 
 endfunction
 
+function netClientSendManifestComplete()
+
+   REM TELL THE SERVER WE ARE DONE UPDATING MANIFEST
+   bytes = NET_HEADER_BYTES
+   netSharedAddHeader(NETC_MANIFEST, bytes)
+   mn Send TCP 0,SendPacket,0,0,1
+   debugWrite(DEBUGINFO,"Sent NETC_MANIFEST")
+
+endfunction
+
+function netClientSendAssetIDRequest(path$ as string)
+
+   REM REQUEST AN RPGID FROM THE SERVER FOR AN ASSET
+   bytes = NET_HEADER_BYTES
+   dat1$ = path$: inc bytes, len(dat1$)
+
+   netSharedAddHeader(NETC_ASSETID, bytes)
+   mn Add String SendPacket, dat1$, 0, 1
+   mn Send TCP 0,SendPacket,0,0,1
+   debugWrite(DEBUGINFO,"Sent NETC_ASSETID for " + path$)
+   
+endfunction
 
 function netClientParseTCP()
 
@@ -389,8 +411,39 @@ function netClientParseTCP()
          next i
          guiClientSwitchToWindow("windowSelectAvatar")
        endcase
+       
+       case NETS_MANIFEST
+            REM SERVER IS TELLING US TO UPDATE OUR LIBRARY
+            debugWrite(DEBUGINFO,"NETS_MANIFEST received")
+            meshClientRegisterNew()
+            `soundClientRegisterNew()
+            `effectClientRegisterNew()
+            rem not yet
+            wait 1000
+            REM TELL THE SERVER WE ARE DONE UPDATING LIBRARY
+            netClientSendManifestComplete()
+       endcase
+       
+       case NETS_ASSETID
+            REM SERVER IS RESPONDING TO AN RPGID
+            REM REQUEST FOR A LIBRARY ASSET
+            assetID = mn Get Int(RecvPacket)
+            assetPath$ = mn Get String(RecvPacket,0,1)
+            dataSharedUpdateField(DATA_TABLE_LIBRARY, str$(assetID), assetPath$)
+            debugWrite(DEBUGINFO,"Asset RPGID for received for " + assetPath$ + " : " + str$(assetID))
+       endcase
+       
+       case NETS_SWITCH_WINDOW
+            REM SERVER IS FORCING A GAME WINDOW CHANGE
+            windowName$ = mn Get String(RecvPacket,0,1)
+            guiClientSwitchToWindow(windowName$)
+            systemSharedGameModeAdd(SYSTEM_MODE_GUI)
+            debugWrite(DEBUGINFO,"NETS_SWITCH_WINDOW received for  " + windowName$)
+       endcase
 
-       case NETS_RPGID
+       case NETS_RPGID       
+         REM SERVER IS SENDING BACK THE UNIQUE
+         REM RPGID OF THE LOCAL PLAYER
          temp = mn Get Int(RecvPacket)
          debugWrite(DEBUGINFO,"Local Player RPGID received: " + str$(temp))
 
