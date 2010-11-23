@@ -52,6 +52,24 @@ dataServerSetup:
    
 return
 
+function dataServerGetLibraryRPGID(path$ as string, createFlag as boolean)
+
+   REM PERFORM A REVERSE-LOOKUP ON THE LIBRARY TABLE
+   
+   retval$ = dataSharedGetField(DATA_TABLE_LIBRARY + DATA_REVERSE_SUFFIX, path$, DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+   
+   if retval$ = DATA_KEY_UNDEFINED AND createFlag = DATA_CREATE
+      REM WE HAVE A NEW ASSET IT - REGISTER IT
+      retval = dataServerGetNextPropID()
+      dataSharedUpdateField(DATA_TABLE_LIBRARY, str$(retval), path$)
+      REM REVERSE LOOKUP WILL BE UPDATED AUTOMATICALLY AS WELL
+   else
+      retval = intval(retval$)
+   endif
+   
+endfunction retval
+
+
 function dataServerCreateAccount(myTable as integer, accountName$ as string, password$ as string)
 
    local retval as integer

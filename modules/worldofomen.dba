@@ -5,55 +5,52 @@ Rem ***** Main Source File *****
 
 sync on : sync rate 0
 
+REM SYSTEM HANDLERS
 gosub systemSharedSetup
 gosub systemClientSetup
 gosub debugSharedSetup
 gosub debugClientSetup
 debugStart()
 
-gosub collisionSharedSetup
-gosub collisionClientSetup
-
-REM FOR DATA, CLIENT/SERVER
-REM MUST BE CALLED BEFORE
-REM SHARED TO SET PATH
-REM CONSTANT
+REM DATA HANDLERS
 gosub dataClientSetup
 gosub dataSharedSetup
 dataSharedLoadAllTables()
 dataClientCreateRPGIDLookup()
-
 gosub commandSharedSetup
+
+REM HARDWARE HANDLERS
 gosub netSharedSetup
 gosub netClientSetup
 gosub keyboardSharedSetup
 gosub keyboardClientSetup
+gosub mouseClientSetup
+gosub cameraClientSetup
+
 
 REM STARTUP FUNCTIONS HERE
 netClientStart()
 netClientConnectStart()
 
-gosub mouseClientSetup
-gosub cameraClientSetup
 
+REM ASSET HANDLERS HERE
+gosub collisionSharedSetup
+gosub collisionClientSetup
+gosub meshClientSetup
 gosub skyClientSetup
-skyClientLoad(2)
-skyClientSetSun(-0.5, -0.5, 0.5)
-
 gosub terrainClientSetup
 
-gosub meshClientSetup
-gosub playerClientSetup
-gosub skillSharedSetup
 
+REM PLAYER HANDLERS HERE
+gosub playerClientSetup
+
+
+REM GUI HANDLERS
 gosub guiClientSetup
 
-REM SHOW THE LOGON WINDOW
-guiClientShowWindow("windowLogon")
-systemSharedGameModeAdd(SYSTEM_MODE_GUI)
-
-REM Parse the command line for commands
+REM PARSE THE COMMAND LINE
 commandSharedParseStartup()
+
 
 repeat
 

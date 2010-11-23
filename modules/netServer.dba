@@ -65,8 +65,9 @@ netServerSetup:
    endif
    
    #constant NET_SERVER_CLIENTID "clientIDLookup"
-   dataSharedUpdateField(NET_SERVER_CLIENTID, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
-    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,NET_SERVER_CLIENTID,DATA_ARGSEP)
+   dataSharedMakeTable(NET_SERVER_CLIENTID,0,DATA_REVERSE)
+   dataSharedRegisterNoSaveTable(NET_SERVER_CLIENTID)
+   
    global NET_SERVER_CTABLEID as integer
    NET_SERVER_CTABLEID = dataSharedTableExist(NET_SERVER_CLIENTID)
    debugWrite(DEBUGINFO,"netServerSetup: client table set to name " + NET_SERVER_CLIENTID + " with tableid: " + str$(NET_SERVER_CTABLEID))
@@ -129,8 +130,12 @@ function netServerMaintain()
          REM BUT STILL PUT THEM IN THE CTABLE
          dataSharedUpdateFieldFast(NET_SERVER_CTABLEID, str$(-joinID), str$(joinID))
          dataSharedUpdateFieldFast(joinID, "rpgid", str$(-joinID))
-         DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,str$(joinID),DATA_ARGSEP)
+         dataSharedRegisterNoSaveTable(str$(joinID))
          debugWrite(DEBUGINFO,"Connect from " + temp$ + ", port:" + str$(temp) + ", clientID:" + str$(joinID))
+         
+         REM TELL THE CLIENT TO UPDATE THEIR MANIFEST
+         netServerSendOpCode(instance, joinID, NETS_MANIFEST)
+         debugWrite(DEBUGINFO, "NETS_MANIFEST sent to clientID " + str$(joinID))
 
       endif
 
@@ -218,6 +223,14 @@ function netServerRpgidSend(instance as integer, client as integer, rpgid as int
    mn Add int SendPacket, rpgid
    mn Send TCP instance, SendPacket, client, 0, 1
 
+endfunction
+
+function netServerSendSwitchWindow(instance as integer, client as integer, windowName$ as string)
+
+   netSharedAddHeader(NETS_SWITCH_WINDOW, NET_HEADER_BYTES + len(windowName$))
+   mn Add string SendPacket, windowName$, 0, 1
+   mn Send TCP instance, SendPacket, client, 0, 1
+   
 endfunction
 
 function netServerSendOpCode(instance as integer, client as integer, code as integer)
@@ -369,12 +382,18 @@ function netServerParseTCP(instance as integer, client as integer)
      case NETC_COMMAND
          cmd$ = mn Get String(RecvPacket,0,1)
          cmd$ = keyboardSharedSanitize(cmd$)
-
-         REM YOU WOULD NEVER DO THIS IN A REAL PRODUCT
-         REM THERE ARE MULTIPLE TESTS PERFORMED HERE
-         REM TO ALLOW COMMANDS BY GMLEVEL.  THIS IS
-         REM HERE JUST FOR DEMONSTRATION PURPOSES.
-         commandSharedTranspose(cmd$)
+         REM DO NOT ALLOW ANY GM COMMANDS
+         REM USING A STANDARD COMMAND MESSAGE
+         REM ONLY 1 COMMAND PER MESSAGE
+         REM SO USE TRANSPOSE, NOT PARSE
+         if fast left$(cmd$,3) <> "/gm"
+            commandSharedTranspose(cmd$)
+         else
+            REM WE REPORT BOTH CLIENT ID AND ACCOUNTNAME
+            REM IN CASE AN ATTEMPT IS MADE PRIOR TO LOGIN
+            accountName$ = dataSharedGetFieldFast(client,"accountname")
+            debugWrite(DEBUGHACK,"GM SKILL ATTEMPTED ON NETC_COMMAND, client: " + str$(client) + ", accountname: " + accountName$)
+         endif
      endcase
 
      case NETC_LISTEN
@@ -494,14 +513,41 @@ function netServerParseTCP(instance as integer, client as integer)
             debugWrite(DEBUGINFO,"Sent avatar list for client " + str$(client) + ": " + myavatarlist$)
          else
             REM THIS CLIENT DOES NOT OWN THIS ACCOUNT
-            netServerSendOpCode(instance, client, NETC_AVATAR_LIST_ERROR)
+            netServerSendOpCode(instance, client, NETS_AVATAR_LIST_ERROR)
             temp$ = ""
             debugWrite(DEBUGHACK,"Attempt to get avatars on unowned account, attacker: " + accountName$)
          endif
          
       endcase
-
-   endselect
+      
+      case NETC_MANIFEST
+      
+            REM CLIENT IS TELLING US THAT THEY ARE DONE
+            REM UPDATING THEIR LOCAL LIBRARY - TELL CLIENT
+            REM TO SWITCH TO THEIR LOGIN WINDOW
+            debugWrite(DEBUGINFO,"Client " + str$(client) + " completed manifest update")
+            netServerSendSwitchWindow(instance, client, "windowLogon")
+            debugWrite(DEBUGINFO,"NETS_SWITCH_WINDOW sent to client " + str$(client))
+            
+      endcase
+      
+      case NETC_ASSETID
+      
+         REM FOR NOW WE ASSUME THAT ANYONE CAN
+         REM REGISTER A NEW ASSET (USING DATA_CREATE)
+         
+         path$ = mn Get String(RecvPacket,0,1)
+         debugWrite(DEBUGINFO,"Received NETC_ASSETID request from client " + str$(client) + " for " + path$)
+         propID = dataServerGetLibraryRPGID(path$, DATA_CREATE)    
+         netSharedAddHeader(NETS_ASSETID, NET_HEADER_BYTES + 4 + len(path$))
+         mn Add Int SendPacket, propID
+         mn Add String SendPacket, path$, 0, 1
+         mn Send TCP instance,SendPacket,client,0,1
+         debugWrite(DEBUGINFO,"Sent NETS_ASSETID to " + str$(client) + " with rpgid " + str$(propID))
+         
+     endcase
+     
+  endselect
 
 endfunction
 

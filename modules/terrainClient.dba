@@ -6,13 +6,13 @@ REM
 
 terrainClientSetup:
 
-   #constant TERRAIN_PATH "media/terrain/"
-
    global dbpidTerrain as integer
    global idTerrainTex as integer
    global idTerrainDet as integer
-
-
+   
+   #constant TERRAIN_PATH "media/terrain/"
+   meshClientRegisterPath(TERRAIN_PATH)
+   
 return
 
 function terrainClientLoad(terrainID, detailID)

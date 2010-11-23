@@ -12,14 +12,17 @@ gosub debugServerSetup
 debugStart()
 
 gosub collisionSharedSetup
-gosub dataSharedSetup
 gosub dataServerSetup
+gosub dataSharedSetup
+dataSharedLoadAllTables()
+
 gosub playerServerSetup
 gosub netSharedSetup
 gosub netServerSetup
 netServerStart()
 
 gosub keyboardSharedSetup
+
 
 REM Parse the command line for commands
 commandSharedParseStartup()

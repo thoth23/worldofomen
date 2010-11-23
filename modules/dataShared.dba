@@ -6,9 +6,18 @@ REM
 
 dataSharedSetup:
 
-   
+   #constant DATA_FUNCTION_FAIL -1
+   #constant DATA_FUNCTION_OK 1
+   #constant DATA_KEY_DIRTY "dirty"
+   #constant DATA_DIRTY 1
+   #constant DATA_CLEAN 0
+      
    #constant DATA_NO_CREATE   0
    #constant DATA_CREATE      1
+   #constant DATA_NO_REVERSE 0
+   #constant DATA_REVERSE 1
+   
+   #constant DATA_REVERSE_SUFFIX "_REVERSE"
 
    #constant DATA_SEARCH_FAST    1
    #constant DATA_SEARCH_REUSE   2
@@ -16,59 +25,70 @@ dataSharedSetup:
    #constant DATA_KEY_UNDEFINED     "\\\undefined\\\"
    #constant DATA_KEY_HIDDEN        "\\\hidden\\\"
    #constant DATA_KEY_NOSAVE        "\\\nosave\\\"
-   #constant DATA_TABLE_INPUT       "input"
    #constant DATA_ARGSEP            ";"
    #constant DATA_NAMEVALSEP        "="
    #constant DATA_FILE_EXT          ".ini"
    #constant DATA_TEMPLATE_KEY      "inherit"
 
    global DATA_NOSAVE_TABLES as string
+   global DATA_LANGUAGE as string
 
    REM BASE TABLE MUST BE BUILT MANUALLY
-   REM AND SET IT TO NOSAVE
-   #constant DATA_TABLES            99
+   #constant DATA_TABLES            100
    #constant DATA_TNAME_TABLES      "tables"
    make lookup DATA_TABLES
    set lookup DATA_TABLES, DATA_TNAME_TABLES, str$(DATA_TABLES)
-   systemSharedPushFree(SYSTEM_TYPE_LOOKUP,99)
-   debugWrite(DEBUGINFO,"dataSharedSetup: root table set to name " + DATA_TNAME_TABLES + " with tableid: " + str$(DATA_TABLES))
-   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TNAME_TABLES,DATA_ARGSEP)
-
+   systemSharedPushFree(SYSTEM_TYPE_LOOKUP,100)
+   debugWrite(DEBUGINFO,"ROOT table is " + DATA_TNAME_TABLES + " with tableid: " + str$(DATA_TABLES))
+   dataSharedRegisterNoSaveTable(DATA_TNAME_TABLES)
+   
    REM PRE-BUILD THE INPUT TABLE
-   REM AND SET IT TO NOSAVE
-   dataSharedUpdateField(DATA_TABLE_INPUT, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
-   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_INPUT,DATA_ARGSEP)
+   #constant DATA_TABLE_INPUT "input"
+   dataSharedMakeTable(DATA_TABLE_INPUT,0,DATA_NO_REVERSE)
+   dataSharedRegisterNoSaveTable(DATA_TABLE_INPUT)
 
-   REM NOW LET'S SET THE LOCALIZATION
-   REM AND SET IT TO NOSAVE
+   REM PRE-BUILD THE GUI TABLE
    #constant DATA_TABLE_GUI "gui"
+   dataSharedMakeTable(DATA_TABLE_GUI,0,DATA_NO_REVERSE)
+   
+   REM PRE-BUILD THE GUIDATA TABLE
    #constant DATA_TABLE_GUIDATA "guidata"
-   global DATA_LANGUAGE as string
-   DATA_LANGUAGE = dataSharedGetField(DATA_TABLE_GUI, "language", "language/english",DATA_CREATE)
-   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_LANGUAGE,DATA_ARGSEP)
+   dataSharedMakeTable(DATA_TABLE_GUIDATA,0,DATA_NO_REVERSE)
+   dataSharedRegisterNoSaveTable(DATA_TABLE_GUIDATA)
 
-
-   REM ...AND A TABLE TO KEEP TRACK OF ALL
-   REM RPGIDS FOR ALL ASSETS, PROVIDES LOOKUP
-   REM OF PATH BY RPGID
+   REM PRE-BUILD THE LIBRARY TABLE
    #constant DATA_TABLE_LIBRARY "library"
-   dataSharedUpdateField(DATA_TABLE_LIBRARY, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
-
-   REM ...AND A TABLE TO KEEP TRACK OF
-   REM CURRENTLY-LOADED ASSETS, PROVIDES LOOKUP
-   REM OF ASSETID (DBPID FOR MESHES FOR EXAMPLE)
-   REM BY RPGID
+   dataSharedMakeTable(DATA_TABLE_LIBRARY,0,DATA_REVERSE)   
+   
+   REM PRE-BUILD THE ASSETS TABLE
    #constant DATA_TABLE_ASSETS "assets"
-   dataSharedUpdateField(DATA_TABLE_ASSETS, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
-   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_TABLE_ASSETS,DATA_ARGSEP)
+   dataSharedMakeTable(DATA_TABLE_ASSETS,0,DATA_NO_REVERSE)   
+   dataSharedRegisterNoSaveTable(DATA_TABLE_ASSETS)
 
-   #constant DATA_FUNCTION_FAIL -1
-   #constant DATA_FUNCTION_OK 1
-   #constant DATA_KEY_DIRTY "dirty"
-   #constant DATA_DIRTY 1
-   #constant DATA_CLEAN 0
 
 return
+
+function dataSharedRegisterNoSaveTable(tableName$ as string)
+   DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,tableName$,DATA_ARGSEP)
+endfunction
+
+function dataSharedMakeTable(tableName$ as string, tableid as integer, makeReverse as boolean)
+   
+   if tableid = 0 then tableid = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
+   make lookup tableid
+   set lookup DATA_TABLES, tableName$, str$(tableid)
+   debugWrite(DEBUGINFO,"New table " + str$(tableid)  + ". " + tableName$)
+   
+   if makeReverse = 1
+      rtableid = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
+      make lookup rtableid
+      set lookup DATA_TABLES, tableName$ + DATA_REVERSE_SUFFIX, str$(rtableid)
+      debugWrite(DEBUGINFO,"New table " + str$(rtableid) + ". " + tableName$ + DATA_REVERSE_SUFFIX)
+      REM REVERSE LOOKUPS ARE NEVER SAVED
+      dataSharedRegisterNoSaveTable(tableName$ + DATA_REVERSE_SUFFIX)
+   endif
+
+endfunction tableid
 
 function dataSharedGetLibraryPath(rpgid as integer)
 
@@ -89,18 +109,16 @@ function dataSharedGetAssetID(rpgid as integer)
    retval$ = dataSharedGetField(DATA_TABLE_ASSETS,str$(rpgid), DATA_KEY_UNDEFINED, DATA_NO_CREATE)
    if retval$ = DATA_KEY_UNDEFINED
 
-      REM ASSET HAS NOT ALREADY BEEN LOADED
-      REM CALL THE APPROPRIATE FUNCTION TO
-      REM DO LOADING BY ASSET EXTENSION
-
-      REM FIRST GET PATH WHERE ASSET
-      REM IS SUPPOSED TO BE
       myPath$ = dataSharedGetLibraryPath(rpgid)
 
       REM IF ASSET IS WHERE IT IS SUPPOSED
       REM TO BE THEN LOAD IT
       if file exist(myPath$)
-         ext$ = fast right$(myPath$,3)
+         if fast right$(myPath$,2) = ".x"
+            ext$ = "dbo"
+         else
+            ext$ = fast right$(myPath$,3)
+         endif
          select ext$
             case "dbo"
                mydbpid = systemSharedGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)
@@ -118,7 +136,7 @@ function dataSharedGetAssetID(rpgid as integer)
 
 endfunction retval
 
-function dataSharedParse(tablename$ as string, attributes$ as string)
+function dataSharedParse(tableName$ as string, attributes$ as string)
 
       REM PARSE A SPACE-DELIMITED ATTRIBUTE LIST
       REM AND APPY IT TO A TABLE
@@ -132,10 +150,10 @@ function dataSharedParse(tablename$ as string, attributes$ as string)
          split string dat$(i), "="
          key$ = get split word$(1)
          value$ = get split word$(2)
-         dataSharedUpdateField(tablename$, key$, value$)
+         dataSharedUpdateField(tableName$, key$, value$)
       next
       
-      dataSharedUpdateField(tablename$, DATA_KEY_DIRTY, str$(DATA_DIRTY))
+      dataSharedUpdateField(tableName$, DATA_KEY_DIRTY, str$(DATA_DIRTY))
       
       undim dat$()
 
@@ -146,7 +164,8 @@ function dataSharedCopyTable(sourceTableid as integer, targetTableid as integer)
 
    REM COPY ALL THE ATTRIBUTES
    REM FOR ONE TABLE INTO ANOTHER
-   REM TABLE
+   REM TABLE - USED TO APPLY TEMPLATES
+   REM TO INSTANCES
 
    local retval as integer
    retval = DATA_FUNCTION_OK
@@ -198,7 +217,6 @@ function dataSharedGetField(tableName$, key$, default$,createFlag as boolean)
                debugWrite(DEBUGWARN,"dataSharedGetField lookup invalid for table: " + str$(tableid))
             endif
          else
-            `debugWrite(DEBUGINFO,"dataSharedGetField lookup not found for table: " + str$(tableid) + " and key: " + key$ + ", using default: " + default$)
             if createFlag = 1
                dataSharedUpdateField(tableName$,key$,default$)
             endif
@@ -208,16 +226,10 @@ function dataSharedGetField(tableName$, key$, default$,createFlag as boolean)
          debugWrite(DEBUGWARN,"dataSharedGetField table lookup invalid for table: " + tableName$)
       endif
    else
-      `debugWrite(DEBUGWARN,"dataSharedGetField table lookup not found for table,key,value: " + tablename$ + "," + key$ + "," + default$)
       if createFlag = 1
-         tableid = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
-         make lookup tableid
-         set lookup DATA_TABLES, tableName$, str$(tableid)
+         tableid = dataSharedMakeTable(tableName$, 0, DATA_NO_REVERSE)
          set lookup tableid, key$, default$
-
          set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
-
-         debugWrite(DEBUGINFO,"dataSharedGetField created table    " + str$(tableid) + ". " + tableName$)
       endif
       retval$ = default$
    endif
@@ -240,8 +252,7 @@ endfunction retval$
 function dataSharedUpdateFieldFast(tableid as integer, key$, value$)
 
    if lookup exist(tableid) = 0
-      make lookup tableid
-      set lookup DATA_TABLES, str$(tableid), str$(tableid)
+      tableid = dataSharedMakeTable(str$(tableid), tableid, DATA_NO_REVERSE)
    endif
    
    set lookup tableid, key$, value$
@@ -252,27 +263,31 @@ endfunction
 
 
 function dataSharedUpdateField(tableName$, key$, value$)
+
+   REM THIS IS THE ONLY TABLE UPDATE FUNCTION
+   REM THAT WILL AUTOMATICALY UPDATE 
+   REM REVERSE LOOKUP TABLES
+   
    local tableid as integer
 
    if tableName$ = "" then exitfunction DATA_FUNCTION_FAIL
-   rem first find the tableID
-   if search lookup (DATA_TABLES, tableName$) = 1
-      if lookup is valid(DATA_TABLES)
-         tableid = intval(LOOKUP CURRENT VALUE$(DATA_TABLES))
-      endif
-   else
-      tableid = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
-      make lookup tableid
-      set lookup DATA_TABLES, tableName$, str$(tableid)
-      debugWrite(DEBUGINFO,"dataSharedUpdateField created table " + str$(tableid) + ". " + tableName$)
-   endif
-
+   
+   tableid = dataSharedTableExist(tableName$)
+   if tableid = DATA_FUNCTION_FAIL
+      tableid = dataSharedMakeTable(tableName$, 0, DATA_NO_REVERSE)
+   endif      
+   
    rem now set the key/value pair in the table
    set lookup tableid, key$, value$
-
    set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
-
-   `debugWrite(DEBUGINFO,"dataSharedUpdateField updated key " + key$ + " to " + value$ + " in table " + str$(tableID) + ". " + tableName$)
+   
+   rem now set the VALUE/KEY pair in the reverse table
+   tableid = dataSharedTableExist(tableName$ + DATA_REVERSE_SUFFIX)
+   if tableid <> DATA_FUNCTION_FAIL
+      set lookup tableid, value$, key$
+      rem reverse lookups are never saved, so no need to set the DATA_KEY_DIRTY flag
+      rem reverse lookups are never automatically created, must be created using the DATA_REVERSE flag when building a table
+   endif
 
 endfunction tableid
 
@@ -289,6 +304,9 @@ function dataSharedLoadAllTables()
       close file SYSTEM_FILE_TABLE
    endif
 
+   DATA_LANGUAGE = dataSharedGetField(DATA_TABLE_GUI, "language", "language/english",DATA_CREATE)
+   debugWrite(DEBUGINFO,"Localization set to " + DATA_LANGUAGE)
+   
    REM LOCALIZATION
    filename$ = DATA_PATH + DATA_LANGUAGE + DATA_FILE_EXT
    if file exist(filename$)
@@ -300,6 +318,8 @@ function dataSharedLoadAllTables()
       endwhile
       close file SYSTEM_FILE_DATA
    endif
+   
+   dataSharedRegisterNoSaveTable(DATA_LANGUAGE)
 
 endfunction
 
@@ -374,14 +394,16 @@ function dataSharedSaveAllTables()
    local myTable as integer
    myTable = 1
 
+   debugWrite(DEBUGINFO,"dataSharedSaveAllTables called, skipping: " + DATA_NOSAVE_TABLES)
    if lookup exist(DATA_TABLES)
       FIRST LOOKUP DATA_TABLES
       while lookup is valid(DATA_TABLES)
-         myKey$ = LOOKUP CURRENT KEY$(DATA_TABLES)
-        if instr(DATA_NOSAVE_TABLES,myKey$) = 0
+        myKey$ = LOOKUP CURRENT KEY$(DATA_TABLES)
+        if systemSharedFieldInRecord(DATA_NOSAVE_TABLES,myKey$,DATA_ARGSEP) = 0
             filename$ = DATA_PATH + myKey$ + DATA_FILE_EXT
             myTable = intval(LOOKUP CURRENT VALUE$(DATA_TABLES))
             if lookup exist(myTable)
+               debugWrite(DEBUGINFO,"dataSharedSaveAllTables saving: " + filename$)
                dataSharedSaveTable(myTable, filename$)
             endif
          endif

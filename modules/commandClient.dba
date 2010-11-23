@@ -70,6 +70,7 @@ function commandRun(cmd$ as string)
       endcase
       
       case "/logoff"
+         cmdFound = 1
          guiClientSwitchToWindow("windowLogon")
          REM MORE STATE MANAGEMENT WILL BE DONE HERE
       endcase
