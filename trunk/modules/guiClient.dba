@@ -622,7 +622,7 @@ endfunction
 
 function guiClientBuildWindow(skinName$ as string, windowName$ as string)
 
-   debugWrite(DEBUGINFO,"guiBuidWindow " + windowName$)
+  
 
    mouseChange(MOUSE_CURSOR_WAIT)
    sync
@@ -846,6 +846,7 @@ function guiClientBuildWindow(skinName$ as string, windowName$ as string)
                      mygadget = guiClientCreateTextArea(guititle,myX#,myY#,myW#,myH#,guicenter,myWindow,guiid,guimultiline,0,guialigntop,0,guisizeratiooverride)
                      guigadgets(mygadget).gadgettype = GUI_TEXTFIELD
                      guigadgets(mygadget).displayPercent = 1.0
+                     guigadgets(mygadget).command = guicommand
                   endcase
                   case "button"
 
@@ -906,6 +907,30 @@ function guiClientBuildWindow(skinName$ as string, windowName$ as string)
 
    mouseChange(MOUSE_CURSOR_DEFAULT)
 
+   REM SOME WINDOWS WE WANT TO GUARANTEE
+   REM THAT SPECIFIC STATES ARE ALWAYS SET
+   REM WHEN THE WINDOW IS CREATED
+   
+   select windowName$
+   
+      case "windowLogon"
+         temp = guiClientGetGadgetID("inputLogonAccountName")
+         GUI_ACTIVE_GADGET = temp
+         guiClientPressButtonNoCommand("inputLogonAccountName")
+      endcase
+   
+      case "windowSelectAvatar"
+         guiClientPressButtonNoCommand("buttonSelectAvatar1")
+      endcase
+      
+      case "windowCreateAvatarClass"
+         guiClientPressButtonNoCommand("buttonSelectClass1")
+         guiClientPressButtonNoCommand("buttonSelectPowerSource0")
+         commandRun("/switchclass 1")
+         commandRun("/switchpowersource 0")
+      endcase
+   endselect
+
 
 endfunction
 
@@ -918,9 +943,7 @@ function guiClientCreateWindow(title as string,x as integer, y as integer, w as 
    add to queue guiwindows()
    windowid = array count(guiwindows())
    guiwindows().windowid = windowid
-   debugWrite(DEBUGINFO,"GUICREATEWINDOW " + str$(windowid))
-
-
+   
 
    guiwindows().x = x
    if savemetrics = 1
@@ -1081,8 +1104,8 @@ function guiClientCreateWindow(title as string,x as integer, y as integer, w as 
 
 
    guiwindows().savemetrics = savemetrics
-
-
+   
+  
 endfunction windowid
 
 function guiClientCreateGadget(myGadgetType as string,x,y,w,h,windowid,myborderimage,mycenterimage,myguiid as string,myidxcolor,sliderbeginrange,sliderendrange,slidervertical)
@@ -2292,25 +2315,25 @@ if guiwindows(windowid).hiddenflag=0 and guiwindows(windowid).closed=0 and guiwi
 
             select guigadgets(i).gadgettype
                case GUI_BUTTON
-                  guiClientPressButtonNoCommand(i)
+                  guiClientPressButtonNoCommand(guigadgets(i).guiid)
                   GUI_ACTIVE_GADGET = i
                endcase
                case GUI_CLOSE
-                  guiClientPressButtonNoCommand(i)
+                  guiClientPressButtonNoCommand(guigadgets(i).guiid)
                   GUI_ACTIVE_GADGET = i
                endcase
                case GUI_MINIMIZE
-                  guiClientPressButtonNoCommand(i)
+                  guiClientPressButtonNoCommand(guigadgets(i).guiid)
                   GUI_ACTIVE_GADGET = i
                endcase
                case GUI_SLIDER
-                  guiClientPressButtonNoCommand(i)
-                  guiClientPressButtonNoCommand(guigadgets(i).scrollbar)
+                  guiClientPressButtonNoCommand(guigadgets(i).guiid)
+                  guiClientPressButtonNoCommand(guigadgets(guigadgets(i).scrollbar).guiid)
                   GUI_ACTIVE_GADGET = i
                endcase
                case GUI_TEXTFIELD
                   clear entry buffer
-                  guiClientPressButtonNoCommand(i)
+                  guiClientPressButtonNoCommand(guigadgets(i).guiid)
                   GUI_ACTIVE_GADGET = i
                endcase
 
@@ -2530,8 +2553,17 @@ if guiwindows(windowid).hiddenflag=0 and guiwindows(windowid).closed=0 and guiwi
                      clear entry buffer
                   endif
                endif
+               
+               if (scancode() = 15)
+                  `Tab
+                  nextRadio = guiFindNextRadioGroup(i)
+                  GUI_ACTIVE_GADGET = nextRadio
+                  guiClientPressButtonNoCommand(guigadgets(nextRadio).guiid)
+                  clear entry buffer
+               endif
 
                if (scancode() = 1)
+                  `Esc
                   guigadgets(i).label = ""
                   guiClientSetTextArea(i,guigadgets(i).label,0,0)
                   clear entry buffer
@@ -2539,6 +2571,7 @@ if guiwindows(windowid).hiddenflag=0 and guiwindows(windowid).closed=0 and guiwi
 
 
                if (scancode() = 14 or scancode() = 211)
+                  `Backspace or Delete
                   if len(guigadgets(i).label) > 1
                      guigadgets(i).label = left$(guigadgets(i).label,len(guigadgets(i).label)-1)
                      guiClientSetTextArea(i,guigadgets(i).label,0,0)
@@ -2554,20 +2587,23 @@ if guiwindows(windowid).hiddenflag=0 and guiwindows(windowid).closed=0 and guiwi
 
 
                if scancode() = 28
-
+                  `Enter
                   if guigadgets(i).guiid = GUI_CHAT_ENTER
+                     REM THIS IS THE CHATBOX
                      sendChat = 1
-
                      if fast left$(guigadgets(i).label,1) = "/"
                         commandSharedParse(guigadgets(i).label)
                         sendChat = 0
                      endif
-
                      if sendChat = 1
                         netClientSendChat(networkClientCurrentChannel$,guigadgets(i).label)
                      endif
                      guigadgets(i).label = ""
                      guiClientSetTextArea(i,guigadgets(i).label,0,0)
+                  else
+                     REM NOT THE CHATBOX
+                     cmd$ = commandSharedUnmask(guigadgets(i).command)
+                     commandSharedParse(cmd$)
                   endif
                   clear entry buffer
 
@@ -2779,6 +2815,7 @@ function guiClientShowWindow(guiid$)
       guiClientSetActiveWindow(windowid)
 
    endif
+   
 
 endfunction
 
@@ -2824,10 +2861,12 @@ function guiClientSetActiveWindow(windowid as integer)
 
 endfunction
 
-function guiClientPressButtonNoCommand(gadgetid as integer)
+function guiClientPressButtonNoCommand(guiid$)
 
 REM SWITCHES TO THE PRESS IMAGE WITHOUT RUNNING THE BUTTON COMMAND
 REM USED TO MAINTAIN BUTTON STATE FOR BUTTON LISTS
+
+gadgetid = guiClientGetGadgetID(guiid$)
 
 if gadgetid < 0 or gadgetid > array count(guigadgets()) then exitfunction
 
@@ -3110,3 +3149,32 @@ function guiClientUpdateGUI()
    guiClientUpdateGadgets()
 
 endfunction
+
+function guiFindNextRadioGroup(idx as integer)
+
+   findWindow = guigadgets(idx).parent.windowid
+   local found as boolean
+   local ctr as integer
+   local foundFirst as integer
+   found = 0 : ctr = 0 : foundFirst = idx
+   while found = 0 and ctr < array count(guigadgets())
+      inc ctr
+      if guigadgets(ctr).parent.windowid = findWindow
+         if ctr <> idx
+            if guigadgets(ctr).radioGroup = guigadgets(idx).radioGroup
+               if foundFirst = idx then foundFirst = ctr
+               if ctr > idx
+                  found = 1
+               endif
+            endif
+         endif
+      endif
+   endwhile
+   
+   if found = 0
+      if foundFirst <> 0
+         ctr = foundFirst
+      endif
+   endif
+   
+endfunction ctr

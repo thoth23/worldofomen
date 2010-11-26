@@ -109,17 +109,17 @@ endfunction retval
 function dataServerAvatarFree(tableName$ as string)
    
    REM SEARCHES A TABLE FOR AN AVAILABLE
-   REM AVATARNAME ATTRIBUTE UP TO PRESET MAX
-   REM USED EXCLUSIVELY FOR ACCOUNT TABLES
+   REM AVATARX ATTRIBUTE UP TO PRESET MAX
+   REM USED EXCLUSIVELY FOR ACOUNT TABLES
    
    local ctr as integer
    local found as boolean
    ctr = 0
    found = 0
    
-   while ctr < DATA_DEFAULT_AVATAR_COUNT AND found = 0
+   while ctr < PLAYER_AVATARS_PER_ACCOUNT_DEFAULT AND found = 0
       inc ctr
-      if dataSharedGetField(tableName$, "avatarname"+str$(ctr),DATA_KEY_UNDEFINED,DATA_NO_CREATE) = DATA_KEY_UNDEFINED then found = 1
+      if dataSharedGetField(tableName$, "avatar"+str$(ctr),DATA_KEY_UNDEFINED,DATA_NO_CREATE) = DATA_KEY_UNDEFINED then found = 1
    endwhile
    
    if found = 0 then ctr = DATA_FUNCTION_FAIL
@@ -127,7 +127,7 @@ function dataServerAvatarFree(tableName$ as string)
 endfunction ctr
 
 
-function dataServerCreateAvatar(myTable as integer, accountName$ as string, avatarName$ as string)
+function dataServerCreateAvatar(client as integer, accountName$ as string, avatarName$ as string, class as integer, powersource as integer)
    
    local retval as integer
    retval = DATA_FUNCTION_FAIL
@@ -139,34 +139,68 @@ function dataServerCreateAvatar(myTable as integer, accountName$ as string, avat
       REM PASSED TEST  1 - NO INVALID CHARACTERS FOUND
       accountFilename$ = DATA_ACCOUNT_PATH + lowerAccountName$
       if fast len(lowerAccountName$) > 5 AND fast len(lowerAvatarName$) > 5
-         REM PASSED TEST 2 - AvatarName MORE THAN 5 CHARACTERS
+         REM PASSED TEST 2 - AvatarName AND AccountName MORE THAN 5 CHARACTERS
          if file exist(accountFilename$) = 1
             REM PASSED TEST 3 - ACCOUNT DOES EXIST
             avatarFilename$ = DATA_AVATAR_PATH + lowerAvatarName$
             if file exist(avatarFilename$) = 0
                REM PASSED TEST 4 - AVATAR DOES NOT ALREADY EXIST
-               retval = DATA_FUNCTION_OK
-               myavatarid = dataServerGetNextAvatarID()
-             
-               REM UPDATE TABLE
-               dataSharedUpdateFieldFast(myTable,"accountname",accountName$)
-               dataSharedUpdateFieldFast(myTable,"avatarname",avatarName$)
-               dataSharedUpdateFieldFast(myTable,"avatarid",str$(myavatarid))
-               REM AND SAVE TABLE
-               dataSharedSaveTable(myTable, avatarFilename$)
-                      
-               debugWrite(DEBUGINFO,"Avatar created successfuly: " + avatarName$)
+               myAvatarSlot=dataServerAvatarFree(str$(client))
+               if myAvatarSlot <> DATA_FUNCTION_FAIL
+                  REM PASSED TEST 5 - ACCOUNT HAS AN AVAILABLE AVATAR SLOT
+
+               
+                  REM GET A NEW UNIQUE AVATAR ID, AND A NEW TABLE ID
+                  myavatarid = dataServerGetNextAvatarID()
+                  myTable = dataSharedMakeTable(avatarFilename$, 0, DATA_NO_REVERSE)
+                  
+                  REM ASSOCIATE THE SELECTED AVATAR TABLE ID WITH THE ACCOUNT TABLE
+                  dataSharedUpdateFieldFast(client,"currentavatartid",str$(myTable))
+                  
+                  REM UPDATE THE RPGID IN THE ACCOUNT TABLE TO THE AVATARID
+                  REM THIS IS A CONVENIENCE FIELD
+                  dataSharedUpdateFieldFast(client,"rpgid",str$(myavatarid))
+                  
+                  REM UPDATE THE CTABLE
+                  dataSharedUpdateFieldFast(NET_SERVER_CTABLEID, str$(myavatarid), str$(client))
+                  
+                  REM PUT THE AVATAR IN THE OPEN ACCOUNT SLOT
+                  REM WE USE CASE-SENSITIVE VALUE IN THE ACCOUNT
+                  REM TABLE BECAUSE THE ACOUNT VALUE IS USED FOR
+                  REM DISPLAY AND FOR SENDING THE AVATAR LIST
+                  dataSharedUpdateFieldFast(client,"avatar"+str$(myAvatarSlot),avatarName$)
+                  
+                  REM UPDATE AVATAR TABLE
+                  dataSharedUpdateFieldFast(myTable,"accountname",accountName$)
+                  dataSharedUpdateFieldFast(myTable,"avatarid",str$(myavatarid))
+                  dataSharedUpdateFieldFast(myTable,"avatarname",avatarName$)
+                  dataSharedUpdateFieldFast(myTable,"class",str$(class))
+                  dataSharedUpdateFieldFast(myTable,"powersource",str$(powersource))
+                  
+                  REM SAVE THE NEW AVATAR TABLE
+                  dataSharedSaveTable(myTable, avatarFilename$)
+                  
+                  REM SAVE THE UPDATES TO THE ACCOUNT TABLE
+                  dataSharedSaveTable(client, DATA_ACCOUNT_PATH + lowerAccountName$)
+                  
+                  REM RETURN THE AVATAR TABLE ID 
+                  retval = myTable
+                  debugWrite(DEBUGINFO,"Avatar create success: " + lowerAvatarName$ + " for " + lowerAccountName$)
+                  
+               else
+                  debugWrite(DEBUGWARN,"Avatar Creation failed: Account has no open avatar slots: " + lowerAccountName$)
+               endif
             else
-               debugWrite(DEBUGWARN,"Avatar already exists: " + avatarFilename$)
+               debugWrite(DEBUGWARN,"Avatar Creation failed: Avatar already exists: " + avatarFilename$)
             endif
          else
-            debugWrite(DEBUGWARN,"Account does not exist for avatar creation: " + lowerAccountName$)
+            debugWrite(DEBUGWARN,"Avatar Creation failed: Account does not exist for avatar creation: " + lowerAccountName$)
          endif
       else
-         debugWrite(DEBUGWARN,"Avatar name less than 6 characters: " + lowerAvatarName$)
+         debugWrite(DEBUGWARN,"Avatar Creation failed: Avatar name less than 6 characters: " + lowerAvatarName$)
       endif
    else
-      debugWrite(DEBUGWARN,"Avatar name contains invalid characters: " + lowerAvatarName$)
+      debugWrite(DEBUGWARN,"Avatar Creation failed: Avatar name contains invalid characters: " + lowerAvatarName$)
    endif
    
 endfunction retval

@@ -10,7 +10,7 @@ keyboardSharedSetup:
    KEYBOARD_SAFE_KEYS = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+{[}];:',./?|"
 
    global KEYBOARD_SAFE_FILENAME_KEYS as string
-   KEYBOARD_SAFE_FILENAME_KEYS = "abcdefghijklmnopqrstuvwxyz0123456789"
+   KEYBOARD_SAFE_FILENAME_KEYS = " abcdefghijklmnopqrstuvwxyz0123456789"
       
 return
 

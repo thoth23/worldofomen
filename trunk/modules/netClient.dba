@@ -344,6 +344,40 @@ function netClientSendAssetIDRequest(path$ as string)
    
 endfunction
 
+function netClientSendCreateAvatarRequest()
+
+   local sendrequest as boolean
+   sendrequest = 1
+
+   REM FIRST COLLECT BASE DATA
+   myclass = intval(dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarClass", "1", DATA_CREATE))
+   mysource = intval(dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarPowerSource", "0", DATA_CREATE))
+   myname$ = dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarName", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+   mymodcount = 0
+   rem not sending mods yet, just the basics
+   
+   REM LOCAL NAME VALIDATION
+   if myname$ = DATA_KEY_UNDEFINED OR myname$="" or len(myname$) < 6
+      guiClientMessageBoxShow("Avatar creation failed.  Avatar names must be at least 6 characters long.",2,"","OK","","","/hidewindow\windowMessageBox","")
+      sendrequest = 0
+   endif
+   
+   if sendrequest = 1
+      bytes = NET_HEADER_BYTES
+      inc bytes, 12
+      inc bytes, len(myname$)
+   
+      netSharedAddHeader(NETC_CREATE_AVATAR, bytes)
+      mn Add Int SendPacket, myclass
+      mn Add Int SendPacket, mysource
+      mn Add String SendPacket, myname$, 0, 1
+      mn Add Int SendPacket, mymodcount
+      mn Send TCP 0,SendPacket,0,0,1
+      debugWrite(DEBUGINFO,"Sent NETC_CREATE_AVATAR for " + myname$)    
+   endif
+      
+endfunction sendrequest
+
 function netClientParseTCP()
 
     length = mn Get Int(RecvPacket)
@@ -440,6 +474,12 @@ function netClientParseTCP()
             systemSharedGameModeAdd(SYSTEM_MODE_GUI)
             debugWrite(DEBUGINFO,"NETS_SWITCH_WINDOW received for  " + windowName$)
        endcase
+       
+       case NETS_CREATE_AVATAR
+            REM SERVER IS TELLING CLIENT THAT AN AVATAR
+            REM CREATION WAS SUCCESSFUL, UPDATE AVATAR LIST
+            guiClientMessageBoxShow("Avatar creation successful.",2,"","OK","","","/hidewindow\windowMessageBox;;/killwindow\windowSelectAvatar;/getavatarlist","")
+       endcase
 
        case NETS_RPGID       
          REM SERVER IS SENDING BACK THE UNIQUE
@@ -475,6 +515,10 @@ function netClientParseTCP()
        
        case NETS_LOGON_BETA_ERROR
          guiClientMessageBoxShow("Logon failed.  Password is case sensitive.  Please try again.",2,"","OK","","","/switchtowindow\windowLogon","")
+       endcase
+
+       case NETS_CREATE_AVATAR_ERROR
+         guiClientMessageBoxShow("Avatar creation failed.  Avatar name invalid or in use.  Please try again.",2,"","OK","","","/hidewindow\windowMessageBox;/showwindow\windowCreateAvatarChasis","")
        endcase
 
     endselect
