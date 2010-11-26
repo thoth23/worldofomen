@@ -13,13 +13,13 @@ LineInclude2=22
 include3=modules\collisionShared.dba
 LineInclude3=0
 include4=modules\commandClient.dba
-LineInclude4=72
+LineInclude4=83
 include5=modules\commandShared.dba
-LineInclude5=11
+LineInclude5=12
 include6=modules\dataClient.dba
-LineInclude6=13
+LineInclude6=12
 include7=modules\dataShared.dba
-LineInclude7=103
+LineInclude7=47
 include8=modules\debugClient.dba
 LineInclude8=0
 include9=modules\debugShared.dba
@@ -31,7 +31,7 @@ LineInclude11=0
 include12=modules\goalShared.dba
 LineInclude12=0
 include13=modules\guiClient.dba
-LineInclude13=275
+LineInclude13=913
 include14=modules\inventoryShared.dba
 LineInclude14=0
 include15=modules\keyboardClient.dba
@@ -41,11 +41,11 @@ LineInclude16=0
 include17=modules\meshClient.dba
 LineInclude17=16
 include18=modules\mouseClient.dba
-LineInclude18=17
+LineInclude18=15
 include19=modules\netClient.dba
-LineInclude19=173
+LineInclude19=473
 include20=modules\netShared.dba
-LineInclude20=79
+LineInclude20=0
 include21=modules\playerClient.dba
 LineInclude21=12
 include22=modules\playerShared.dba
@@ -90,7 +90,7 @@ graphics mode=window
 fullscreen resolution=1024x768x32
 
 ; arbitrary sizes are valid for windowed mode
-window resolution=800x600
+window resolution=1024x768
 
 ; **** External Files Information ****
 

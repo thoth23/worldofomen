@@ -65,7 +65,7 @@ netServerSetup:
    endif
    
    #constant NET_SERVER_CLIENTID "clientIDLookup"
-   dataSharedMakeTable(NET_SERVER_CLIENTID,0,DATA_REVERSE)
+   dataSharedMakeTable(NET_SERVER_CLIENTID,0,DATA_NO_REVERSE)
    dataSharedRegisterNoSaveTable(NET_SERVER_CLIENTID)
    
    global NET_SERVER_CTABLEID as integer
@@ -546,6 +546,27 @@ function netServerParseTCP(instance as integer, client as integer)
          debugWrite(DEBUGINFO,"Sent NETS_ASSETID to " + str$(client) + " with rpgid " + str$(propID))
          
      endcase
+     
+     case NETC_CREATE_AVATAR
+         accountName$ = dataSharedGetFieldFast(client,"accountname")
+         myclass = mn Get Int(RecvPacket)
+         mysource = mn Get Int(RecvPacket)
+         myname$ = mn Get String(RecvPacket,0,1)
+         mymodcount = mn Get Int(RecvPacket)
+         
+         REM READING MODS WILL GO HERE
+         
+         myAvatarTable = dataServerCreateAvatar(client, accountName$, myname$, myclass, mysource)
+         if myAvatarTable = DATA_FUNCTION_FAIL
+            debugWrite(DEBUGWARN,"Avatar Creation failed: " + myname$)
+            netServerSendOpCode(instance, client, NETS_CREATE_AVATAR_ERROR)    
+         else
+            debugWrite(DEBUGINFO,"Avatar Creation success: " + myname$)
+            netServerSendOpCode(instance, client, NETS_CREATE_AVATAR)    
+         endif
+     endcase
+    
+
      
   endselect
 
