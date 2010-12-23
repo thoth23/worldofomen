@@ -119,6 +119,10 @@ function commandRun(cmd$ as string)
             netClientSendAvatarList()
       endcase
       
+      case "/switchavatar"
+            netClientSendAvatarDetailsSelf(get split word$(2))
+      endcase
+      
       case default
             REM NOT A CLIENT COMMAND, SEND TO SERVER
             netClientSendCommand(cmd$)

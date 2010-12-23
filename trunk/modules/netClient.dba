@@ -321,6 +321,20 @@ function netClientSendAvatarList()
 
 endfunction
 
+function netClientSendAvatarDetailsSelf(avatarName$ as string)
+
+   REM MUST SEND ENCYPTED ACCOUNTNAME
+   REM USING UNIQUE SESSION KEY
+   bytes = NET_HEADER_BYTES
+   inc bytes, len(avatarName$)
+
+   netSharedAddHeader(NETC_AVATAR_DETAILS_SELF, bytes)
+   mn Add String SendPacket, avatarName$, 0, 1
+   mn Send TCP 0,SendPacket,0,0,1
+   debugWrite(DEBUGINFO,"Sent NETC_AVATAR_DETAILS_SELF")
+
+endfunction
+
 function netClientSendManifestComplete()
 
    REM TELL THE SERVER WE ARE DONE UPDATING MANIFEST
@@ -480,24 +494,56 @@ function netClientParseTCP()
             REM CREATION WAS SUCCESSFUL, UPDATE AVATAR LIST
             guiClientMessageBoxShow("Avatar creation successful.",2,"","OK","","","/hidewindow\windowMessageBox;;/killwindow\windowSelectAvatar;/getavatarlist","")
        endcase
+       
+       case NETS_AVATAR_DETAILS_SELF
+            REM SERVER IS SENDING BACK tidPlayer AVATAR DETAILS
+            
+            myavatarid = mn Get Int(RecvPacket)
+            myavatarName$ = mn Get String(RecvPacket,0,1)
+            myclass = mn Get Int(RecvPacket)
+            mypowersource = mn Get Int(RecvPacket)
+            mymeshid = mn Get Int(RecvPacket)
+            mymorphcount = mn Get Int(RecvPacket)
+            
+            
+            mytid = playerClientCreate(myavatarid, mymeshid)
+            
+            tidPlayer = mytid
+            dataSharedUpdateFieldFast(mytid,"avatarid",str$(myavatarid))
+            dataSharedUpdateFieldFast(mytid,"avatarname",myavatarName$)
+            dataSharedUpdateFieldFast(mytid,"class",str$(myclass))
+            dataSharedUpdateFieldFast(mytid,"powersource",str$(mypowersource))
+            dataSharedUpdateFieldFast(mytid,"meshid",str$(mymeshid))
+            dataSharedUpdateFieldFast(mytid,"morphcount",str$(mymorphcount))
+            
+            mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+            cameraClientPaperDoll(mydbpid)
+            DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,str$(myavatarid),DATA_ARGSEP)
+            
+            for i = 1 to mymorphcount
+                  mymorphid = mn Get Int(RecvPacket)      
+                  meshClientApplyMorphTarget(mytid,mymorphid)
+            next i
+            
+            REM GET AND APPLY MASKS
+            
+            REM GET AND APPLY TEXTURES/COLORS
+            
+            REM GET AND APPLY SHADER
+            
+            REM MORE MODS WILL BE ADDED HERE LATER
+            
+       endcase
 
        case NETS_RPGID       
          REM SERVER IS SENDING BACK THE UNIQUE
          REM RPGID OF THE LOCAL PLAYER
-         temp = mn Get Int(RecvPacket)
-         debugWrite(DEBUGINFO,"Local Player RPGID received: " + str$(temp))
-
-         REM WE ARE TEMPORARILY CHEATING HERE - THE SERVER
-         REM WILL NEED TO SEND THE BASE MESH RPGID BY THIS
-         REM POINT AS WELL - WE'LL USE A WELL-KNOWN VALUE
-         REM FOR NOW (1 for the player_base.dbo)
-         tidPlayer = playerClientCreate(temp,1)
-         
-         REM WE DON'T WANT TO SAVE A TABLE FOR OUR OWN
-         REM PLAYER - THAT IS HANDLED BY THE SERVER
-         DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,str$(temp),DATA_ARGSEP)
+         myrpgid = mn Get Int(RecvPacket)
+         mymeshid = mn Get Int(RecvPacket)
+         debugWrite(DEBUGINFO,"Local Player RPGID received: " + str$(myrpgid))
                   
-         
+         DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,str$(myrpgid),DATA_ARGSEP)
+                  
          guiClientShowWindow(GUI_WINDOW_MAIN)
 
          systemSharedGameModeAdd(SYSTEM_MODE_LOGON_COMPLETE)

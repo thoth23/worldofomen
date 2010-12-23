@@ -21,9 +21,7 @@ meshClientSetup:
    MESH_DEFAULT_FPS = val(dataSharedGetField("meshClient", "meshDefaultFPS", "24.0", DATA_CREATE))
    
    global MESH_PATHS as string
-   
-   #constant MESH_AVATAR_PATH "media/avatar/"
-   
+  
    meshClientRegisterPath(MESH_AVATAR_PATH)
    
 return
@@ -60,7 +58,7 @@ function meshClientRegisterNew()
                      rpgid = dataClientGetLibraryRPGID(pathfilename$)
                      if rpgid = DATA_FUNCTION_FAIL
                      
-                        REM NOT REGISTERED YET, ASK THE SERVER FOR AN RPGID
+                        REM NOT REGISTERED YET, ASK THE SERVER FOR AN ASSETID
                         netClientSendAssetIDRequest(pathfilename$)
                         
                      endif
@@ -85,6 +83,18 @@ function meshClientLoad(myPath$, mydbpid)
 
 endfunction MESH_FUNCTION_OK
 
+function meshClientLoadMorph(myPath$,mybnkid)
+
+   REM LOADS A MORPH TARGET INTO A BANK FOR LATER APPLICATION
+   
+   if file exist(myPath$) = 0 then exitfunction MESH_FUNCTION_FAIL
+   if bank exist(mybnkid)
+      delete bank mybnkid
+   endif
+   make bank from file mybnkid, myPath$
+   
+endfunction MESH_FUNCTION_OK
+
 function meshClientDestroy(mytid as integer)
 
    mydbpid = intval(dataSharedGetFieldFast(mytid, "dbpid"))
@@ -101,10 +111,10 @@ function meshClientCreate(mytid as integer)
 
    REM INSTANTIATE A MESH INTO THE WORLD
    REM ASSUMES THE TABLE HAS BEEN
-   REM PRE-POPULATED WITH rpgidmesh
+   REM PRE-POPULATED WITH meshid
 
    mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
-   myrpgidmesh = intval(dataSharedGetFieldFast(mytid,"rpgidmesh"))
+   mymeshid = intval(dataSharedGetFieldFast(mytid,"meshid"))
    if mydbpid = 0
       mydbpid = systemSharedGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)
       dataSharedUpdateFieldFast(mytid, "dbpid", str$(mydbpid))
@@ -124,8 +134,8 @@ function meshClientCreate(mytid as integer)
    scale object mydbpid, 100, 5000, 100
    color object mydbpid, rgb(255,0,128)
 
-   myPath$ = dataSharedGetLibraryPath(myrpgidmesh)
-   mysourcedbpid = dataSharedGetAssetID(myrpgidmesh)
+   myPath$ = dataSharedGetLibraryPath(mymeshid)
+   mysourcedbpid = dataSharedGetAssetID(mymeshid)
    debugWrite(DEBUGINFO,"meshClientCreate: target dbpid found for cloning " + str$(mydbpid))
    debugWrite(DEBUGINFO,"meshClientCreate: source dbpid found for cloning " + str$(mysourcedbpid))
 
@@ -137,27 +147,9 @@ function meshClientCreate(mytid as integer)
    if object exist(mydbpid) then delete object mydbpid
    clone object mydbpid, mysourcedbpid, 1
 
-   datafilename$ = myPath$ + DATA_FILE_EXT
-
-   if file exist(datafilename$)
-
-      debugWrite(DEBUGINFO,"meshClientCreate: data file for mesh exists: " + datafilename$)
-      REM MESH HAS ITS OWN DATA FILE
-      REM LOAD TABLE IF NOT ALREADY LOADED
-      if dataSharedTableExist(datafilename$) = DATA_FUNCTION_FAIL
-         debugWrite(DEBUGINFO,"meshClientCreate: data file not previously loaded, loading and applying: " + datafilename$)
-         dataSharedLoadTable(datafilename$,datafilename$)
-      else
-         debugWrite(DEBUGINFO,"meshClientCreate: data file already loaded, applying: " + datafilename$)
-      endif
-
-      REM APPLY THE DATA FILE TO THE ASSOCIATED
-      REM DATAOBJECT ARRAY
-      mytemplatetid = dataSharedTableExist(datafilename$)
-      dataSharedCopyTable(mytemplatetid, mytid)
-      dataSharedUpdateFieldFast(mytid, "meshdata",datafilename$)
-
-   endif
+   REM IF A DATA FILE EXISTS FOR THE MESH BEING USED THEN
+   REM APPLY IT TO THE TABLE OF THE OBJECT
+   meshSharedApplyDataFile(mytid)
    
    REM APPLY TRANSFORMS
    posx# = val(dataSharedGetFieldFast(mytid,"posx"))
@@ -185,6 +177,39 @@ function meshClientCreate(mytid as integer)
    endif
    myval = collisionClientSet(mydbpid,colType,colGroup)
    debugWrite(DEBUGINFO,"collision Setup Result: " + str$(myval))
+
+endfunction MESH_FUNCTION_OK
+
+function meshClientApplyMorphTarget(mytid as integer, morphid as integer)
+
+      mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+      mymeshlimb = intval(dataSharedGetFieldFast(mytid,"meshlimb"))
+      mybankid = dataSharedGetAssetID(morphid)
+      
+      debugWrite(DEBUGINFO, "meshClientApplyMorphTarget applying " + str$(mybankid) + " to " + str$(mydbpid))
+      
+      lock vertexdata for limb mydbpid, mymeshlimb, 2
+      
+      bpos = 0
+      bSize = get bank size(mybankid)
+      while bpos < bSize
+         v=bank integer(1,bpos) : inc bpos, 4
+         posx# = bank float(1,bpos) : inc bpos, 4
+         posy# = bank float(1,bpos) : inc bpos, 4
+         posz# = bank float(1,bpos) : inc bpos, 4
+         norx# = bank float(1,bpos) : inc bpos, 4
+         nory# = bank float(1,bpos) : inc bpos, 4
+         norz# = bank float(1,bpos) : inc bpos, 4
+         x#=get vertexdata position x(v)
+         y#=get vertexdata position y(v)
+         z#=get vertexdata position z(v)
+         nx#=get vertexdata normals x(v)
+         ny#=get vertexdata normals y(v)
+         nz#=get vertexdata normals z(v)
+         set vertexdata position v, x# + posx#, y# + posy#, z# + posz#
+         set vertexdata normals v, nx# + norx#, ny# + nory#, nz# + norz#
+      endwhile
+      unlock vertexdata
 
 endfunction MESH_FUNCTION_OK
 

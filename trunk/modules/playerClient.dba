@@ -37,13 +37,12 @@ playerClientSetup:
 return
 
 
-function playerClientCreate(rpgid as integer, rpgidmesh as integer)
+function playerClientCreate(rpgid as integer, meshid as integer)
 
-   
    tid = dataSharedUpdateField(str$(rpgid),"rpgid",str$(rpgid))
-   dataSharedUpdateField(str$(rpgid),"rpgidmesh",str$(rpgidmesh))
+   dataSharedUpdateFieldFast(tid,"meshid",str$(meshid))
    dataSharedUpdateFieldFast(DATA_CLIENT_RTABLEID,str$(rpgid),str$(tid))
-   meshClientCreate(tid)
+   meshClientCreate(tid)   
    
 endfunction tid
 

@@ -73,15 +73,18 @@ endfunction
 function cameraClientPaperDoll(idTarget as integer)
 
    if idTarget < 1 then exitfunction
-   if object exist(idTarget) = 0 then exitfunction
+   if object exist(idTarget) = 0
+      debugWrite(DEBUGWARN,"cameraClientPaperDoll: target doesn't exist: " + str$(idTarget))
+      exitfunction
+   endif
 
    position camera 0, (object position x(idTarget)), (object position y(idTarget)), (object position z(idTarget))
    rotate camera 0, 0,0,0
-   move camera 0, 2.25
-   move camera left 0, 1.0
+   move camera 0, (object size(idTarget) * 1.25)
+   move camera left 0, (object size(idTarget) * 0.5)
    `move camera up 0, 1.0
    point camera 0, (object position x(idTarget)), (object position y(idTarget)), (object position z(idTarget))
-   move camera left 0, 0.5
+   move camera left 0, (object size(idTarget) * 0.25)
 
 endfunction
 

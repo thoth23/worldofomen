@@ -318,7 +318,7 @@ function guiClientGetGUIDataField(key as string, default as string)
 endfunction value$
 
 function guiClientSetGUIDataField(key as string, value as string)
-   REM INTERFACE TO UNSTRUCTURED DATA SYSTEM, INPUT TABLE
+   REM INTERFACE TO UNSTRUCTURED DATA SYSTEM, GUI DATA TABLE
    dataSharedUpdateField(DATA_TABLE_GUIDATA, key, value)
 endfunction
 

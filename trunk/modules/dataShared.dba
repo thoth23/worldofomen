@@ -77,12 +77,14 @@ function dataSharedMakeTable(tableName$ as string, tableid as integer, makeRever
    if tableid = 0 then tableid = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
    make lookup tableid
    set lookup DATA_TABLES, tableName$, str$(tableid)
+   dataSharedUpdateFieldFast(tableid, "tablename", tableName$)
    debugWrite(DEBUGINFO,"New table " + str$(tableid)  + ". " + tableName$)
    
    if makeReverse = 1
       rtableid = systemSharedGetFree(SYSTEM_TYPE_LOOKUP,SYSTEM_SEARCH_FAST)
       make lookup rtableid
       set lookup DATA_TABLES, tableName$ + DATA_REVERSE_SUFFIX, str$(rtableid)
+      dataSharedUpdateFieldFast(rtableid, "tablename", tableName$ + DATA_REVERSE_SUFFIX)
       debugWrite(DEBUGINFO,"New table " + str$(rtableid) + ". " + tableName$ + DATA_REVERSE_SUFFIX)
       REM REVERSE LOOKUPS ARE NEVER SAVED
       dataSharedRegisterNoSaveTable(tableName$ + DATA_REVERSE_SUFFIX)
@@ -125,6 +127,12 @@ function dataSharedGetAssetID(rpgid as integer)
                meshClientLoad(myPath$,mydbpid)
                dataSharedUpdateField(DATA_TABLE_ASSETS, str$(rpgid), str$(mydbpid))
                retval = mydbpid
+            endcase
+            case "tgt"
+               mybnkid = systemSharedGetFree(SYSTEM_TYPE_BANK, SYSTEM_SEARCH_REUSE)
+               meshClientLoadMorph(myPath$,mybnkid)
+               dataSharedUpdateField(DATA_TABLE_ASSETS, str$(rpgid), str$(mybnkid))
+               retval = mybnkid
             endcase
          endselect
       else
@@ -177,9 +185,9 @@ function dataSharedCopyTable(sourceTableid as integer, targetTableid as integer)
    while lookup is valid(sourceTableid)
       key$ = fast lower$(lookup current key$(sourceTableid))
       value$ = lookup current value$(sourceTableid)
-
-      dataSharedUpdateFieldFast(targetTableid, key$, value$)
-
+      if key$ <> "tablename"
+         dataSharedUpdateFieldFast(targetTableid, key$, value$)
+      endif
       next lookup sourceTableid
    endwhile
 
@@ -189,7 +197,33 @@ endfunction retval
 
 function dataSharedResetTable(tableid as integer)
    
-      delete lookup tableid
+      REM FIRST GET THE TABLE NAME
+      REM AND THE REVERSE TABLE NAME
+      tableName$ = dataSharedGetFieldFast(tableid,"tablename")
+      rTableName$ = tableName$ + DATA_REVERSE_SUFFIX
+      rtableid = dataSharedTableExist(rTableName$)
+      
+      REM DELETE THE TABLE IF IT EXISTS
+      if lookup exist(tableid)
+         delete lookup tableid
+         debugWrite(DEBUGINFO,"Deleted  Table " + str$(tableid) + ". " + tableName$)
+      endif
+      
+      REM DELETE THE REVERSE TABLE IF IT EXISTS
+      if lookup exist(rtableid)
+         delete lookup rtableid
+         debugWrite(DEBUGINFO,"Deleted rTable " + str$(rtableid) + ". " + rTableName$)
+      endif
+      
+      REM REMOVE RECORD FROM DATA_TABLES
+      if search lookup (DATA_TABLES, tableName$) = 1
+         delete lookup DATA_TABLES, tableName$
+      endif
+      
+      REM REMOVE RECORD FOR REVERSE TABLE FROM DATA_TABLES
+      if search lookup (DATA_TABLES, rTableName$) = 1
+         delete lookup DATA_TABLES, rTableName$
+      endif
    
 endfunction
 
@@ -241,10 +275,12 @@ function dataSharedGetFieldFast(tableid, key$)
    local retval$ as string
    retval$ = DATA_KEY_UNDEFINED
    
-   if search lookup(tableid, key$) = 1
-         if lookup is valid(tableid)
-            retval$ = lookup current value$(tableid)
-         endif      
+   if tableid > 0
+      if search lookup(tableid, key$) = 1
+            if lookup is valid(tableid)
+               retval$ = lookup current value$(tableid)
+            endif      
+      endif
    endif
    
 endfunction retval$
@@ -282,9 +318,9 @@ function dataSharedUpdateField(tableName$, key$, value$)
    set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
    
    rem now set the VALUE/KEY pair in the reverse table
-   tableid = dataSharedTableExist(tableName$ + DATA_REVERSE_SUFFIX)
-   if tableid <> DATA_FUNCTION_FAIL
-      set lookup tableid, value$, key$
+   rtableid = dataSharedTableExist(tableName$ + DATA_REVERSE_SUFFIX)
+   if rtableid <> DATA_FUNCTION_FAIL
+      set lookup rtableid, value$, key$
       rem reverse lookups are never saved, so no need to set the DATA_KEY_DIRTY flag
       rem reverse lookups are never automatically created, must be created using the DATA_REVERSE flag when building a table
    endif
@@ -305,7 +341,6 @@ function dataSharedLoadAllTables()
    endif
 
    DATA_LANGUAGE = dataSharedGetField(DATA_TABLE_GUI, "language", "language/english",DATA_CREATE)
-   debugWrite(DEBUGINFO,"Localization set to " + DATA_LANGUAGE)
    
    REM LOCALIZATION
    filename$ = DATA_PATH + DATA_LANGUAGE + DATA_FILE_EXT
@@ -365,6 +400,8 @@ function dataSharedLoadTable(filename$, table$)
                   templateLoaded = 1
                endwhile
             close file SYSTEM_FILE_DATA
+         else
+            debugWrite(DEBUGWARN,"dataSharedLoadTable: table does not exist " + filename$)
          endif
          table$ = template$
       endwhile
@@ -415,20 +452,24 @@ endfunction
 
 function dataSharedSaveTable(myTable as integer, filename$ as string)
    
-   if file exist(filename$)
-      delete file filename$
-   endif
+   if filename$ <> "" and myTable > 0
    
-   open to write SYSTEM_FILE_DATA, filename$
-   FIRST LOOKUP myTable
-   while lookup is valid(myTable)
-      if LOOKUP CURRENT KEY$(myTable) <> "" AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_DIRTY  AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_UNDEFINED
-         dat$ = LOOKUP CURRENT KEY$(myTable) + DATA_NAMEVALSEP + LOOKUP CURRENT VALUE$(myTable)
-         write string SYSTEM_FILE_DATA, dat$
-      endif
-      next lookup myTable
-   endwhile
-   close file SYSTEM_FILE_DATA
+         if file exist(filename$)
+            delete file filename$
+         endif
+         
+         open to write SYSTEM_FILE_DATA, filename$
+         FIRST LOOKUP myTable
+         while lookup is valid(myTable)
+            if LOOKUP CURRENT KEY$(myTable) <> "" AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_DIRTY  AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_UNDEFINED
+               dat$ = LOOKUP CURRENT KEY$(myTable) + DATA_NAMEVALSEP + LOOKUP CURRENT VALUE$(myTable)
+               write string SYSTEM_FILE_DATA, dat$
+            endif
+            next lookup myTable
+         endwhile
+         close file SYSTEM_FILE_DATA
+   
+   endif
    
 endfunction
 

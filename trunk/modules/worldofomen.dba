@@ -36,6 +36,7 @@ netClientConnectStart()
 REM ASSET HANDLERS HERE
 gosub collisionSharedSetup
 gosub collisionClientSetup
+gosub meshSharedSetup
 gosub meshClientSetup
 gosub skyClientSetup
 gosub terrainClientSetup

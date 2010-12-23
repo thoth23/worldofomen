@@ -6,6 +6,9 @@ REM
 
 netSharedSetup:
 
+   #constant NET_FUNCTION_FAIL -1
+   #constant NET_FUNCTION_OK 1
+
    #constant NET_SERVER_NAME_DEFAULT "127.0.0.1"
 
    global NET_SERVER_NAME as string
@@ -61,6 +64,7 @@ netSharedSetup:
    #constant NETC_AVATAR_LIST 10
    #constant NETC_MANIFEST 11
    #constant NETC_ASSETID 12
+   #constant NETC_AVATAR_DETAILS_SELF 13
    
    REM SERVER TCP OPERATIONS
    #constant NETS_CHAT              1001
@@ -75,6 +79,7 @@ netSharedSetup:
    #constant NETS_AVATAR_LIST 1010
    #constant NETS_MANIFEST 1011
    #constant NETS_ASSETID 1012
+   #constant NETS_AVATAR_DETAILS_SELF 1013
    
    REM SERVER TCP COMMANDS
    #constant NETS_SWITCH_WINDOW 5001
@@ -92,6 +97,7 @@ netSharedSetup:
    #constant NETS_AVATAR_LIST_ERROR -1010
    #constant NETS_MANIFEST_ERROR -1011
    #constant NETS_ASSETID_ERROR -1012
+   #constant NETS_AVATAR_DETAILS_SELF_ERROR -1013
    
  
    REM CLIENT UDP OPERATIONS
