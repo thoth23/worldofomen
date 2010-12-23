@@ -64,14 +64,18 @@ netServerSetup:
       endselect
    endif
    
-   #constant NET_SERVER_CLIENTID "clientIDLookup"
-   dataSharedMakeTable(NET_SERVER_CLIENTID,0,DATA_NO_REVERSE)
-   dataSharedRegisterNoSaveTable(NET_SERVER_CLIENTID)
+   REM THE CLIENT TABLE IS USED TO LOOKUP THE
+   REM CLIENT CONNECTION ID USING THE AVATARID
+   REM ALSO CREATE REVERSE LOOKUP OF AVATARID
+   REM USING THE CLIENT CONNECTION ID
+   #constant DATA_TABLE_CLIENT "client"
+   global tidClient as integer
+   tidClient = dataSharedMakeTable(DATA_TABLE_CLIENT,0,DATA_REVERSE)
+   dataSharedRegisterNoSaveTable(DATA_TABLE_CLIENT)
    
-   global NET_SERVER_CTABLEID as integer
-   NET_SERVER_CTABLEID = dataSharedTableExist(NET_SERVER_CLIENTID)
-   debugWrite(DEBUGINFO,"netServerSetup: client table set to name " + NET_SERVER_CLIENTID + " with tableid: " + str$(NET_SERVER_CTABLEID))
-      
+   global rTidClient as integer
+   rTidClient = dataSharedTableExist(DATA_TABLE_CLIENT + DATA_REVERSE_SUFFIX)
+   
 return
 
 function netServerStart()
@@ -126,10 +130,15 @@ function netServerMaintain()
          temp$ = mn Get Client IP TCP(instance, joinID)
          temp = mn Get Client Port TCP(instance, joinID)
          
-         REM GIVE NEW CONNECTIONS AN INVALID RPGID
-         REM BUT STILL PUT THEM IN THE CTABLE
-         dataSharedUpdateFieldFast(NET_SERVER_CTABLEID, str$(-joinID), str$(joinID))
-         dataSharedUpdateFieldFast(joinID, "rpgid", str$(-joinID))
+         REM GIVE NEW CONNECTIONS AN INVALID AVATARID
+         REM BUT STILL PUT THEM IN THE CLIENT TABLE
+         dataSharedUpdateFieldFast(tidClient, str$(-joinID), str$(joinID))
+         
+         REM SET ALL THE CONNECTION VALUES TO INVALID
+         dataSharedUpdateFieldFast(joinID, "accounttableid", DATA_KEY_UNDEFINED)
+         dataSharedUpdateFieldFast(joinID, "avatartableid", DATA_KEY_UNDEFINED)
+         dataSharedUpdateFieldFast(joinID, "key", DATA_KEY_UNDEFINED)
+         
          dataSharedRegisterNoSaveTable(str$(joinID))
          debugWrite(DEBUGINFO,"Connect from " + temp$ + ", port:" + str$(temp) + ", clientID:" + str$(joinID))
          
@@ -145,20 +154,40 @@ function netServerMaintain()
       if leftID > 0 and leftID <= NET_CLIENTS_PER_INSTANCE
 
          debugWrite(DEBUGINFO,"Connection dropped from clientID " + str$(leftID))
-         rpgid$ = dataSharedGetFieldFast(leftID, "rpgid")
-         dataSharedResetTable(leftID)
-         if rpgid$ <> DATA_KEY_UNDEFINED
-            dataSharedDeleteRecord(NET_SERVER_CTABLEID, rpgid$)
+         
+         REM SAVE AND DROP ACCOUNT TABLE
+         temp = intval(dataSharedGetFieldFast(leftID, "accounttableid"))
+         if temp > 0
+               myaccountname$ = dataSharedGetFieldFast(temp,"accountname")
+               dataSharedSaveTable(temp,DATA_ACCOUNT_PATH + myaccountname$)
+               dataSharedResetTable(temp)
          endif
-
+         
+         REM SAVE AND DROP AVATAR TABLE
+         temp = intval(dataSharedGetFieldFast(leftID, "avatartableid"))
+         if temp > 0
+               myavatarname$ = dataSharedGetFieldFast(temp,"avatarname")
+               dataSharedSaveTable(temp,DATA_AVATAR_PATH + myavatarname$)
+               myavatarid$ = dataSharedGetFieldFast(temp,"avatarid")
+               if myavatarid$ <> DATA_KEY_UNDEFINED
+                  dataSharedDeleteRecord(tidClient, myavatarid$)
+               endif         
+               dataSharedResetTable(temp)
+         endif
+         
+         REM ANY OTHER CHILD TABLES DROP HERE
+         
+         REM ALWAYS DROP THE PARENT TABLE LAST
+         dataSharedResetTable(leftID)
+         
       endif
 
       REM TAKE CARE OF TCP AND UDP MESSAGES
-      if NET_SERVER_CTABLEID > 0
-         FIRST LOOKUP NET_SERVER_CTABLEID
-         while lookup is valid(NET_SERVER_CTABLEID)
-            rpgid = intval(LOOKUP CURRENT KEY$(NET_SERVER_CTABLEID))
-            client = intval(LOOKUP CURRENT VALUE$(NET_SERVER_CTABLEID))
+      if tidClient > 0
+         FIRST LOOKUP tidClient
+         while lookup is valid(tidClient)
+            rpgid = intval(LOOKUP CURRENT KEY$(tidClient))
+            client = intval(LOOKUP CURRENT VALUE$(tidClient))
                if client > 0
                   if mn Recv TCP(instance,RecvPacket,client) > 0
                      netServerParseTCP(instance, client)
@@ -171,7 +200,7 @@ function netServerMaintain()
                   next operationID
                endif
            
-            next lookup NET_SERVER_CTABLEID
+            next lookup tidClient
          endwhile
       endif
 
@@ -190,12 +219,12 @@ function netServerChatBroadcast(instance as integer, channel$ as string, message
    mn Add string SendPacket, channel$, 0, 1
    mn Add String SendPacket, message$, 0, 1
 
-   tableid = NET_SERVER_CTABLEID
+   tableid = tidClient
    if tableid > 0
       FIRST LOOKUP tableid
       while lookup is valid(tableid)
-         rpgid = intval(LOOKUP CURRENT KEY$(NET_SERVER_CTABLEID))
-         client = intval(LOOKUP CURRENT VALUE$(NET_SERVER_CTABLEID))
+         rpgid = intval(LOOKUP CURRENT KEY$(tidClient))
+         client = intval(LOOKUP CURRENT VALUE$(tidClient))
          listenChannels$ = dataSharedGetField(str$(client), "listenChannels", NET_LISTEN_CHANNELS_DEFAULT,DATA_CREATE)
             if instr(listenChannels$,channel$) <> 0
                mn Send TCP instance, SendPacket, client, 1, 1
@@ -320,7 +349,7 @@ function netServerUDPBroadcast(instance as integer, clientExclude as integer)
    posy1 = intval(dataSharedGetFieldFast(clientExclude,"posy"))
    posz1 = intval(dataSharedGetFieldFast(clientExclude,"posz"))
 
-   tableid = NET_SERVER_CTABLEID
+   tableid = tidClient
    if tableid > 0
       FIRST LOOKUP tableid
       while lookup is valid(tableid)
@@ -417,7 +446,7 @@ function netServerParseTCP(instance as integer, client as integer)
          REM ENCRYPTED, SO WE LEAVE IT AS IS
          accountName$ = mn Get String(RecvPacket,0,1)
          password$ = mn Get String(RecvPacket,0,1)
-         retval = dataServerCreateAccount(client,accountName$, password$)
+         retval = dataServerCreateAccount(client, accountName$, password$)
          if retval = DATA_FUNCTION_FAIL
             netServerSendOpCode(instance, client, NETS_CREATE_ACCOUNT_ERROR)
             debugWrite(DEBUGWARN,"Account Creation failed: " + accountName$)
@@ -428,37 +457,44 @@ function netServerParseTCP(instance as integer, client as integer)
      endcase
      
      case NETC_LOGON_ALPHA
+     
          debugWrite(DEBUGINFO,"NETC_LOGON_ALPHA received from client " + str$(client))
          REM CLIENT IS SENDING ACCOUNT NAME FOR LOGON
          encryptSetKey(systemGameTitle$)
          accountName$ = DecryptString(mn Get String(RecvPacket,0,1))
-         retval = 1
-         
-         REM CHECK TO SEE IF DUPLICATE LOGON
-         rem not yet
+    
+         if dataSharedTableExist(DATA_ACCOUNT_PATH + accountName$) = DATA_FUNCTION_FAIL
+            REM PASSED TEST 1 - ACCOUNT IS NOT ALREADY IN USE
+            if file exist(DATA_ACCOUNT_PATH + accountName$)
+               REM PASSED TEST 2 - ACCOUNT EXISTS
+               if dataSharedLoadTable(DATA_ACCOUNT_PATH + accountName$,DATA_ACCOUNT_PATH + accountName$) <> DATA_FUNCTION_FAIL
+                  REM PASSED TEST 3 - ACCOUNT LOADED SUCCESSFULLY, LINK TO CLIENT
+                  myaccounttableid = dataSharedTableExist(DATA_ACCOUNT_PATH + accountName$)
+                  dataSharedUpdateFieldFast(client,"accounttableid",str$(myaccounttableid))
                   
-         REM CHECK TO SEE IF accountname IS VALID
-         if retval > 0
-            REM BEFORE LOADING THE TABLE, FORCE IT INTO EXISTANCE
-            REM USING THE client AS THE TABLEID
-            dataSharedUpdateFieldFast(client,"accountname",accountName$)
-            retval = dataSharedLoadTable(DATA_ACCOUNT_PATH + accountName$,str$(client))
-            if retval = DATA_FUNCTION_OK
-               temp$ = dataSharedGetFieldFast(client,"password")
-               temp$ = DecryptString(temp$)
-               encryptSetKey(temp$ + systemGameTitle$) : temp$ = ""
-               temp$ = encryptCreateKey() : dataSharedUpdateFieldFast(client,"key", temp$) : temp$ = EncryptString(temp$)
-               netSharedAddHeader(NETS_LOGON_ALPHA, NET_HEADER_BYTES + len(temp$))
-               mn Add String SendPacket, temp$, 0, 1
-               mn Send TCP instance,SendPacket,client,0,1
-               temp$ = ""
-               `debugWrite(DEBUGINFO,"Sent NETS_LOGON_ALPHA to client " + str$(client))
+                  temp$ = dataSharedGetFieldFast(myaccounttableid,"password")
+                  temp$ = DecryptString(temp$)
+                  encryptSetKey(temp$ + systemGameTitle$) : temp$ = ""
+                  temp$ = encryptCreateKey() : dataSharedUpdateFieldFast(client,"key", temp$) : temp$ = EncryptString(temp$)
+                  netSharedAddHeader(NETS_LOGON_ALPHA, NET_HEADER_BYTES + len(temp$))
+                  mn Add String SendPacket, temp$, 0, 1
+                  mn Send TCP instance,SendPacket,client,0,1
+                  temp$ = ""
+                  debugWrite(DEBUGINFO,"Sent NETS_LOGON_ALPHA to client " + str$(client))
+                  
+               else
+                  netServerSendOpCode(instance, client, NETS_LOGON_ALPHA_ERROR)
+                  debugWrite(DEBUGWARN,"Account failed to load: " + accountName$)         
+               endif
             else
                netServerSendOpCode(instance, client, NETS_LOGON_ALPHA_ERROR)
-               temp$ = ""
-               debugWrite(DEBUGHACK,"Logon accountname invalid: " + accountName$)
+               debugWrite(DEBUGWARN,"Invalid logon account name: " + accountName$)         
             endif
+         else
+            netServerSendOpCode(instance, client, NETS_LOGON_ALPHA_ERROR)
+            debugWrite(DEBUGHACK,"Duplicate logon attempted: " + accountName$)         
          endif
+         
       endcase
       
       case NETC_LOGON_BETA
@@ -466,8 +502,9 @@ function netServerParseTCP(instance as integer, client as integer)
          debugWrite(DEBUGINFO,"NETC_LOGON_BETA received from client " + str$(client))
          temp$ = dataSharedGetFieldFast(client,"key")
          encryptSetKey(temp$)
-         temp$ = DecryptString(mn Get String(RecvPacket,0,1))         
-         accountName$ = dataSharedGetFieldFast(client,"accountname")
+         temp$ = DecryptString(mn Get String(RecvPacket,0,1)) 
+         myaccounttableid = intval(dataSharedGetFieldFast(client,"accounttableid"))
+         accountName$ = dataSharedGetFieldFast(myaccounttableid,"accountname")
          
          REM IF THE CLIENT WAS ABLE TO SUCCESSFULLY
          REM DECRYPT THE KEY TO USE IT TO ENCRYPT
@@ -493,16 +530,18 @@ function netServerParseTCP(instance as integer, client as integer)
          
          encryptSetKey(dataSharedGetFieldFast(client,"key"))
          temp$ = DecryptString(mn Get String(RecvPacket,0,1)) 
-         accountName$ = dataSharedGetFieldFast(client,"accountname")
+         myaccounttableid = intval(dataSharedGetFieldFast(client,"accounttableid"))
+         accountName$ = dataSharedGetFieldFast(myaccounttableid,"accountname")
          
          if temp$ = accountName$
             REM THIS CLIENT OWNS THIS ACCOUNT
-            accountAvatarLimit = intval(dataSharedGetFieldFast(client,"accountavatarlimit"))
-            mylimit = max(accountAvatarLimit,PLAYER_AVATARS_PER_ACCOUNT_DEFAULT)
+            REM GET OR SET THE AVATARLIMIT
+            accountAvatarLimit = intval(dataSharedGetField(DATA_ACCOUNT_PATH + accountName$, "accountavatarlimit", str$(PLAYER_AVATARS_PER_ACCOUNT_DEFAULT), DATA_CREATE))
+            mylimit = accountAvatarLimit
             ctr = 0
             while ctr < mylimit
                inc ctr
-               myavatarname$ = dataSharedGetFieldFast(client,"avatar"+str$(ctr))
+               myavatarname$ = dataSharedGetFieldFast(myaccounttableid,"avatar"+str$(ctr))
                if myavatarname$ <> DATA_KEY_UNDEFINED
                   myavatarlist$ = systemSharedFieldAdd(myavatarlist$,myavatarname$,DATA_ARGSEP)
                endif
@@ -514,7 +553,6 @@ function netServerParseTCP(instance as integer, client as integer)
          else
             REM THIS CLIENT DOES NOT OWN THIS ACCOUNT
             netServerSendOpCode(instance, client, NETS_AVATAR_LIST_ERROR)
-            temp$ = ""
             debugWrite(DEBUGHACK,"Attempt to get avatars on unowned account, attacker: " + accountName$)
          endif
          
@@ -548,25 +586,83 @@ function netServerParseTCP(instance as integer, client as integer)
      endcase
      
      case NETC_CREATE_AVATAR
-         accountName$ = dataSharedGetFieldFast(client,"accountname")
+         myaccounttableid = intval(dataSharedGetFieldFast(client,"accounttableid"))
+         accountName$ = dataSharedGetFieldFast(myaccounttableid,"accountname")
          myclass = mn Get Int(RecvPacket)
          mysource = mn Get Int(RecvPacket)
          myname$ = mn Get String(RecvPacket,0,1)
          mymodcount = mn Get Int(RecvPacket)
          
-         REM READING MODS WILL GO HERE
+         REM GETTING MORE MODS WILL GO HERE
          
-         myAvatarTable = dataServerCreateAvatar(client, accountName$, myname$, myclass, mysource)
-         if myAvatarTable = DATA_FUNCTION_FAIL
-            debugWrite(DEBUGWARN,"Avatar Creation failed: " + myname$)
+         myretval = dataServerCreateAvatar(client, accountName$, myname$, myclass, mysource)
+         if myretval = DATA_FUNCTION_FAIL
+            debugWrite(DEBUGWARN,"Avatar Creation failed: " + myname$ + " for " + accountName$)
             netServerSendOpCode(instance, client, NETS_CREATE_AVATAR_ERROR)    
          else
-            debugWrite(DEBUGINFO,"Avatar Creation success: " + myname$)
+            debugWrite(DEBUGINFO,"Avatar Creation success: " + myname$ + " for " + accountName$)
             netServerSendOpCode(instance, client, NETS_CREATE_AVATAR)    
          endif
      endcase
-    
+     
+     case NETC_AVATAR_DETAILS_SELF
+     
+         REM CLIENT IS REQUESTING OWN 
+         REM AVATAR DETAILS - USED FOR
+         REM AVATAR SELECTION AND ZONING
+         myaccounttableid = intval(dataSharedGetFieldFast(client,"accounttableid"))
+         accountName$ = dataSharedGetFieldFast(myaccounttableid,"accountname")
 
+         avatarName$ = mn Get String(RecvPacket,0,1)
+
+         if dataServerAccountOwnsAvatar(DATA_ACCOUNT_PATH + accountName$, avatarName$) <> DATA_FUNCTION_FAIL 
+            REM PASSED TEST 1 - ACCOUNT OWNS AVATAR
+            if file exist(DATA_AVATAR_PATH + avatarName$)
+               REM PASSED TEST 2 - AVATAR EXISTS
+               if dataSharedLoadTable(DATA_AVATAR_PATH + avatarName$,DATA_AVATAR_PATH + avatarName$) <> DATA_FUNCTION_FAIL
+                  REM PASSED TEST 3 - AVATAR LOADED SUCCESSFULLY, LINK TO CLIENT
+                  myavatartableid = dataSharedTableExist(DATA_AVATAR_PATH + avatarName$)
+                  dataSharedUpdateFieldFast(client,"avatartableid",str$(myavatartableid))
+                  avatarName$ = dataSharedGetFieldFast(myavatartableid,"avatarname")
+                  
+                  REM APPLY DATA RELATED TO THE MESH
+                  meshSharedApplyDataFile(myavatartableid)
+                  
+                  REM MORE DATA CHECKS WILL GO HERE
+                  
+                  netSharedAddHeader(NETS_AVATAR_DETAILS_SELF, NET_HEADER_BYTES + len(avatarName$) + 16)
+                  temp = intval(dataSharedGetFieldFast(myavatartableid,"avatarid"))
+                  mn Add Int SendPacket, temp
+                  mn Add String SendPacket, avatarName$, 0, 1
+                  temp = intval(dataSharedGetFieldFast(myavatartableid,"class"))
+                  mn Add Int SendPacket, temp
+                  temp = intval(dataSharedGetFieldFast(myavatartableid,"powersource"))
+                  mn Add Int SendPacket, temp
+                  temp = intval(dataSharedGetFieldFast(myavatartableid,"meshid"))
+                  mn Add Int SendPacket, temp
+                  
+                  mymorphcount = intval(dataSharedGetFieldFast(myavatartableid,"morphcount"))
+                  mn Add Int SendPacket, mymorphcount
+                  for i = 1 to mymorphcount
+                     temp = intval(dataSharedGetFieldFast(myavatartableid,"morph"+str$(i)))
+                     mn Add Int SendPacket, temp
+                  next
+                  
+                  REM WILL SEND MORE MODS HERE
+
+                  mn Send TCP instance,SendPacket,client,0,1
+                  debugWrite(DEBUGINFO,"Sent NETS_AVATAR_DETAILS for client/avatar: " + str$(client) + "/" + avatarName$)
+
+               else
+                  debugWrite(DEBUGWARN,"Received NETC_AVATAR_DETAILS_SELF but avatar load failed: " + DATA_AVATAR_PATH + avatarName$)
+               endif
+            else
+               debugWrite(DEBUGWARN,"Received NETC_AVATAR_DETAILS_SELF on non-existant avatar: " + DATA_AVATAR_PATH + avatarName$)
+            endif
+         else
+            debugWrite(DEBUGHACK,"Received NETC_AVATAR_DETAILS_SELF on unowned avatar: " + accountName$ + " for avatar " + avatarName$)
+         endif
+     endcase
      
   endselect
 

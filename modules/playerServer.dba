@@ -9,4 +9,7 @@ playerServerSetup:
    global PLAYER_AVATARS_PER_ACCOUNT_DEFAULT as integer
    PLAYER_AVATARS_PER_ACCOUNT_DEFAULT = intval(dataSharedGetField("playerServer", "playerAvatarsPerAccountDefault", "8", DATA_CREATE))
    
+   global PLAYER_DEFAULT_MESH as string
+   PLAYER_DEFAULT_MESH = dataSharedGetField("playerServer", "playerDefaultMesh", "female1.x", DATA_CREATE)
+   
 return

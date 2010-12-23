@@ -1,0 +1,36 @@
+
+meshSharedSetup:
+
+   #constant MESH_AVATAR_PATH "media/avatar/"
+   
+return
+
+function meshSharedApplyDataFile(mytid as integer)
+
+      mymeshid = intval(dataSharedGetFieldFast(mytid,"meshid"))
+      myPath$ = dataSharedGetLibraryPath(mymeshid)
+      datafilename$ = myPath$ + DATA_FILE_EXT
+
+      if file exist(datafilename$)
+   
+         debugWrite(DEBUGINFO,"meshSharedApplyDataFile: data file for mesh exists: " + datafilename$)
+         REM MESH HAS ITS OWN DATA FILE
+         REM LOAD TABLE IF NOT ALREADY LOADED
+         if dataSharedTableExist(datafilename$) = DATA_FUNCTION_FAIL
+            debugWrite(DEBUGINFO,"meshSharedApplyDataFile: data file not previously loaded, loading and applying: " + datafilename$)
+            dataSharedLoadTable(datafilename$,datafilename$)
+            dataSharedRegisterNoSaveTable(datafilename$)
+         else
+            debugWrite(DEBUGINFO,"meshSharedApplyDataFile: data file already loaded, applying: " + datafilename$)
+         endif
+   
+         REM APPLY THE DATA FILE TO THE ASSOCIATED
+         REM DATAOBJECT ARRAY
+         mytemplatetid = dataSharedTableExist(datafilename$)
+         dataSharedCopyTable(mytemplatetid, mytid)
+         
+      else
+            debugWrite(DEBUGWARN,"meshSharedApplyDataFile: data file does not exist: " + datafilename$)
+      endif
+      
+endfunction

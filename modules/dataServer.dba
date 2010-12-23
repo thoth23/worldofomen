@@ -10,7 +10,7 @@ dataServerSetup:
    #constant DATA_ID_PATH "server/data/id/"
    #constant DATA_ACCOUNT_PATH "server/data/account/"
    #constant DATA_AVATAR_PATH "server/data/avatar/"
-
+   
    REM CALCULATE OUR CRITICAL FILE PATHS
    global dataguidfilename as string
    global dataserveridfilename as string
@@ -70,7 +70,7 @@ function dataServerGetLibraryRPGID(path$ as string, createFlag as boolean)
 endfunction retval
 
 
-function dataServerCreateAccount(myTable as integer, accountName$ as string, password$ as string)
+function dataServerCreateAccount(client as integer, accountName$ as string, password$ as string)
 
    local retval as integer
    retval = DATA_FUNCTION_FAIL
@@ -83,16 +83,28 @@ function dataServerCreateAccount(myTable as integer, accountName$ as string, pas
          REM PASSED TEST 2 - BOTH MORE THAN 5 CHARACTERS
          if file exist(filename$) = 0
             REM PASSED TEST 3 - ACCOUNT DOES NOT ALREADY EXIST
-            retval = DATA_FUNCTION_OK
+            
+            REM CREATE THE ACCOUNT TABLE
+            myaccounttableid = dataSharedMakeTable(filename$, 0, 0)
+            
+            REM GET A NEW ACCOUNT ID
             myaccountid = dataServerGetNextAccountID()
             
-            REM UPDATE TABLE
-            dataSharedUpdateFieldFast(myTable,"accountname",accountName$)
-            dataSharedUpdateFieldFast(myTable,"password",password$)
-            dataSharedUpdateFieldFast(myTable,"accountid",str$(myaccountid))
-            REM AND SAVE TABLE
-            dataSharedSaveTable(myTable, filename$)
-            debugWrite(DEBUGINFO,"Account created successfuly: " + accountName$)
+            REM UPDATE THE NEW ACCOUNT TABLE
+            dataSharedUpdateFieldFast(myaccounttableid,"accountid",str$(myaccountid))
+            dataSharedUpdateFieldFast(myaccounttableid,"accountname",accountName$)
+            dataSharedUpdateFieldFast(myaccounttableid,"password",password$)
+            
+            REM SAVE THE NEW ACCOUNT TABLE
+            dataSharedSaveTable(myaccounttableid, filename$)
+            
+            REM NOW UNLOAD THE ACCOUNT TABLE TO
+            REM PREPARE IT FOR A LOGIN - LOGIN HAS NOT
+            REM ACTUALLY OCCURRED YET - NO LINK WAS
+            REM MADE TO THE CLIENT TABLE
+            dataSharedResetTable(myaccounttableid)
+
+            retval = DATA_FUNCTION_OK
             
          else
             debugWrite(DEBUGWARN,"Account already exists: " + lowerAccountName$)
@@ -110,7 +122,7 @@ function dataServerAvatarFree(tableName$ as string)
    
    REM SEARCHES A TABLE FOR AN AVAILABLE
    REM AVATARX ATTRIBUTE UP TO PRESET MAX
-   REM USED EXCLUSIVELY FOR ACOUNT TABLES
+   REM USED EXCLUSIVELY FOR ACCOUNT TABLES
    
    local ctr as integer
    local found as boolean
@@ -120,6 +132,26 @@ function dataServerAvatarFree(tableName$ as string)
    while ctr < PLAYER_AVATARS_PER_ACCOUNT_DEFAULT AND found = 0
       inc ctr
       if dataSharedGetField(tableName$, "avatar"+str$(ctr),DATA_KEY_UNDEFINED,DATA_NO_CREATE) = DATA_KEY_UNDEFINED then found = 1
+   endwhile
+   
+   if found = 0 then ctr = DATA_FUNCTION_FAIL
+
+endfunction ctr
+
+function dataServerAccountOwnsAvatar(tableName$ as string, avatarName$)
+   
+   REM SEARCHES A TABLE TO SEE IF A
+   REM SPECIFIC AVATAR IS LISTED
+   REM USED EXCLUSIVELY FOR ACCOUNT TABLES
+   
+   local ctr as integer
+   local found as boolean
+   ctr = 0
+   found = 0
+   
+   while ctr < PLAYER_AVATARS_PER_ACCOUNT_DEFAULT AND found = 0
+      inc ctr
+      if dataSharedGetField(tableName$, "avatar"+str$(ctr),DATA_KEY_UNDEFINED,DATA_NO_CREATE) = avatarName$ then found = 1
    endwhile
    
    if found = 0 then ctr = DATA_FUNCTION_FAIL
@@ -145,46 +177,59 @@ function dataServerCreateAvatar(client as integer, accountName$ as string, avata
             avatarFilename$ = DATA_AVATAR_PATH + lowerAvatarName$
             if file exist(avatarFilename$) = 0
                REM PASSED TEST 4 - AVATAR DOES NOT ALREADY EXIST
-               myAvatarSlot=dataServerAvatarFree(str$(client))
+               myAvatarSlot=dataServerAvatarFree(lowerAccountName$)
                if myAvatarSlot <> DATA_FUNCTION_FAIL
                   REM PASSED TEST 5 - ACCOUNT HAS AN AVAILABLE AVATAR SLOT
 
                
                   REM GET A NEW UNIQUE AVATAR ID, AND A NEW TABLE ID
                   myavatarid = dataServerGetNextAvatarID()
-                  myTable = dataSharedMakeTable(avatarFilename$, 0, DATA_NO_REVERSE)
+                  myavatartableid = dataSharedMakeTable(avatarFilename$, 0, DATA_NO_REVERSE)
                   
-                  REM ASSOCIATE THE SELECTED AVATAR TABLE ID WITH THE ACCOUNT TABLE
-                  dataSharedUpdateFieldFast(client,"currentavatartid",str$(myTable))
+                  REM UPDATE THE AVATARID IN THE AVATAR TABLE
+                  dataSharedUpdateFieldFast(myavatartableid,"avatarid",str$(myavatarid))
                   
-                  REM UPDATE THE RPGID IN THE ACCOUNT TABLE TO THE AVATARID
-                  REM THIS IS A CONVENIENCE FIELD
-                  dataSharedUpdateFieldFast(client,"rpgid",str$(myavatarid))
-                  
-                  REM UPDATE THE CTABLE
-                  dataSharedUpdateFieldFast(NET_SERVER_CTABLEID, str$(myavatarid), str$(client))
+                  REM UPDATE THE CLIENT TABLE
+                  REM REMOVE THE INVALID RPGID RECORD FROM THE
+                  REM CLIENT TABLE AND SET THE CORRECT ONE
+                  dataSharedDeleteRecord(tidClient, str$(-client))
+                  dataSharedUpdateFieldFast(tidClient, str$(myavatarid), str$(client))
                   
                   REM PUT THE AVATAR IN THE OPEN ACCOUNT SLOT
                   REM WE USE CASE-SENSITIVE VALUE IN THE ACCOUNT
-                  REM TABLE BECAUSE THE ACOUNT VALUE IS USED FOR
+                  REM TABLE BECAUSE THE ACCOUNT VALUE IS USED FOR
                   REM DISPLAY AND FOR SENDING THE AVATAR LIST
-                  dataSharedUpdateFieldFast(client,"avatar"+str$(myAvatarSlot),avatarName$)
+                  myaccounttableid = intval(dataSharedGetFieldFast(client,"accounttableid"))
+                  dataSharedUpdateFieldFast(myaccounttableid,"avatar"+str$(myAvatarSlot),avatarName$)
+                  
+                  REM GET THE DEFAULT MESH PLAYER MESH ID
+                  REM THIS CAN BE ENHANCED LATER BY BASE
+                  REM MESH SELECTION FROM CLIENT
+                  mymeshid = intval(dataSharedGetField(DATA_TABLE_LIBRARY + DATA_REVERSE_SUFFIX, MESH_AVATAR_PATH + PLAYER_DEFAULT_MESH, DATA_KEY_UNDEFINED, DATA_NO_CREATE))
+                  
                   
                   REM UPDATE AVATAR TABLE
-                  dataSharedUpdateFieldFast(myTable,"accountname",accountName$)
-                  dataSharedUpdateFieldFast(myTable,"avatarid",str$(myavatarid))
-                  dataSharedUpdateFieldFast(myTable,"avatarname",avatarName$)
-                  dataSharedUpdateFieldFast(myTable,"class",str$(class))
-                  dataSharedUpdateFieldFast(myTable,"powersource",str$(powersource))
+                  dataSharedUpdateFieldFast(myavatartableid,"inherit","templates/template_player")
+                  dataSharedUpdateFieldFast(myavatartableid,"avatarid",str$(myavatarid))
+                  dataSharedUpdateFieldFast(myavatartableid,"accountname",accountName$)
+                  dataSharedUpdateFieldFast(myavatartableid,"avatarname",avatarName$)
+                  dataSharedUpdateFieldFast(myavatartableid,"class",str$(class))
+                  dataSharedUpdateFieldFast(myavatartableid,"powersource",str$(powersource))
+                  dataSharedUpdateFieldFast(myavatartableid,"meshid",str$(mymeshid))
                   
                   REM SAVE THE NEW AVATAR TABLE
-                  dataSharedSaveTable(myTable, avatarFilename$)
+                  dataSharedSaveTable(myavatartableid, avatarFilename$)
                   
                   REM SAVE THE UPDATES TO THE ACCOUNT TABLE
-                  dataSharedSaveTable(client, DATA_ACCOUNT_PATH + lowerAccountName$)
+                  dataSharedSaveTable(myaccounttableid, accountFilename$)
                   
-                  REM RETURN THE AVATAR TABLE ID 
-                  retval = myTable
+                  REM NOW UNLOAD THE AVATAR TABLE TO
+                  REM PREPARE IT FOR A SELECTION - SELECTION HAS NOT
+                  REM ACTUALLY OCCURRED YET - NO LINK WAS
+                  REM MADE TO THE CLIENT TABLE
+                  dataSharedResetTable(myavatartableid)
+                  
+                  retval = DATA_FUNCTION_OK
                   debugWrite(DEBUGINFO,"Avatar create success: " + lowerAvatarName$ + " for " + lowerAccountName$)
                   
                else

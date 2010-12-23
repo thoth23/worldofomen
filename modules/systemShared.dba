@@ -20,8 +20,9 @@ systemSharedSetup:
    #constant SYSTEM_TYPE_MUSIC    8
    #constant SYSTEM_TYPE_VECTOR3  9
    #constant SYSTEM_TYPE_VECTOR4  10
+   #constant SYSTEM_TYPE_BANK 11
    
-   #constant SYSTEM_TYPE_MAX      10
+   #constant SYSTEM_TYPE_MAX      11
    
    global dim systemNextID(SYSTEM_TYPE_MAX) as integer
    

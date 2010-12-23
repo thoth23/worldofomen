@@ -22,6 +22,7 @@ gosub netServerSetup
 netServerStart()
 
 gosub keyboardSharedSetup
+gosub meshSharedSetup
 
 
 REM Parse the command line for commands
