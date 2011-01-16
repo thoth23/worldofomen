@@ -366,9 +366,20 @@ function netClientSendCreateAvatarRequest()
    REM FIRST COLLECT BASE DATA
    myclass = intval(dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarClass", "1", DATA_CREATE))
    mysource = intval(dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarPowerSource", "0", DATA_CREATE))
-   myname$ = dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarName", DATA_KEY_UNDEFINED, DATA_NO_CREATE)
-   mymodcount = 0
-   rem not sending mods yet, just the basics
+   myname$ = dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarName", "", DATA_CREATE)
+   
+   REM SECOND COLLECT THE MORPHS
+   mymorphlist$ = dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarMorphList", "", DATA_CREATE)
+   split string mymorphlist$, DATA_ARGSEP
+   mymorphcount = split count()
+   dim morph(mymorphcount) as integer
+   for i = 1 to mymorphcount
+      morph(i) = intval(get split word$(i))
+   next i
+   
+   REM TEXTURES WILL GO HERE
+   
+   REM OTHER MODS WILL GO HERE
    
    REM LOCAL NAME VALIDATION
    if myname$ = DATA_KEY_UNDEFINED OR myname$="" or len(myname$) < 6
@@ -385,7 +396,10 @@ function netClientSendCreateAvatarRequest()
       mn Add Int SendPacket, myclass
       mn Add Int SendPacket, mysource
       mn Add String SendPacket, myname$, 0, 1
-      mn Add Int SendPacket, mymodcount
+      mn Add Int SendPacket, mymorphcount
+      for i = 1 to mymorphcount
+         mn Add Int SendPacket, morph(i)
+      next i
       mn Send TCP 0,SendPacket,0,0,1
       debugWrite(DEBUGINFO,"Sent NETC_CREATE_AVATAR for " + myname$)    
    endif
@@ -455,7 +469,7 @@ function netClientParseTCP()
          for i = 1 to split count()
             myAvatarName$ = get split word$(i)
             guiClientSetGUIDataField("avatarname"+str$(i), myAvatarName$)
-            guiClientSetGUIDataField("switchavatar"+str$(i), "/switchavatar\"+myAvatarName$)
+            guiClientSetGUIDataField("switchavatar"+str$(i), ";/deletelocalplayer;/switchavatar\"+myAvatarName$)
          next i
          guiClientSwitchToWindow("windowSelectAvatar")
        endcase
@@ -463,10 +477,7 @@ function netClientParseTCP()
        case NETS_MANIFEST
             REM SERVER IS TELLING US TO UPDATE OUR LIBRARY
             debugWrite(DEBUGINFO,"NETS_MANIFEST received")
-            meshClientRegisterNew()
-            `soundClientRegisterNew()
-            `effectClientRegisterNew()
-            rem not yet
+            mediaClientRegisterNew()
             wait 1000
             REM TELL THE SERVER WE ARE DONE UPDATING LIBRARY
             netClientSendManifestComplete()
@@ -522,7 +533,7 @@ function netClientParseTCP()
             
             for i = 1 to mymorphcount
                   mymorphid = mn Get Int(RecvPacket)      
-                  meshClientApplyMorphTarget(mytid,mymorphid)
+                  meshClientApplyMorphTarget(mytid,mymorphid,MORPH_TYPE_ADD)
             next i
             
             REM GET AND APPLY MASKS

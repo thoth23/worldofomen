@@ -11,3 +11,11 @@ endfunction
 function meshClientLoadMorph(temp$,temp)
    REM NO MORPHS WILL BE LOADED ON THE SERVER
 endfunction
+
+function meshClientDestroy(temp)
+   REM NO MESHES WILL BE DESTROYED ON THE SERVER
+endfunction
+
+function effectClientLoad(temp$, temp)
+   REM NO EFFECTS WILL BE LOADED ON THE SERVER
+endfunction

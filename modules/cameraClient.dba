@@ -80,7 +80,7 @@ function cameraClientPaperDoll(idTarget as integer)
 
    position camera 0, (object position x(idTarget)), (object position y(idTarget)), (object position z(idTarget))
    rotate camera 0, 0,0,0
-   move camera 0, (object size(idTarget) * 1.25)
+   move camera 0, (object size(idTarget) * 3.0)
    move camera left 0, (object size(idTarget) * 0.5)
    `move camera up 0, 1.0
    point camera 0, (object position x(idTarget)), (object position y(idTarget)), (object position z(idTarget))

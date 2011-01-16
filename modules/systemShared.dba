@@ -21,8 +21,9 @@ systemSharedSetup:
    #constant SYSTEM_TYPE_VECTOR3  9
    #constant SYSTEM_TYPE_VECTOR4  10
    #constant SYSTEM_TYPE_BANK 11
+   #constant SYSTEM_TYPE_EFFECT 12
    
-   #constant SYSTEM_TYPE_MAX      11
+   #constant SYSTEM_TYPE_MAX      12
    
    global dim systemNextID(SYSTEM_TYPE_MAX) as integer
    
@@ -263,7 +264,7 @@ function systemSharedFieldRemove(record$,field$,separator$)
                if len(record$) > 0
                   record$ = record$ + separator$
                endif
-               record$ = record$ + field$
+               record$ = record$ + get split word$(i)
          endif
       next
    endif

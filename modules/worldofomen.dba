@@ -34,8 +34,11 @@ netClientConnectStart()
 
 
 REM ASSET HANDLERS HERE
+gosub mediaSharedSetup
+gosub mediaClientSetup
 gosub collisionSharedSetup
 gosub collisionClientSetup
+gosub effectClientSetup
 gosub meshSharedSetup
 gosub meshClientSetup
 gosub skyClientSetup
@@ -43,6 +46,7 @@ gosub terrainClientSetup
 
 
 REM PLAYER HANDLERS HERE
+gosub playerSharedSetup
 gosub playerClientSetup
 
 

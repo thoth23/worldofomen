@@ -16,6 +16,8 @@ gosub dataServerSetup
 gosub dataSharedSetup
 dataSharedLoadAllTables()
 
+gosub mediaSharedSetup
+gosub playerSharedSetup
 gosub playerServerSetup
 gosub netSharedSetup
 gosub netServerSetup

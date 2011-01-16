@@ -41,6 +41,8 @@ guiClientSetup:
    #constant GUI_GOAL_PATH "media/gui/goals/"
    #constant GUI_MASK_PATH "media/avatar/"
    #constant GUI_AREA_PATH "media/gui/areas/"
+   #constant GUI_SNAPS_PATH "media/gui/snaps/"
+   
 
    #constant GUI_WINDOW_MAIN "windowMain"
    #constant GUI_WINDOW_MESSAGEBOX "windowMessageBox"
@@ -50,6 +52,7 @@ guiClientSetup:
    #constant GUI_CREATE_UNAME "inputCreateAccountName"
    #constant GUI_CREATE_PWD "inputCreateAccountPassword"
    #constant GUI_CHAT_ENTER "inputChatEnter"
+   #constant GUI_CHASIS_BUTTON_PREFIX "buttonCreateAvatarChasis"
    
 
    global guiWindowskin as integer
@@ -237,6 +240,19 @@ guiClientSetup:
       guiFadeState = GUI_FADE_NONE
       guiProgressState = 0
       guiFadePercent = 0.0
+      
+    global guiImageNoSnapshot as integer
+    guiImageNoSnapshot = guiClientFindImage()
+    load image GUI_SNAPS_PATH + "nosnapshot.png",guiImageNoSnapshot,1
+
+    global guiImageNoSnapshotHover as integer
+    guiImageNoSnapshotHover = guiClientFindImage()
+    load image GUI_SNAPS_PATH + "nosnapshot_hover.png",guiImageNoSnapshotHover,1
+
+    global guiImageNoSnapshotPress as integer
+    guiImageNoSnapshotPress = guiClientFindImage()
+    load image GUI_SNAPS_PATH + "nosnapshot_press.png",guiImageNoSnapshotPress,1
+
 
    guiPanelFrontDrop = guiClientFindImage()
    load image GUI_AREA_PATH + "a000.png", guiPanelFrontDrop, 1
@@ -919,8 +935,14 @@ function guiClientBuildWindow(skinName$ as string, windowName$ as string)
          guiClientPressButtonNoCommand("inputLogonAccountName")
       endcase
    
+      case "windowCreateAccount"
+         temp = guiClientGetGadgetID("inputCreateAccountName")
+         GUI_ACTIVE_GADGET = temp
+         guiClientPressButtonNoCommand("inputCreateAccountName")
+      endcase
+
       case "windowSelectAvatar"
-         guiClientPressButtonNoCommand("buttonSelectAvatar1")
+         guiClientPressButton("buttonSelectAvatar1")
       endcase
       
       case "windowCreateAvatarClass"
@@ -929,9 +951,13 @@ function guiClientBuildWindow(skinName$ as string, windowName$ as string)
          commandRun("/switchclass 1")
          commandRun("/switchpowersource 0")
       endcase
+      
+      case "windowCreateAvatarChasis"
+         guiClientUpdateChasis(0)
+      endcase
+      
    endselect
-
-
+  
 endfunction
 
 function guiClientCreateWindow(title as string,x as integer, y as integer, w as integer, h as integer, hastitle as boolean, hasclose as boolean, hasmin as boolean, skinid as integer, myguiid as string, hasstretch as boolean, savemetrics as boolean, haspanel as boolean, haspopup as boolean)
@@ -1993,7 +2019,7 @@ endif
 
 endfunction
 
-function guiUpdateFrontDrop()
+function guiClientUpdateFrontDrop()
 
     local fadeValue as integer
 
@@ -2556,7 +2582,7 @@ if guiwindows(windowid).hiddenflag=0 and guiwindows(windowid).closed=0 and guiwi
                
                if (scancode() = 15)
                   `Tab
-                  nextRadio = guiFindNextRadioGroup(i)
+                  nextRadio = guiClientFindNextRadioGroup(i)
                   GUI_ACTIVE_GADGET = nextRadio
                   guiClientPressButtonNoCommand(guigadgets(nextRadio).guiid)
                   clear entry buffer
@@ -2861,6 +2887,15 @@ function guiClientSetActiveWindow(windowid as integer)
 
 endfunction
 
+function guiClientPressButton(guiid$)
+
+   REM PRESS THE BUTTON AND RUN THE COMMAND
+
+   guiClientPressButtonNoCommand(guiid$)
+   commandSharedParse(commandSharedUnmask(guigadgets(guiClientGetGadgetID(guiid$)).command))
+   
+endfunction
+
 function guiClientPressButtonNoCommand(guiid$)
 
 REM SWITCHES TO THE PRESS IMAGE WITHOUT RUNNING THE BUTTON COMMAND
@@ -3150,7 +3185,7 @@ function guiClientUpdateGUI()
 
 endfunction
 
-function guiFindNextRadioGroup(idx as integer)
+function guiClientFindNextRadioGroup(idx as integer)
 
    findWindow = guigadgets(idx).parent.windowid
    local found as boolean
@@ -3178,3 +3213,45 @@ function guiFindNextRadioGroup(idx as integer)
    endif
    
 endfunction ctr
+
+function guiClientUpdateChasis(fwdback as boolean)
+
+   for i = 1 to 20
+      found = 0
+      while found = 0
+         path$ = dataSharedGetLibraryNext(fwdback)
+         if instr(path$,MESH_AVATAR_PATH) <> 0 then found =1
+      endwhile
+      temp = guiClientGetGadgetID(GUI_CHASIS_BUTTON_PREFIX + str$(i))
+      guigadgets(temp).stayhiddenflag=0
+      guigadgets(temp).norebuildflag=1
+      myassetid$ = dataSharedGetField(DATA_TABLE_LIBRARY + DATA_REVERSE_SUFFIX,path$,DATA_KEY_UNDEFINED,DATA_NO_CREATE)
+      split string path$, "." : ext$ = get split word$(split count())
+      select ext$
+         case "tgt"
+            guigadgets(temp).command = "/switchmorph\" + str$(tidPlayer) + "\" + myassetid$
+         endcase
+         case "png"
+            guigadgets(temp).command = "/switchskin\" + str$(tidPlayer) + "\" + myassetid$
+         endcase
+      endselect
+      
+      if guigadgets(temp).imageid <> 0
+         if image exist(guigadgets(temp).imageid) then delete image guigadgets(temp).imageid
+      endif
+      imagepath$ = replace$(path$,MESH_AVATAR_PATH, GUI_SNAPS_PATH)
+      imagepath$ = replace$(imagepath$,".x",".png")
+      imagepath$ = replace$(imagepath$,".dbo",".png")
+      imagepath$ = replace$(imagepath$,".tgt",".png")
+      if file exist(imagepath$) and guigadgets(temp).imageid <> 0
+         load image imagepath$, guigadgets(temp).imageid, 1
+         if image exist(guigadgets(temp).imageid) then sprite guigadgets(temp).imageid, sprite x(guigadgets(temp).imageid), sprite y(guigadgets(temp).imageid),guigadgets(temp).imageid
+      else
+         if image exist(guiImageNoSnapshot)
+            sprite guigadgets(temp).imageid, sprite x(guigadgets(temp).imageid), sprite y(guigadgets(temp).imageid),guiImageNoSnapshot
+         endif
+      endif
+    
+    next i     
+   
+endfunction

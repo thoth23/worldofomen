@@ -58,7 +58,12 @@ dataSharedSetup:
 
    REM PRE-BUILD THE LIBRARY TABLE
    #constant DATA_TABLE_LIBRARY "library"
-   dataSharedMakeTable(DATA_TABLE_LIBRARY,0,DATA_REVERSE)   
+   global DATA_LIBRARY_TABLEID as integer
+   DATA_LIBRARY_TABLEID = dataSharedMakeTable(DATA_TABLE_LIBRARY,0,DATA_REVERSE)
+   
+   REM CREATE A GLOBAL LIBRARY LOCATION POINTER
+   global DATA_LIBRARY_CURRENT_KEY as string   
+   DATA_LIBRARY_CURRENT_KEY = DATA_KEY_UNDEFINED
    
    REM PRE-BUILD THE ASSETS TABLE
    #constant DATA_TABLE_ASSETS "assets"
@@ -103,6 +108,46 @@ function dataSharedGetLibraryPath(rpgid as integer)
 
 endfunction retval$
 
+function dataSharedGetLibraryNext(fwdback as boolean)
+   
+   local retval$ as string
+   local last$ as string
+   retval$ = DATA_KEY_UNDEFINED
+   
+   if DATA_LIBRARY_CURRENT_KEY = DATA_KEY_UNDEFINED
+      first lookup DATA_LIBRARY_TABLEID
+   else
+      retval = search lookup(DATA_LIBRARY_TABLEID, DATA_LIBRARY_CURRENT_KEY)
+      
+      if fwdback = 0
+         next lookup DATA_LIBRARY_TABLEID
+      else
+         prev lookup DATA_LIBRARY_TABLEID
+      endif
+      
+      if not lookup is valid(DATA_LIBRARY_TABLEID)
+         if fwdback = 0
+            first lookup DATA_LIBRARY_TABLEID
+         else
+            last lookup DATA_LIBRARY_TABLEID
+         endif
+      endif
+      
+   endif
+   
+   if lookup is valid(DATA_LIBRARY_TABLEID)
+      DATA_LIBRARY_CURRENT_KEY = lookup current key$(DATA_LIBRARY_TABLEID)
+      retval$ = lookup current value$(DATA_LIBRARY_TABLEID)
+   endif
+
+endfunction retval$
+
+function dataSharedGetLibrarySize()
+
+   retval = lookup size(DATA_LIBRARY_TABLEID)
+   
+endfunction retval
+
 function dataSharedGetAssetID(rpgid as integer)
 
    local retval$ as string
@@ -116,23 +161,38 @@ function dataSharedGetAssetID(rpgid as integer)
       REM IF ASSET IS WHERE IT IS SUPPOSED
       REM TO BE THEN LOAD IT
       if file exist(myPath$)
-         if fast right$(myPath$,2) = ".x"
-            ext$ = "dbo"
-         else
-            ext$ = fast right$(myPath$,3)
-         endif
-         select ext$
-            case "dbo"
+         split string myPath$, "."
+         ext$ = get split word$(split count())
+         
+         REM LOAD THE MEDIA BASED ON THE MEDIA TYPE
+         myMediaType$ = dataSharedGetField(DATA_TABLE_MEDIA, ext$, DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+
+         select myMediaType$
+            case "mesh"
                mydbpid = systemSharedGetFree(SYSTEM_TYPE_OBJECT, SYSTEM_SEARCH_REUSE)
                meshClientLoad(myPath$,mydbpid)
                dataSharedUpdateField(DATA_TABLE_ASSETS, str$(rpgid), str$(mydbpid))
                retval = mydbpid
             endcase
-            case "tgt"
-               mybnkid = systemSharedGetFree(SYSTEM_TYPE_BANK, SYSTEM_SEARCH_REUSE)
+            case "morph"
+               mybnkid = systemSharedGetFree(SYSTEM_TYPE_BANK, SYSTEM_SEARCH_FAST)
                meshClientLoadMorph(myPath$,mybnkid)
                dataSharedUpdateField(DATA_TABLE_ASSETS, str$(rpgid), str$(mybnkid))
                retval = mybnkid
+            endcase
+            case "material"
+            endcase
+            case "texture"
+            endcase
+            case "shader"
+               myeffectid = systemSharedGetFree(SYSTEM_TYPE_EFFECT, SYSTEM_SEARCH_REUSE)
+               effectClientLoad(myPath$,myeffectid)
+               dataSharedUpdateField(DATA_TABLE_ASSETS, str$(rpgid), str$(myeffectid))
+               retval = myeffectid
+            endcase
+            case "music"
+            endcase
+            case "sound"
             endcase
          endselect
       else
@@ -202,6 +262,10 @@ function dataSharedResetTable(tableid as integer)
       tableName$ = dataSharedGetFieldFast(tableid,"tablename")
       rTableName$ = tableName$ + DATA_REVERSE_SUFFIX
       rtableid = dataSharedTableExist(rTableName$)
+      
+      REM FIND ANY ASSOCIATED INSTANCIATED ASSETS
+      REM AND DELETE THEM - FOR NOW, JUST MESH
+      meshClientDestroy(tableid)
       
       REM DELETE THE TABLE IF IT EXISTS
       if lookup exist(tableid)

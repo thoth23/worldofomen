@@ -591,11 +591,13 @@ function netServerParseTCP(instance as integer, client as integer)
          myclass = mn Get Int(RecvPacket)
          mysource = mn Get Int(RecvPacket)
          myname$ = mn Get String(RecvPacket,0,1)
-         mymodcount = mn Get Int(RecvPacket)
+         mymorphcount = mn Get Int(RecvPacket)
+         for i = 1 to mymorphcount
+            morphid = mn Get Int(RecvPacket)
+            mymorphlist$ = systemSharedFieldAdd(mymorphlist$,str$(morphid),DATA_ARGSEP)
+         next i
          
-         REM GETTING MORE MODS WILL GO HERE
-         
-         myretval = dataServerCreateAvatar(client, accountName$, myname$, myclass, mysource)
+         myretval = dataServerCreateAvatar(client, accountName$, myname$, myclass, mysource, mymorphlist$)
          if myretval = DATA_FUNCTION_FAIL
             debugWrite(DEBUGWARN,"Avatar Creation failed: " + myname$ + " for " + accountName$)
             netServerSendOpCode(instance, client, NETS_CREATE_AVATAR_ERROR)    
@@ -621,6 +623,17 @@ function netServerParseTCP(instance as integer, client as integer)
                REM PASSED TEST 2 - AVATAR EXISTS
                if dataSharedLoadTable(DATA_AVATAR_PATH + avatarName$,DATA_AVATAR_PATH + avatarName$) <> DATA_FUNCTION_FAIL
                   REM PASSED TEST 3 - AVATAR LOADED SUCCESSFULLY, LINK TO CLIENT
+                  
+                  REM FOR NOW WE WONT UNLOAD PREVIOUS AVATAR SELECTIONS
+                  REM AUTOMATICALLY, THIS WILL SPEED THINGS UP IF PLAYERS
+                  REM GO BACK AND FORTH BETWEEN THEIR AVATARS A LOT
+                  REM THIS CAN BE UNCOMMENTED TO CONSERVE MEMORY AT THE
+                  REM EXPENSE OF SPEED
+                  `temp$ = dataSharedGetFieldFast(client,"avatartableid")
+                  `if temp$ <> DATA_KEY_UNDEFINED
+                   `  dataSharedResetTable(intval(temp$))
+                  `endif
+                  
                   myavatartableid = dataSharedTableExist(DATA_AVATAR_PATH + avatarName$)
                   dataSharedUpdateFieldFast(client,"avatartableid",str$(myavatartableid))
                   avatarName$ = dataSharedGetFieldFast(myavatartableid,"avatarname")

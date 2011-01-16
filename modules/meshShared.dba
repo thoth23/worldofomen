@@ -2,6 +2,9 @@
 meshSharedSetup:
 
    #constant MESH_AVATAR_PATH "media/avatar/"
+   #constant MORPH_TYPE_ADD 1
+   #constant MORPH_TYPE_REMOVE -1
+   
    
 return
 
