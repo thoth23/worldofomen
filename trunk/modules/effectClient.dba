@@ -1,5 +1,22 @@
-REM *** Include File: modules\effectClient.dba ***
-REM Created: 7/4/2010 11:15:51 AM
-REM
-REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+
+effectClientSetup:
+
+   #constant EFFECT_PATH "media/fx/"
+   #constant EFFECT_FUNCTION_FAIL -1
+   #constant EFFECT_FUNCTION_OK 1
+   
+   mediaClientRegisterPath(EFFECT_PATH)
+      
+return
+
+function effectClientLoad(myPath$, myeffectid)
+
+   REM LOADS AN EFFECT FOR LATER APPLICATION
+   if file exist(myPath$) = 0 then exitfunction EFFECT_FUNCTION_FAIL
+   
+   REM LOADING SHADER TO USE EXISTING TEXTURES
+   REM SKIP BINORMAL AND TANGENT DATA GENERATION
+   REM AND STRIP OUT SECONDARY UV DATA
+   load effect myPath$, myeffectid, 0, 2
+
+endfunction EFFECT_FUNCTION_OK

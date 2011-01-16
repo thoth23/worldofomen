@@ -11,7 +11,7 @@ terrainClientSetup:
    global idTerrainDet as integer
    
    #constant TERRAIN_PATH "media/terrain/"
-   meshClientRegisterPath(TERRAIN_PATH)
+   mediaClientRegisterPath(TERRAIN_PATH)
    
 return
 

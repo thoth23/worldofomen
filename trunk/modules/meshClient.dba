@@ -20,57 +20,9 @@ meshClientSetup:
    global MESH_DEFAULT_FPS as float
    MESH_DEFAULT_FPS = val(dataSharedGetField("meshClient", "meshDefaultFPS", "24.0", DATA_CREATE))
    
-   global MESH_PATHS as string
-  
-   meshClientRegisterPath(MESH_AVATAR_PATH)
+   mediaClientRegisterPath(MESH_AVATAR_PATH)
    
 return
-
-function meshClientRegisterPath(path$ as string)
-   MESH_PATHS = systemSharedFieldAdd(MESH_PATHS,path$,DATA_ARGSEP)
-endfunction
-
-function meshClientRegisterNew()
-   
-   REM SEARCH MEDIA AREAS THAT CONTAIN MESHES
-   REM AND SEE IF THERE ARE ANY NEW ASSETS THAT
-   REM NEED TO BE REGISTERED
-   
-   REM FIRST WE NEED THE LIBRARY TABLE ID
-   libraryTableID = dataSharedTableExist(DATA_TABLE_LIBRARY)
-   
-   split string MESH_PATHS,  DATA_ARGSEP
-   debugWrite(DEBUGINFO,"meshClientRegisterNew: " + str$(split count()) + " mesh paths will be synchronized...")
-   for i = 1 to split count()
-      path$ = get split word$(i)
-      if path exist(path$)
-         cd path$
-            perform checklist for files
-               debugWrite(DEBUGINFO,"meshClientRegisterNew: checking " + str$(checklist quantity()) + " files under path " + path$)
-               for j = 1 to checklist quantity()
-                  filename$ = checklist string$(j)
-                  if fast right$(filename$,4) = ".dbo" OR fast right$(filename$,2) = ".x" OR fast right$(filename$,4) = ".tgt"
-                     
-                     REM MESH OR MORPH TARGET FOUND, CHECK TO SEE 
-                     REM IF IT IS ALREADY REGISTERED IN THE LOCAL LIBRARY
-                     
-                     pathfilename$ = path$ + filename$
-                     rpgid = dataClientGetLibraryRPGID(pathfilename$)
-                     if rpgid = DATA_FUNCTION_FAIL
-                     
-                        REM NOT REGISTERED YET, ASK THE SERVER FOR AN ASSETID
-                        netClientSendAssetIDRequest(pathfilename$)
-                        
-                     endif
-                     
-                  endif
-               next
-            empty checklist
-         cd (dir exe())
-      endif
-   next
-   
-endfunction
 
 function meshClientLoad(myPath$, mydbpid)
 
@@ -111,7 +63,12 @@ function meshClientCreate(mytid as integer)
 
    REM INSTANTIATE A MESH INTO THE WORLD
    REM ASSUMES THE TABLE HAS BEEN
-   REM PRE-POPULATED WITH meshid
+   REM PRE-POPULATED WITH dbpid, meshid, effectid,
+   REM transforms, and collision data.  ALL MESHES GET
+   REM TRANSFORMS, A SHADER, AND COLLISION
+   REM SO WE PERFORM ALL THESE APPLICATIONS
+   REM AS PART OF MESH CREATION INSTEAD OF
+   REM AS SEPARATE FUNCTIONS
 
    mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
    mymeshid = intval(dataSharedGetFieldFast(mytid,"meshid"))
@@ -123,12 +80,6 @@ function meshClientCreate(mytid as integer)
          delete object mydbpid
       endif
    endif
-
-   REM WE'RE GOING TO MAKE A "HOLDER" OBJECT TO
-   REM GUARANTEE WE HAVE THIS OBJECT RESERVED
-   REM WE'RE ALSO GOING TO MAKE IT HIGHLY
-   REM VISIBLE TO MAKE SOURCE MESH ISSUES
-   REM VERY EASY TO SEE
 
    make object cylinder mydbpid, 10
    scale object mydbpid, 100, 5000, 100
@@ -151,6 +102,10 @@ function meshClientCreate(mytid as integer)
    REM APPLY IT TO THE TABLE OF THE OBJECT
    meshSharedApplyDataFile(mytid)
    
+   REM EFFECTS MAY COME FROM A MESH DATA FILE, SO
+   REM WE POSTPONE EFFECT INTERROGATION UNTIL NOW
+   myeffectid = intval(dataSharedGetFieldFast(mytid,"effectid"))
+   
    REM APPLY TRANSFORMS
    posx# = val(dataSharedGetFieldFast(mytid,"posx"))
    posy# = val(dataSharedGetFieldFast(mytid,"posy"))
@@ -164,11 +119,11 @@ function meshClientCreate(mytid as integer)
    scly# = val(dataSharedGetFieldFast(mytid,"scly"))
    sclz# = val(dataSharedGetFieldFast(mytid,"sclz"))
    
+   REM APPLY COLLISION
    colType = intval(dataSharedGetFieldFast(mytid,"collisiontype"))
    colGroup = intval(dataSharedGetFieldFast(mytid,"collisiongroup"))
    debugWrite(DEBUGINFO,"collisionType found to be " + str$(colType))
    debugWrite(DEBUGINFO,"collisionGroup found to be " + str$(colGroup))
-
    position object mydbpid, posx#,posy#,posz#
    if sclx# <> 1 or scly# <> 1 or sclz# <> 1
       if sclx# > 0 and scly# > 0 and sclz# > 0
@@ -177,10 +132,13 @@ function meshClientCreate(mytid as integer)
    endif
    myval = collisionClientSet(mydbpid,colType,colGroup)
    debugWrite(DEBUGINFO,"collision Setup Result: " + str$(myval))
+   
+   REM APPLY SHADER
+   
 
 endfunction MESH_FUNCTION_OK
 
-function meshClientApplyMorphTarget(mytid as integer, morphid as integer)
+function meshClientApplyMorphTarget(mytid as integer, morphid as integer, operation as integer)
 
       mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
       mymeshlimb = intval(dataSharedGetFieldFast(mytid,"meshlimb"))
@@ -193,21 +151,21 @@ function meshClientApplyMorphTarget(mytid as integer, morphid as integer)
       bpos = 0
       bSize = get bank size(mybankid)
       while bpos < bSize
-         v=bank integer(1,bpos) : inc bpos, 4
-         posx# = bank float(1,bpos) : inc bpos, 4
-         posy# = bank float(1,bpos) : inc bpos, 4
-         posz# = bank float(1,bpos) : inc bpos, 4
-         norx# = bank float(1,bpos) : inc bpos, 4
-         nory# = bank float(1,bpos) : inc bpos, 4
-         norz# = bank float(1,bpos) : inc bpos, 4
+         v=bank integer(mybankid,bpos) : inc bpos, 4
+         posx# = bank float(mybankid,bpos) : inc bpos, 4
+         posy# = bank float(mybankid,bpos) : inc bpos, 4
+         posz# = bank float(mybankid,bpos) : inc bpos, 4
+         norx# = bank float(mybankid,bpos) : inc bpos, 4
+         nory# = bank float(mybankid,bpos) : inc bpos, 4
+         norz# = bank float(mybankid,bpos) : inc bpos, 4
          x#=get vertexdata position x(v)
          y#=get vertexdata position y(v)
          z#=get vertexdata position z(v)
          nx#=get vertexdata normals x(v)
          ny#=get vertexdata normals y(v)
          nz#=get vertexdata normals z(v)
-         set vertexdata position v, x# + posx#, y# + posy#, z# + posz#
-         set vertexdata normals v, nx# + norx#, ny# + nory#, nz# + norz#
+         set vertexdata position v, x# + (posx# * operation), y# + (posy# * operation), z# + (posz# * operation)
+         set vertexdata normals v, nx# + (norx# * operation), ny# + (nory# * operation), nz# + (norz# * operation)
       endwhile
       unlock vertexdata
 

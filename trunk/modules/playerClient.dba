@@ -31,9 +31,10 @@ playerClientSetup:
    global PLAYER_MAX_INERTIA as float
    PLAYER_MAX_INERTIA = val(dataSharedGetField("playerClient", "playerMaxInertia", "0.10", DATA_CREATE))
 
+   #constant PLAYER_MEDIA_PATH "media/avatar"
    #constant PLAYER_FUNCTION_FAIL 0
    #constant PLAYER_FUNCTION_OK 1
-
+   
 return
 
 
@@ -50,17 +51,17 @@ function playerClientDestroy(tid as integer)
 
    local rpgid$ as string
    rpgid$ = dataSharedGetFieldFast(tid, "rpgid")
-   
-   REM REMOVE THE MESH
-   meshClientDestroy(tid)
-   
+      
    REM REMOVE THE REVERSE LOOKUP
    dataSharedDeleteRecord(DATA_CLIENT_RTABLEID,rpgid$)
    
    REM BECAUSE PLAYER IS CURRENTLY THE HIGHEST
    REM LEVEL OF ABSTRACTION, WE DELETE THE 
-   REM TABLE AT THIS LEVEL
+   REM TABLE AT THIS LEVEL - RESET TABLE TAKES
+   REM CARE OF REMOVING ANY INSTATIATED ASSETS
    dataSharedResetTable(tid)
+   
+   if tid = tidPlayer then tidPlayer = 0
 
 endfunction retval
 

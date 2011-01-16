@@ -1,0 +1,72 @@
+
+mediaClientSetup:
+
+   global MEDIA_PATHS as string
+   
+return
+
+function mediaClientRegisterPath(path$ as string)
+   MEDIA_PATHS = systemSharedFieldAdd(MEDIA_PATHS,path$,DATA_ARGSEP)
+endfunction
+
+function mediaClientRegisterNew()
+   
+   REM SEARCH MEDIA PATHS
+   REM AND SEE IF THERE ARE ANY NEW ASSETS THAT
+   REM NEED TO BE REGISTERED
+   
+   REM FIRST WE NEED THE LIBRARY TABLE ID
+   libraryTableID = DATA_LIBRARY_TABLEID
+   
+   REM PRESERVE THE SPLIT INTO A TEMP ARRAY
+   REM SO THAT SPLIT STRING CAN BE USED LATER
+   split string MEDIA_PATHS,  DATA_ARGSEP
+   dim myPaths(split count()) as string
+   for i = 1 to split count()
+      myPaths(i) = get split word$(i)
+   next
+      
+   debugWrite(DEBUGINFO,"mediaClientRegisterNew: " + str$(split count()) + " media paths will be synchronized...")
+   for i = 1 to array count(myPaths())
+      path$ = myPaths(i)
+      if path exist(path$)
+         cd path$
+            perform checklist for files
+               debugWrite(DEBUGINFO,"mediaClientRegisterNew: checking " + str$(checklist quantity()) + " files under path " + path$)
+               for j = 1 to checklist quantity()
+                  filename$ = checklist string$(j)
+                  REM IGNORE HIDDEN FILES AND CURRENT/PARENT DIR
+                  if fast left$(filename$,1) <> "."
+                     split string filename$, "." : ext$ = get split word$(split count())
+                     
+                     REM CHECK TO SEE IF EXTENSION IS REGISTERED
+                     REM AS A VALID MEDIA TYPE
+                     myMediaType$ = dataSharedGetField(DATA_TABLE_MEDIA, ext$, DATA_KEY_UNDEFINED, DATA_NO_CREATE)
+                     
+                     if myMediaType$ <> DATA_KEY_UNDEFINED
+                        REM VALID MEDIA TYPE FOUND, CHECK TO SEE 
+                        REM IF IT IS ALREADY REGISTERED IN THE LOCAL LIBRARY
+                        `debugWrite(DEBUGINFO,"mediaClientRegisterNew: registered extension found: " + ext$ + "=" + myMediaType$)
+                        pathfilename$ = path$ + filename$
+                        rpgid = intval(dataSharedGetField(DATA_TABLE_LIBRARY + DATA_REVERSE_SUFFIX, pathfilename$, str$(DATA_FUNCTION_FAIL), DATA_NO_CREATE))
+                        REM rpgid = dataClientGetLibraryRPGID(pathfilename$)
+                        if rpgid = DATA_FUNCTION_FAIL
+                           REM NOT REGISTERED YET, ASK THE SERVER FOR AN ASSETID
+                           debugWrite(DEBUGINFO,"mediaClientRegisterNew: " + pathfilename$ + " not registered in local library, requesting assetID from server.")
+                           netClientSendAssetIDRequest(pathfilename$)
+                        endif
+                     endif
+                     
+                     REM HERE WE COULD DO SPECIAL HANDLING
+                     REM FOR VARIOUS MEDIA TYPES USING EITHER
+                     REM THE GENERIC myMediaType$ OR THE EXACT ext$
+                  
+                  endif
+                           
+               next
+            empty checklist
+         cd (dir exe())
+      endif
+   next
+   
+endfunction
