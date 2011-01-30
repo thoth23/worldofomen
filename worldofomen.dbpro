@@ -1,50 +1,71 @@
 ; **** Dark BASIC Professional Project File ****
+; **** Written by Synergy Editor ****
 version=DBP1.00
 project name=World of OMEN
 
-
-
 ; **** source file information ****
 main=modules\worldofomen.dba
+LineMain=0
 include1=modules\debugShared.dba
+LineInclude1=0
 include2=modules\debugClient.dba
+LineInclude2=0
 include3=modules\systemShared.dba
+LineInclude3=0
 include4=modules\systemClient.dba
+LineInclude4=0
 include5=modules\commandShared.dba
+LineInclude5=0
 include6=modules\commandClient.dba
+LineInclude6=0
 include7=modules\encryptShared.dba
+LineInclude7=0
 include8=modules\netShared.dba
+LineInclude8=11
 include9=modules\netClient.dba
+LineInclude9=40
 include10=modules\dataShared.dba
+LineInclude10=0
 include11=modules\dataClient.dba
+LineInclude11=0
 include12=modules\mouseClient.dba
+LineInclude12=0
 include13=modules\keyboardClient.dba
+LineInclude13=0
 include14=modules\guiClient.dba
+LineInclude14=0
 include15=modules\cameraClient.dba
+LineInclude15=0
 include16=modules\meshClient.dba
+LineInclude16=0
 include17=modules\collisionClient.dba
+LineInclude17=0
 include18=modules\terrainClient.dba
+LineInclude18=0
 include19=modules\skyClient.dba
+LineInclude19=0
 include20=modules\playerShared.dba
+LineInclude20=0
 include21=modules\playerClient.dba
+LineInclude21=0
 include22=modules\abilityShared.dba
+LineInclude22=0
 include23=modules\inventoryShared.dba
+LineInclude23=0
 include24=modules\goalShared.dba
+LineInclude24=0
 include25=modules\effectClient.dba
+LineInclude25=0
 include26=modules\soundClient.dba
-; The compiler only needs to read the final source from this entry - the editor
-; handles include files, concatenation, etc.
-final source=_Temp.dbsource
-
-; The editor will replace any references to %temp in the EXE path/filename
-executable=World of OMEN.exe
+LineInclude26=0
 
 ; **** Executable Information  ***
-; build types: exe, media, installer,alone
+; build types: exe, media, installer, alone
+executable=World of OMEN.exe
 build type=exe
-
 ; ** Media file compression **
 compression=NO
+
 ; ** Media file encryption **
 encryption=NO
 ; ** Display the card options screen window? **
@@ -53,19 +74,23 @@ card options window=NO
 ; **** debugger information ****
 ; If the editor sets this to yes, it is running in debug mode
 CLI=NO
+CommandLineArguments=
 
 ; **** display mode information ****
 app title=World of OMEN
-; graphics mode options: fullscreen, window, desktop,fulldesktop, hidden
+
+; graphics mode options: fullscreen, window, desktop, fulldesktop, hidden
 graphics mode=window
 fullscreen resolution=640x480x32
+
 ; arbitrary sizes are valid for windowed mode
 window resolution=640x480
 
 ; **** External Files Information ****
+
 ; **** Media ****
-media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\
-; example entries: media1=graphics\*.jpg
+; Example entries: media1=graphics\*.jpg
+media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen2\darknet20\
 
 ; **** Icons ****
 
@@ -75,10 +100,21 @@ media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Proje
 VerComments=
 VerCompany=
 VerFileDesc=
-VerFileNumber=
-VerInternal=
+VerFileNumber=v1.0
+VerInternal=v1.0
 VerCopyright=
 VerTrademark=
 VerFilename=
 VerProduct=
 VerProductNumber=v1.0
+
+; **** To Do ****
+
+; **** Comments ****
+comments1=
+
+; **** Advanced (setup.ini) configuration ****
+RemoveSafetyCode=NO
+SafeArrays=YES
+LocalTempFolder=NO
+ExternaliseDLLS=NO

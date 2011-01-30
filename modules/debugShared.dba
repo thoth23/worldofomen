@@ -29,7 +29,7 @@ debugSharedSetup:
 
 return
 
-function debugShutdown()
+function debugStop()
 
    CLOSE LOG
 
