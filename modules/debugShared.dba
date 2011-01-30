@@ -9,9 +9,13 @@ debugSharedSetup:
    global debugMode as boolean
    REM 0=DO NOT PRINT TO SCREEN, 1=PRINT TO SCREEN
 
-   global debugfilename$ as string
-   debugfilename$ = remove$(appName$(),".exe") + systemSharedGetRealDateTime("_","_","_") + ".log"
+   `debugfilename$ = remove$(appName$(),".exe") + systemGetRealDateTime("_","_","_") + ".log"
+   debugfilename$ = remove$(appName$(),".exe") + ".log"
+   if file exist(debugfilename$)
+      delete file debugfilename$
+   endif
 
+   OPEN LOG debugfilename$, 1
    SET LOG TAG 0, "[SYSTEM] INFO  ", ""
    SET LOG TAG 1, "[SYSTEM] WARN  ", ""
    SET LOG TAG 2, "[SYSTEM] ERROR ", ""
@@ -25,20 +29,14 @@ debugSharedSetup:
 
 return
 
-function debugStart()
-
-   OPEN LOG debugfilename$, 1
-
-endfunction
-
-function debugStop()
+function debugShutdown()
 
    CLOSE LOG
 
 endfunction
 
 function debugWrite(level as integer, msg$ as string)
-   tstamp$ = systemSharedGetRealDateTime("/"," ",":")
+   tstamp$ = systemGetRealDateTime("/"," ",":")
    WRITELN LOG level, "%s :: %s" , tstamp$, msg$
-   if debugMode = 1 then print tstamp$, " :: ", msg$ : sync
+   if debugMode = 1 then print tstamp$, " :: ", msg$
 endfunction

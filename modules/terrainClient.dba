@@ -6,31 +6,29 @@ REM
 
 terrainClientSetup:
 
-   global dbpidTerrain as integer
+   #constant TERRAIN_PATH "media/terrain/"
+
+   global idTerrain as integer
    global idTerrainTex as integer
    global idTerrainDet as integer
-   
-   #constant TERRAIN_PATH "media/terrain/"
-   mediaClientRegisterPath(TERRAIN_PATH)
-   
+
+   idTerrain=2
+   idTerrainTex=3
+   idTerrainDet=4
+   rem temporary
+
 return
 
-function terrainClientLoad(terrainID, detailID)
+function terrainLoad(terrainID, detailID)
 
-   if terrainID = 0 or detailID = 0 then exitfunction -1
+   `if idTerrainTex = 0 then idTerrainTex = systemFreeImage()
+   `if idTerrainDet = 0 then idTerrainDet = systemFreeImage()
+   `if idTerrain = 0 then idTerrain = dataSharedObjectFindFree()
+   `dataObject(idTerrain).rpgid=1
+   `dataObject(idTerrain).class=DATA_CLASS_TERRAIN
+   rem not yet
 
-   if idTerrainTex = 0 then idTerrainTex = systemSharedGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
-   if idTerrainDet = 0 then idTerrainDet = systemSharedGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
 
-   if dbpidTerrain = 0
-      dbpidTerrain = systemSharedGetFree(SYSTEM_TYPE_OBJECT,DATA_SEARCH_REUSE)
-      debugWrite(DEBUGINFO,"terrainLoad: dbpidTerrain set to " + str$(dbpidTerrain))
-   endif
-
-   if object exist(dbpidTerrain)
-      delete object dbpidTerrain
-   endif
-   
    texFileName$ = TERRAIN_PATH + str$(terrainID) + "_TX.jpg"
    mapFileName$ = TERRAIN_PATH + str$(terrainID) + "_HF.bmp"
    detFileName$ = TERRAIN_PATH + str$(detailID) + "_DT.tga"
@@ -38,28 +36,22 @@ function terrainClientLoad(terrainID, detailID)
    load image texFileName$, idTerrainTex
    load image detFileName$, idTerrainDet
 
-   make object terrain dbpidTerrain
-   set terrain heightmap dbpidTerrain, mapFileName$
-   set terrain scale dbpidTerrain, 3, 0.6, 3
-   set terrain split dbpidTerrain, 4
-   set terrain tiling dbpidTerrain, 4
-   set terrain light dbpidTerrain, -0.5, -0.5, 0.5, 1, 1, 1, .25
-   set terrain texture dbpidTerrain, idTerrainTex, idTerrainDet
-   build terrain dbpidTerrain
+   make object terrain idTerrain
+   set terrain heightmap idTerrain, mapFileName$
+   set terrain scale idTerrain, 3, 0.6, 3
+   set terrain split idTerrain, 4
+   set terrain tiling idTerrain, 4
+   set terrain light idTerrain, 1, -0.25, 0, 1, 1, 0.78, 0.5
+   set terrain texture idTerrain, idTerrainTex, idTerrainDet
+   build terrain idTerrain
 
-   collisionClientSet(dbpidTerrain, COLLISION_TYPE_COMPLEX, COLLISION_GROUP_WORLD)
-
-   systemSharedGameModeAdd(SYSTEM_MODE_TERRAIN)
-
-endfunction dbpidTerrain
-
-function terrainClientUpdate()
-
-   update terrain
+   position object idTerrain,0,-5,0
+   rem temporary
 
 endfunction
 
-function terrainClientUnload()
+function terrainUnload()
+
 
    if idTerrainTex > 0
       if image exist(idTerrainTex)
@@ -73,17 +65,17 @@ function terrainClientUnload()
       endif
    endif
 
-   if dbpidTerrain > 0
-      if object exist(dbpidTerrain)
-         collisionClientDelete(dbpidTerrain)
-         destroy terrain dbpidTerrain
+   if idTerrain > 0
+      if object exist(idTerrain)
+         `collisionDelete(idTerrain)
+         rem not yet
+         destroy terrain idTerrain
       endif
    endif
 
-   systemSharedGameModeRemove(SYSTEM_MODE_TERRAIN)
+   `systemGameModeRemove(SYSTEM_MODE_AREA_TERRAIN)
+   rem not yet
 
 endfunction
-
-
 
 

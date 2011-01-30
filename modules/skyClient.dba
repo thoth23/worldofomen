@@ -4,55 +4,51 @@ REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
 REM
 
-skyClientSetup:
+skyboxClientSetup:
 
-   global dbpidSkybox as integer
+   global idSkybox as integer
    #constant SKYBOX_PATH "media/skybox/"
-   mediaClientRegisterPath(SKYBOX_PATH)
+
+   idSkybox = 1
+   rem termporary
 
 return
 
 
 
-function skyClientLoad(skyboxID)
+function skyboxLoad(skyboxID)
 
    if skyboxID = 0 then exitfunction -1
    meshName$ = "skybox"+str$(skyboxID)+".x"
 
-   if dbpidSkybox = 0
-      dbpidSkybox = systemSharedGetFree(SYSTEM_TYPE_OBJECT,SYSTEM_SEARCH_REUSE)
-      debugWrite(DEBUGINFO,"skyboxClientLoad: dbpidSkybox set to " + str$(dbpidSkybox))
-   endif
+   `if idSkybox = 0 then idSkybox = dataSharedObjectFindFree()
+   `dataObject(idSkybox).rpgid=1
+   `dataObject(idSkybox).class = DATA_CLASS_SKYBOX
+   rem not yet
 
-   if object exist(dbpidSkybox)
-      delete object dbpidSkybox
-   endif
-   
    filename$ = SKYBOX_PATH + meshName$
 
    if file exist(filename$)
-      load object filename$, dbpidSkybox
-      set object light dbpidSkybox, 0
-      set object texture dbpidSkybox, 3, 1
-      position object dbpidSkybox, 1000, 2000, 4000
-      scale object dbpidSkybox, 30000, 30000, 30000
+
+      load object filename$, idSkybox
+      set object light idSkybox, 0
+      set object texture idSkybox, 3, 1
+      position object idSkybox, 1000, 2000, 4000
+      scale object idSkybox, 30000, 30000, 30000
+
    else
-      debugWrite(DEBUGWARN,"skyboxClientLoad: Skybox not found: " + filename$)
+
+      `debugWrite(DEBUGWARN,"Skybox not found: " + filename$)
+      rem not yet
+
    endif
-
-endfunction dbpidSkybox
-
-function skyClientUnload()
-
-   if dbpidSkybox = 0 then exitfunction -1
-   if object exist(dbpidSkybox) = 0 then exitfunction -2
-   delete object dbpidSkybox
 
 endfunction 0
 
-function skyClientSetSun(x as float, y as float, z as float)
+function skyboxUnload()
+   if idSkybox = 0 then exitfunction -1
+   if object exist(idSkybox) = 0 then exitfunction -2
 
-   set directional light 0, x, y, z
-
-endfunction
+   delete object idSkybox
+endfunction 0
 

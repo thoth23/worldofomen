@@ -1,63 +1,40 @@
 ; **** Dark BASIC Professional Project File ****
-; **** Written by Synergy Editor ****
 version=DBP1.00
 project name=server
 
+
+
 ; **** source file information ****
 main=modules\server.dba
-LineMain=0
 include1=modules\debugShared.dba
-LineInclude1=42
 include2=modules\debugServer.dba
-LineInclude2=0
 include3=modules\systemShared.dba
-LineInclude3=248
 include4=modules\systemServer.dba
-LineInclude4=0
 include5=modules\commandShared.dba
-LineInclude5=8
 include6=modules\commandServer.dba
-LineInclude6=27
 include7=modules\encryptShared.dba
-LineInclude7=0
 include8=modules\netShared.dba
-LineInclude8=8
 include9=modules\netServer.dba
-LineInclude9=636
 include10=modules\dataShared.dba
-LineInclude10=339
 include11=modules\dataServer.dba
-LineInclude11=228
 include12=modules\playerShared.dba
-LineInclude12=9
 include13=modules\playerServer.dba
-LineInclude13=9
-include14=modules\inventoryShared.dba
-LineInclude14=0
-include15=modules\goalShared.dba
-LineInclude15=0
-include16=modules\keyboardShared.dba
-LineInclude16=9
-include17=modules\collisionShared.dba
-LineInclude17=0
-include18=modules\skillShared.dba
-LineInclude18=13
-include19=modules\serverStubs.dba
-LineInclude19=15
-include20=modules\skillServer.dba
-LineInclude20=3
-include21=modules\meshShared.dba
-LineInclude21=14
-include22=modules\mediaShared.dba
-LineInclude22=0
+include14=modules\abilityShared.dba
+include15=modules\inventoryShared.dba
+include16=modules\goalShared.dba
+; The compiler only needs to read the final source from this entry - the editor
+; handles include files, concatenation, etc.
+final source=_Temp.dbsource
+
+; The editor will replace any references to %temp in the EXE path/filename
+executable=server.exe
 
 ; **** Executable Information  ***
-; build types: exe, media, installer, alone
-executable=server.exe
+; build types: exe, media, installer,alone
 build type=exe
+
 ; ** Media file compression **
 compression=NO
-
 ; ** Media file encryption **
 encryption=NO
 ; ** Display the card options screen window? **
@@ -66,26 +43,21 @@ card options window=NO
 ; **** debugger information ****
 ; If the editor sets this to yes, it is running in debug mode
 CLI=NO
-CommandLineArguments=
 
 ; **** display mode information ****
 app title=server
-
-; graphics mode options: fullscreen, window, desktop, fulldesktop, hidden
+; graphics mode options: fullscreen, window, desktop,fulldesktop, hidden
 graphics mode=window
 fullscreen resolution=640x480x32
-
 ; arbitrary sizes are valid for windowed mode
 window resolution=640x480
 
 ; **** External Files Information ****
-
 ; **** Media ****
-; Example entries: media1=graphics\*.jpg
-media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\
+media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\server\
+; example entries: media1=graphics\*.jpg
 
 ; **** Icons ****
-icon1=media\cog.ico
 
 ; **** Cursors ****
 
@@ -93,21 +65,10 @@ icon1=media\cog.ico
 VerComments=
 VerCompany=
 VerFileDesc=
-VerFileNumber=v1.0
-VerInternal=v1.0
+VerFileNumber=
+VerInternal=
 VerCopyright=
 VerTrademark=
 VerFilename=
 VerProduct=
 VerProductNumber=v1.0
-
-; **** To Do ****
-
-; **** Comments ****
-comments1=
-
-; **** Advanced (setup.ini) configuration ****
-RemoveSafetyCode=NO
-SafeArrays=YES
-LocalTempFolder=NO
-ExternaliseDLLS=NO

@@ -3,10 +3,3 @@ REM Created: 7/4/2010 11:33:40 AM
 REM
 REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\server.dbpro
 REM 
-
-playerServerSetup:
-
-   global PLAYER_AVATARS_PER_ACCOUNT_DEFAULT as integer
-   PLAYER_AVATARS_PER_ACCOUNT_DEFAULT = intval(dataSharedGetField("playerServer", "playerAvatarsPerAccountDefault", "8", DATA_CREATE))
-   
-return
