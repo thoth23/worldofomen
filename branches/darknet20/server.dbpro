@@ -1,0 +1,74 @@
+; **** Dark BASIC Professional Project File ****
+version=DBP1.00
+project name=server
+
+
+
+; **** source file information ****
+main=modules\server.dba
+include1=modules\debugShared.dba
+include2=modules\debugServer.dba
+include3=modules\systemShared.dba
+include4=modules\systemServer.dba
+include5=modules\commandShared.dba
+include6=modules\commandServer.dba
+include7=modules\encryptShared.dba
+include8=modules\netShared.dba
+include9=modules\netServer.dba
+include10=modules\dataShared.dba
+include11=modules\dataServer.dba
+include12=modules\playerShared.dba
+include13=modules\playerServer.dba
+include14=modules\abilityShared.dba
+include15=modules\inventoryShared.dba
+include16=modules\goalShared.dba
+; The compiler only needs to read the final source from this entry - the editor
+; handles include files, concatenation, etc.
+final source=_Temp.dbsource
+
+; The editor will replace any references to %temp in the EXE path/filename
+executable=server.exe
+
+; **** Executable Information  ***
+; build types: exe, media, installer,alone
+build type=exe
+
+; ** Media file compression **
+compression=NO
+; ** Media file encryption **
+encryption=NO
+; ** Display the card options screen window? **
+card options window=NO
+
+; **** debugger information ****
+; If the editor sets this to yes, it is running in debug mode
+CLI=NO
+
+; **** display mode information ****
+app title=server
+; graphics mode options: fullscreen, window, desktop,fulldesktop, hidden
+graphics mode=window
+fullscreen resolution=640x480x32
+; arbitrary sizes are valid for windowed mode
+window resolution=640x480
+
+; **** External Files Information ****
+; **** Media ****
+media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\server\
+; example entries: media1=graphics\*.jpg
+
+; **** Icons ****
+
+; **** Cursors ****
+
+; **** Version Info ****
+VerComments=
+VerCompany=
+VerFileDesc=
+VerFileNumber=
+VerInternal=
+VerCopyright=
+VerTrademark=
+VerFilename=
+VerProduct=
+VerProductNumber=v1.0
