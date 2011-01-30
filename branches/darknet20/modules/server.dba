@@ -3,19 +3,28 @@ Rem Created: Saturday, July 03, 2010
 
 Rem ***** Main Source File *****
 
-
-sync on : sync rate 30
-
+REM SYSTEM SETUP
 gosub systemSharedSetup
 gosub debugSharedSetup
 gosub debugServerSetup
+gosub dataSharedSetup
 gosub dataServerSetup
+gosub netSharedSetup
+gosub netServerSetup
 
 
-do
+REM SYSTEM START
 
-   sync
+netServerStart()
 
-loop
+repeat
+
+   netServerMaintain()
+
+until (spacekey() > 0)
 
 
+REM SYSTEM STOP
+
+netServerStop()
+debugStop()
