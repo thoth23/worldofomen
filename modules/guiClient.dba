@@ -3228,11 +3228,16 @@ function guiClientUpdateChasis(fwdback as boolean)
       myassetid$ = dataSharedGetField(DATA_TABLE_LIBRARY + DATA_REVERSE_SUFFIX,path$,DATA_KEY_UNDEFINED,DATA_NO_CREATE)
       split string path$, "." : ext$ = get split word$(split count())
       select ext$
-         case "tgt"
-            guigadgets(temp).command = "/switchmorph\" + str$(tidPlayer) + "\" + myassetid$
-         endcase
-         case "png"
-            guigadgets(temp).command = "/switchskin\" + str$(tidPlayer) + "\" + myassetid$
+         case "mod"
+            REM COMBINED MODIFICATIONS FILE
+            if file exist(path$)
+               open to read SYSTEM_FILE_GUI, path$
+               read string SYSTEM_FILE_GUI, cmd$
+               close file SYSTEM_FILE_GUI
+               cmd$ = replace all$(cmd$,"target",str$(tidPlayer))
+               REM OTHER KEYWORDS CAN BE ADDED HERE
+               guigadgets(temp).command = cmd$
+            endif
          endcase
       endselect
       
@@ -3240,9 +3245,7 @@ function guiClientUpdateChasis(fwdback as boolean)
          if image exist(guigadgets(temp).imageid) then delete image guigadgets(temp).imageid
       endif
       imagepath$ = replace$(path$,MESH_AVATAR_PATH, GUI_SNAPS_PATH)
-      imagepath$ = replace$(imagepath$,".x",".png")
-      imagepath$ = replace$(imagepath$,".dbo",".png")
-      imagepath$ = replace$(imagepath$,".tgt",".png")
+      imagepath$ = replace$(imagepath$,".mod",".png")
       if file exist(imagepath$) and guigadgets(temp).imageid <> 0
          load image imagepath$, guigadgets(temp).imageid, 1
          if image exist(guigadgets(temp).imageid) then sprite guigadgets(temp).imageid, sprite x(guigadgets(temp).imageid), sprite y(guigadgets(temp).imageid),guigadgets(temp).imageid

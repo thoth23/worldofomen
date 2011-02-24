@@ -13,6 +13,7 @@ mediaSharedSetup:
    dataSharedUpdateField(DATA_TABLE_MEDIA, "obj", "mesh")
    dataSharedUpdateField(DATA_TABLE_MEDIA, "tgt", "morph")
    dataSharedUpdateField(DATA_TABLE_MEDIA, "mat", "material")
+   dataSharedUpdateField(DATA_TABLE_MEDIA, "mod", "modification")
    dataSharedUpdateField(DATA_TABLE_MEDIA, "bmp", "texture")
    dataSharedUpdateField(DATA_TABLE_MEDIA, "png", "texture")
    dataSharedUpdateField(DATA_TABLE_MEDIA, "tga", "texture")

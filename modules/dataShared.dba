@@ -16,6 +16,8 @@ dataSharedSetup:
    #constant DATA_CREATE      1
    #constant DATA_NO_REVERSE 0
    #constant DATA_REVERSE 1
+   #constant DATA_OVERWRITE 1
+   #constant DATA_NO_OVERWRITE 0
    
    #constant DATA_REVERSE_SUFFIX "_REVERSE"
 
@@ -29,7 +31,7 @@ dataSharedSetup:
    #constant DATA_NAMEVALSEP        "="
    #constant DATA_FILE_EXT          ".ini"
    #constant DATA_TEMPLATE_KEY      "inherit"
-
+   
    global DATA_NOSAVE_TABLES as string
    global DATA_LANGUAGE as string
 
@@ -69,8 +71,7 @@ dataSharedSetup:
    #constant DATA_TABLE_ASSETS "assets"
    dataSharedMakeTable(DATA_TABLE_ASSETS,0,DATA_NO_REVERSE)   
    dataSharedRegisterNoSaveTable(DATA_TABLE_ASSETS)
-
-
+   
 return
 
 function dataSharedRegisterNoSaveTable(tableName$ as string)
@@ -181,8 +182,21 @@ function dataSharedGetAssetID(rpgid as integer)
                retval = mybnkid
             endcase
             case "material"
+               REM VIRTUAL OBJECT - TABLE ONLY
+               if dataSharedTableExist(myPath$) = DATA_FUNCTION_FAIL
+                  dataSharedMakeTable(myPath$,0,DATA_NO_REVERSE)
+                  dataSharedLoadTable(myPath$, myPath$)
+                  dataSharedRegisterNoSaveTable(myPath$)
+               endif
+               mymatid = dataSharedTableExist(myPath$)
+               dataSharedUpdateField(DATA_TABLE_ASSETS, str$(rpgid), str$(mymatid))
+               retval = mymatid
             endcase
             case "texture"
+               mytexid = systemSharedGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
+               imageClientLoad(myPath$, mytexid)
+               dataSharedUpdateField(DATA_TABLE_ASSETS, str$(rpgid), str$(mytexid))
+               retval = mytexid
             endcase
             case "shader"
                myeffectid = systemSharedGetFree(SYSTEM_TYPE_EFFECT, SYSTEM_SEARCH_REUSE)
@@ -228,7 +242,7 @@ function dataSharedParse(tableName$ as string, attributes$ as string)
 endfunction
 
 
-function dataSharedCopyTable(sourceTableid as integer, targetTableid as integer)
+function dataSharedCopyTable(sourceTableid as integer, targetTableid as integer, overwrite as boolean)
 
    REM COPY ALL THE ATTRIBUTES
    REM FOR ONE TABLE INTO ANOTHER
@@ -246,7 +260,14 @@ function dataSharedCopyTable(sourceTableid as integer, targetTableid as integer)
       key$ = fast lower$(lookup current key$(sourceTableid))
       value$ = lookup current value$(sourceTableid)
       if key$ <> "tablename"
-         dataSharedUpdateFieldFast(targetTableid, key$, value$)
+         if overwrite = 1
+            dataSharedUpdateFieldFast(targetTableid, key$, value$)
+         else
+            current$ = dataSharedGetFieldFast(targetTableid,key$)
+            if current$ = DATA_KEY_UNDEFINED
+               dataSharedUpdateFieldFast(targetTableid, key$, value$)
+            endif
+         endif
       endif
       next lookup sourceTableid
    endwhile
@@ -425,68 +446,53 @@ endfunction
 function dataSharedLoadTable(filename$, table$)
    
    retval = DATA_FUNCTION_FAIL
-
-   if file exist(filename$)
+   originalFilename$ = filename$
+   filesToLoad$ = ""
+   filesLoaded$ = ""
+   filesToLoad$ = systemSharedFieldAdd(filesToLoad$,filename$,DATA_ARGSEP)
+   
+   while filesToLoad$ <> ""
+   
+      split string filesToLoad$, DATA_ARGSEP
+      filename$ = get split word$(1)
       
-      retval = DATA_FUNCTION_OK
-
-      REM LOAD BASE
-
-      open to read SYSTEM_FILE_DATA, filename$
-      while not file end(SYSTEM_FILE_DATA)
-         read string SYSTEM_FILE_DATA, dat$
-         split string dat$,DATA_NAMEVALSEP
-         dataSharedUpdateField(table$, get split word$(1), get split word$(2))
-      endwhile
-      close file SYSTEM_FILE_DATA
-
-
-      REM LOAD TEMPLATE CHAIN IF
-      REM TEMPLATE KEY IS PRESENT
-
-      alreadyChecked$ = ""
-      originalTable$ = table$
-      originalFileName$ = filename$
-
-      templateLoaded = 0
-      while (dataSharedGetField(table$, DATA_TEMPLATE_KEY, DATA_KEY_UNDEFINED,DATA_NO_CREATE) <> DATA_KEY_UNDEFINED) AND (instr(alreadyChecked$,table$) = 0)
-         template$ = dataSharedGetField(table$, DATA_TEMPLATE_KEY, DATA_KEY_UNDEFINED,DATA_NO_CREATE)
-         debugWrite(DEBUGINFO, "dataSharedLoadTable: applying template " + template$)
-         alreadyChecked$ = systemSharedFieldAdd(alreadyChecked$,template$,DATA_ARGSEP)
-         filename$ = DATA_PATH + template$ + DATA_FILE_EXT
-         if file exist(filename$)
+      if file exist(filename$) AND systemSharedFieldInRecord(filesLoaded$,filename$,DATA_ARGSEP) = 0
+      
+            if filename$ <> originalFilename$
+               debugWrite(DEBUGINFO,"dataSharedLoadTable: inheriting " + filename$)
+            endif
+      
             open to read SYSTEM_FILE_DATA, filename$
-               while not file end(SYSTEM_FILE_DATA)
-                  read string SYSTEM_FILE_DATA, dat$
-                  split string dat$, DATA_NAMEVALSEP
-                  dataSharedUpdateField(originalTable$, get split word$(1), get split word$(2))
-                  `debugWrite(DEBUGINFO,"dataSharedLoad template: " + get split word$(1) + " from table " + filename$ + " added to table " + originalTable$)
-                  templateLoaded = 1
-               endwhile
+            while not file end(SYSTEM_FILE_DATA)
+               read string SYSTEM_FILE_DATA, dat$
+               split string dat$,DATA_NAMEVALSEP
+               key$ = get split word$(1)
+               value$ = get split word$(2)
+               retval = DATA_FUNCTION_OK
+               
+               if key$ = DATA_TEMPLATE_KEY then filesToLoad$ = systemSharedFieldAdd(filesToLoad$, DATA_PATH + value$ + DATA_FILE_EXT, DATA_ARGSEP)
+                  
+               if filename$ = originalFilename$
+                  dataSharedUpdateField(table$, key$, value$)
+               else
+                  REM ONLY SET THE VALUE IF ITS NOT ALREADY SET
+                  REM THIS ALLOWS THE ORIGINAL FILE INSTANCE
+                  REM TO MAINTAIN THE HIGHEST PRIORITY
+                  current$ = dataSharedGetField(table$, key$, value$, DATA_CREATE)
+               endif
+               
+            endwhile
             close file SYSTEM_FILE_DATA
-         else
-            debugWrite(DEBUGWARN,"dataSharedLoadTable: table does not exist " + filename$)
-         endif
-         table$ = template$
-      endwhile
-
-      REM RELOAD BASE IF ANY TEMPLATES WERE LOADED
-      REM THIS ALLOWS LOCAL VALUES TO OVERRIDE
-      REM INHERITED VALUES
-
-      if TemplateLoaded = 1
-         open to read SYSTEM_FILE_DATA, originalFileName$
-         while not file end(SYSTEM_FILE_DATA)
-            read string SYSTEM_FILE_DATA, dat$
-            split string dat$,DATA_NAMEVALSEP
-            dataSharedUpdateField(originalTable$, get split word$(1), get split word$(2))
-         endwhile
-         close file SYSTEM_FILE_DATA
+            
+      else
+         debugWrite(DEBUGWARN,"dataSharedLoadTable: File not found " + filename$)  
       endif
-
-
-   endif
-
+      
+      filesToLoad$ = systemSharedFieldRemove(filesToLoad$,filename$,DATA_ARGSEP)
+      filesLoaded$ = systemSharedFieldAdd(filesLoaded$,filename$,DATA_ARGSEP)
+      
+   endwhile
+   
 endfunction retval
 
 

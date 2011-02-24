@@ -18,5 +18,20 @@ function effectClientLoad(myPath$, myeffectid)
    REM SKIP BINORMAL AND TANGENT DATA GENERATION
    REM AND STRIP OUT SECONDARY UV DATA
    load effect myPath$, myeffectid, 0, 2
+   debugWrite(DEBUGINFO, "effectClientLoad: Loaded effect " + myPath$ + " to effect id " + str$(myeffectid))
 
 endfunction EFFECT_FUNCTION_OK
+
+function effectClientApply(mytid as integer, effectid as integer)
+
+      mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+      myeffectid = dataSharedGetAssetID(effectid)
+      
+      if myeffectid > 0
+         if effect exist(myeffectid)
+            set object effect mydbpid, myeffectid
+            debugWrite(DEBUGINFO, "effectClientApply: Applied effect " + str$(myeffectid) + " to dbpid " + str$(mydbpid))
+         endif
+      endif
+
+endfunction

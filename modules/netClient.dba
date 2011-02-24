@@ -38,11 +38,19 @@ netClientSetup:
 
 return
 
+function netClientCreateProfile()
+
+   REM DARKNET 2.0
+   myProfile = mn create instance profile()
+
+endfunction myProfile
 
 function netClientStart()
 
    mn start 1, 0
-   mn Disable Message Boxes
+   mn Toggle Error Mode 1
+   NET_PROFILE_STANDARD = netClientCreateProfile()
+
 
    if NET_SERVER_NAME = NET_SERVER_NAME_DEFAULT
       debugWrite(DEBUGWARN,"Server name not set, attempting search...")
@@ -92,7 +100,8 @@ endfunction
 
 function netClientConnectStart()
 
-   mn Connect 0,NET_SERVER_NAME,NET_SERVER_PORT,NET_SERVER_NAME,NET_SERVER_PORT,NET_TIMEOUT_SECONDS,0
+   debugWrite(DEBUGINFO,"CONNECT START: " + NET_SERVER_NAME + ":" + str$(NET_SERVER_PORT) + ", Profile: " + str$(NET_PROFILE_STANDARD))
+   myConnect = mn Connect(0,NET_SERVER_NAME,NET_SERVER_PORT,NET_SERVER_NAME,NET_SERVER_PORT,(NET_TIMEOUT_SECONDS * 1000),0,NET_PROFILE_STANDARD)
 
 endfunction
 
@@ -377,8 +386,19 @@ function netClientSendCreateAvatarRequest()
       morph(i) = intval(get split word$(i))
    next i
    
-   REM TEXTURES WILL GO HERE
+   REM THIRD COLLECT THE TEXTURES
+   mymateriallist$ = dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarMaterialList", "", DATA_CREATE)
+   split string mymateriallist$, DATA_ARGSEP
+   mymaterialcount = split count()
+   dim material(mymaterialcount) as integer
+   for i = 1 to mymaterialcount
+      material(i) = intval(get split word$(i))
+   next i
    
+   
+   debugWrite(DEBUGINFO, "netClientSendCreateAvatarRequest will send material list: " + mymateriallist$)
+
+
    REM OTHER MODS WILL GO HERE
    
    REM LOCAL NAME VALIDATION
@@ -400,8 +420,14 @@ function netClientSendCreateAvatarRequest()
       for i = 1 to mymorphcount
          mn Add Int SendPacket, morph(i)
       next i
+      mn Add Int SendPacket, mymaterialcount
+      for i = 1 to mymaterialcount
+         mn Add Int SendPacket, material(i)
+      next i
+
       mn Send TCP 0,SendPacket,0,0,1
-      debugWrite(DEBUGINFO,"Sent NETC_CREATE_AVATAR for " + myname$)    
+      debugWrite(DEBUGINFO,"Sent NETC_CREATE_AVATAR for " + myname$)   
+      debugWrite(DEBUGINFO, "material count was: " + str$(mymaterialcount)) 
    endif
       
 endfunction sendrequest
@@ -465,12 +491,14 @@ function netClientParseTCP()
          REM THE CHARACTER SELECTION WINDOW
          myAvatarList$ = mn Get String(RecvPacket,0,1)
          debugWrite(DEBUGINFO,"Avatar list received: " + myAvatarList$)
-         split string myAvatarList$, DATA_ARGSEP
-         for i = 1 to split count()
-            myAvatarName$ = get split word$(i)
-            guiClientSetGUIDataField("avatarname"+str$(i), myAvatarName$)
-            guiClientSetGUIDataField("switchavatar"+str$(i), ";/deletelocalplayer;/switchavatar\"+myAvatarName$)
-         next i
+         if myAvatarList$ <> DATA_KEY_UNDEFINED
+            split string myAvatarList$, DATA_ARGSEP
+            for i = 1 to split count()
+               myAvatarName$ = get split word$(i)
+               guiClientSetGUIDataField("avatarname"+str$(i), myAvatarName$)
+               guiClientSetGUIDataField("switchavatar"+str$(i), ";/deletelocalplayer;/switchavatar\"+myAvatarName$)
+            next i
+         endif
          guiClientSwitchToWindow("windowSelectAvatar")
        endcase
        
@@ -514,7 +542,8 @@ function netClientParseTCP()
             myclass = mn Get Int(RecvPacket)
             mypowersource = mn Get Int(RecvPacket)
             mymeshid = mn Get Int(RecvPacket)
-            mymorphcount = mn Get Int(RecvPacket)
+            
+            
             
             
             mytid = playerClientCreate(myavatarid, mymeshid)
@@ -525,22 +554,25 @@ function netClientParseTCP()
             dataSharedUpdateFieldFast(mytid,"class",str$(myclass))
             dataSharedUpdateFieldFast(mytid,"powersource",str$(mypowersource))
             dataSharedUpdateFieldFast(mytid,"meshid",str$(mymeshid))
-            dataSharedUpdateFieldFast(mytid,"morphcount",str$(mymorphcount))
             
             mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
             cameraClientPaperDoll(mydbpid)
             DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,str$(myavatarid),DATA_ARGSEP)
             
+            mymorphcount = mn Get Int(RecvPacket)
+            dataSharedUpdateFieldFast(mytid,"morphcount",str$(mymorphcount))
             for i = 1 to mymorphcount
                   mymorphid = mn Get Int(RecvPacket)      
                   meshClientApplyMorphTarget(mytid,mymorphid,MORPH_TYPE_ADD)
             next i
             
-            REM GET AND APPLY MASKS
+            dataSharedUpdateFieldFast(mytid,"materialcount",str$(mymaterialcount))
+            mymaterialcount = mn Get Int(RecvPacket)
+            for i = 1 to mymaterialcount
+                  mymaterialid = mn Get Int(RecvPacket)      
+                  materialClientApply(mytid,mymaterialid)
+            next i
             
-            REM GET AND APPLY TEXTURES/COLORS
-            
-            REM GET AND APPLY SHADER
             
             REM MORE MODS WILL BE ADDED HERE LATER
             

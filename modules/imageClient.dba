@@ -1,0 +1,21 @@
+
+imageClientSetup:
+
+   #constant IMAGE_PATH "media/image/"
+   #constant IMAGE_FUNCTION_FAIL -1
+   #constant IMAGE_FUNCTION_OK 1
+   
+   mediaClientRegisterPath(IMAGE_PATH)
+      
+return
+
+function imageClientLoad(myPath$, myimageid)
+
+   REM LOADS AN IMAGE FOR LATER APPLICATION
+   if file exist(myPath$) = 0 then exitfunction IMAGE_FUNCTION_FAIL
+   
+   REM LOADING THE IMAGE AS A TEXTURE
+   load image myPath$, myimageid, 0
+   debugWrite(DEBUGINFO, "imageClientLoad: Loaded image " + myPath$ + " to image id " + str$(myimageid))
+
+endfunction IMAGE_FUNCTION_OK

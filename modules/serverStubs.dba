@@ -19,3 +19,8 @@ endfunction
 function effectClientLoad(temp$, temp)
    REM NO EFFECTS WILL BE LOADED ON THE SERVER
 endfunction
+
+function imageClientLoad(temp$, temp)
+   REM NO IMAGES WILL BE LOADED ON THE SERVER
+endfunction
+

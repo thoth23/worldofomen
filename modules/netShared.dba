@@ -47,7 +47,7 @@ netSharedSetup:
    RecvPacket = mn create packet()
    mn set memory size SendPacket,1024
    rem RecVPacket size is set automatically on receive
-
+   
    global NET_LISTEN_CHANNELS_DEFAULT as string
    NET_LISTEN_CHANNELS_DEFAULT = dataSharedGetField("netShared", "netListenChannelsDefault", "SYSTEM;LOCAL;BROADCAST", DATA_CREATE)
 
@@ -107,7 +107,10 @@ netSharedSetup:
    REM SERVER UDP OPERATIONS
    #constant NETS_MOVE 0
    #constant NETS_JUMP 1
-   
+ 
+    REM DARKNET 2.0
+   global NET_PROFILE_STANDARD as dword
+  
 return
 
 function netSharedAddHeader(msgID as integer,size as integer)
