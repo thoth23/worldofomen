@@ -2,6 +2,7 @@
 meshSharedSetup:
 
    #constant MESH_AVATAR_PATH "media/avatar/"
+
    #constant MORPH_TYPE_ADD 1
    #constant MORPH_TYPE_REMOVE -1
    
@@ -30,7 +31,7 @@ function meshSharedApplyDataFile(mytid as integer)
          REM APPLY THE DATA FILE TO THE ASSOCIATED
          REM DATAOBJECT ARRAY
          mytemplatetid = dataSharedTableExist(datafilename$)
-         dataSharedCopyTable(mytemplatetid, mytid)
+         dataSharedCopyTable(mytemplatetid, mytid, DATA_OVERWRITE)
          
       else
             debugWrite(DEBUGWARN,"meshSharedApplyDataFile: data file does not exist: " + datafilename$)

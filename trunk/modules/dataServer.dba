@@ -165,7 +165,7 @@ function dataServerAccountOwnsAvatar(tableName$ as string, avatarName$)
 endfunction ctr
 
 
-function dataServerCreateAvatar(client as integer, accountName$ as string, avatarName$ as string, class as integer, powersource as integer, mymorphlist$ as string)
+function dataServerCreateAvatar(client as integer, accountName$ as string, avatarName$ as string, class as integer, powersource as integer, mymorphlist$ as string, mymateriallist$ as string)
    
    local retval as integer
    retval = DATA_FUNCTION_FAIL
@@ -229,6 +229,14 @@ function dataServerCreateAvatar(client as integer, accountName$ as string, avata
                   dataSharedUpdateFieldFast(myavatartableid,"morphcount",str$(mymorphcount))
                   for i = 1 to mymorphcount
                      dataSharedUpdateFieldFast(myavatartableid,"morph"+str$(i),get split word$(i))
+                  next i
+
+                  REM UPDATE MATERIALS
+                  split string mymateriallist$, DATA_ARGSEP
+                  mymaterialcount = split count()
+                  dataSharedUpdateFieldFast(myavatartableid,"materialcount",str$(mymaterialcount))
+                  for i = 1 to mymaterialcount
+                     dataSharedUpdateFieldFast(myavatartableid,"material"+str$(i),get split word$(i))
                   next i
                   
                   REM SAVE THE NEW AVATAR TABLE

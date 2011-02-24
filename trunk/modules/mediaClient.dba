@@ -49,7 +49,6 @@ function mediaClientRegisterNew()
                         `debugWrite(DEBUGINFO,"mediaClientRegisterNew: registered extension found: " + ext$ + "=" + myMediaType$)
                         pathfilename$ = path$ + filename$
                         rpgid = intval(dataSharedGetField(DATA_TABLE_LIBRARY + DATA_REVERSE_SUFFIX, pathfilename$, str$(DATA_FUNCTION_FAIL), DATA_NO_CREATE))
-                        REM rpgid = dataClientGetLibraryRPGID(pathfilename$)
                         if rpgid = DATA_FUNCTION_FAIL
                            REM NOT REGISTERED YET, ASK THE SERVER FOR AN ASSETID
                            debugWrite(DEBUGINFO,"mediaClientRegisterNew: " + pathfilename$ + " not registered in local library, requesting assetID from server.")

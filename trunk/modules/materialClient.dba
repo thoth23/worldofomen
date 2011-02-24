@@ -1,0 +1,56 @@
+
+materialClientSetup:
+
+   #constant MATERIAL_MAX_TEXTURES 8
+   
+   #constant MATERIAL_FUNCTION_FAIL -1
+   #constant MATERIAL_FUNCTION_OK 1
+   
+   #constant MATERIAL_PATH "data/materials/"
+   
+   mediaClientRegisterPath(MATERIAL_PATH)
+   
+return
+
+function materialClientApply(mytid as integer, mymatrpgid as integer)
+
+   local retval as integer
+   retval = MATERIAL_FUNCTION_FAIL
+   
+   if mytid > 0
+      if lookup exist(mytid)
+      
+         retval = MATERIAL_FUNCTION_OK
+         
+         if mymatrpgid > 0
+            mymatid = dataSharedGetAssetID(mymatrpgid)
+            if lookup exist(mymatid)
+               debugWrite(DEBUGINFO,"materialClientApply will apply table " + str$(mymatid) + " to table " + str$(mytid))
+               dataSharedCopyTable(mymatid, mytid,DATA_OVERWRITE)
+            else
+               debugWrite(DEBUGWARN,"materialClientApply invalid material table " + str$(mymatid))
+            endif
+         endif
+        
+         for i = 0 to MATERIAL_MAX_TEXTURES
+            mytexid = intval(dataSharedGetFieldFast(mytid, "textureid" + str$(i)))
+            if mytexid > 0
+               debugWrite(DEBUGINFO,"materialClientApply is applying textureid " + str$(mytexid))
+               meshClientApplyTexture(mytid,mytexid,i)
+            endif
+         next
+         
+         //myeffectid = intval(dataSharedGetFieldFast(mytid, "effectid"))
+         //if myeffectid > 0
+            //effectClientApply(mytid, myeffectid)
+         //endif
+         rem not yet
+         
+      else
+         debugWrite(DEBUGWARN,"materialClientApply: invalid materialid/tableid requested: " + str$(mymatid) + "/" + str$(mytid))
+      endif
+   else
+      debugWrite(DEBUGWARN,"materialClientApply: invalid materialid/tableid requested: " + str$(mymatid) + "/" + str$(mytid))
+   endif
+   
+endfunction retval

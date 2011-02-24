@@ -28,9 +28,6 @@ gosub mouseClientSetup
 gosub cameraClientSetup
 
 
-REM STARTUP FUNCTIONS HERE
-netClientStart()
-netClientConnectStart()
 
 
 REM ASSET HANDLERS HERE
@@ -38,6 +35,8 @@ gosub mediaSharedSetup
 gosub mediaClientSetup
 gosub collisionSharedSetup
 gosub collisionClientSetup
+gosub materialClientSetup
+gosub imageClientSetup
 gosub effectClientSetup
 gosub meshSharedSetup
 gosub meshClientSetup
@@ -56,6 +55,9 @@ gosub guiClientSetup
 REM PARSE THE COMMAND LINE
 commandSharedParseStartup()
 
+REM STARTUP FUNCTIONS HERE
+netClientStart()
+netClientConnectStart()
 
 repeat
 
@@ -68,6 +70,11 @@ repeat
       mouseClientProcessClicks()
       keyboardClientPoll()
       guiClientUpdateGUI()
+   endif
+   
+   if (systemMode && SYSTEM_MODE_AV_SELECT)
+      meshClientAnimate(tidPlayer, "idle1", 1)
+      meshClientRegulate(tidPlayer)
    endif
 
    if (systemMode && SYSTEM_MODE_LOGON_COMPLETE)

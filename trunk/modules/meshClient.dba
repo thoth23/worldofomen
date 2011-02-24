@@ -101,11 +101,7 @@ function meshClientCreate(mytid as integer)
    REM IF A DATA FILE EXISTS FOR THE MESH BEING USED THEN
    REM APPLY IT TO THE TABLE OF THE OBJECT
    meshSharedApplyDataFile(mytid)
-   
-   REM EFFECTS MAY COME FROM A MESH DATA FILE, SO
-   REM WE POSTPONE EFFECT INTERROGATION UNTIL NOW
-   myeffectid = intval(dataSharedGetFieldFast(mytid,"effectid"))
-   
+      
    REM APPLY TRANSFORMS
    posx# = val(dataSharedGetFieldFast(mytid,"posx"))
    posy# = val(dataSharedGetFieldFast(mytid,"posy"))
@@ -133,9 +129,14 @@ function meshClientCreate(mytid as integer)
    myval = collisionClientSet(mydbpid,colType,colGroup)
    debugWrite(DEBUGINFO,"collision Setup Result: " + str$(myval))
    
-   REM APPLY SHADER
+   REM DEFAULT MATERIALS MAY COME FROM A MESH DATA FILE, SO
+   REM WE POSTPONE MATERIAL INTERROGATION UNTIL NOW
+   REM HERE WE ARE JUST APPLYING ANY PREDEFINED 
+   REM MATERIALS FOR THE MESH
+   mymatid = intval(dataSharedGetFieldFast(mytid,"materialid"))
+   debugWrite(DEBUGINFO,"default materialid found to be " + str$(mymatid))
+   materialClientApply(mytid,mymatid)
    
-
 endfunction MESH_FUNCTION_OK
 
 function meshClientApplyMorphTarget(mytid as integer, morphid as integer, operation as integer)
@@ -170,6 +171,21 @@ function meshClientApplyMorphTarget(mytid as integer, morphid as integer, operat
       unlock vertexdata
 
 endfunction MESH_FUNCTION_OK
+
+function meshClientApplyTexture(mytid as integer, textureid as integer, stage as integer)
+
+      mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+      mytextureid = dataSharedGetAssetID(textureid)
+      
+      if mytextureid > 0
+         if image exist(mytextureid)
+            texture object mydbpid, stage, mytextureid
+            debugWrite(DEBUGINFO, "meshClientApplyTexture: Applied texture " + str$(mytextureid) + " to dbpid " + str$(mydbpid) + " on stage " + str$(stage))
+         endif
+      endif
+
+endfunction
+
 
 function meshClientAnimate(mytid as integer, animName as string, loopPlay as boolean)
 

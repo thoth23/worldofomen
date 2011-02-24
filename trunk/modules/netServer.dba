@@ -22,10 +22,9 @@ netServerSetup:
    global NET_VISIBILITY_LOCAL_CHAT as float
    NET_VISIBILITY_LOCAL_CHAT = intval(dataSharedGetField("netServer", "netVisibilityLocalChat", "10000.0",1))
    
-   REM TURN OFF DARKNET DEBUG ON SERVER SO WE DON'T
+   REM TURN OF DARKNET DEBUG ON SERVER SO WE DON'T
    REM SEE POPUP WINDOWS FOR WARNINGS
-   mn Disable Debug
-   mn Disable Message Boxes
+   mn Toggle Error Mode 1
 
    if NET_SERVER_NAME = NET_SERVER_NAME_DEFAULT
       debugWrite(DEBUGWARN,"Server name not set, attempting search...")
@@ -78,16 +77,27 @@ netServerSetup:
    
 return
 
+function netServerCreateProfile()
+
+   REM DARKNET 2.0
+   myProfile = mn create instance profile()
+   mn Set Profile Local myProfile, NET_SERVER_NAME, NET_SERVER_PORT, NET_SERVER_NAME, NET_SERVER_PORT
+   mn Set Profile Mode UDP myProfile, NET_UDP_MODE
+   mn Set Profile Num Operations UDP myProfile, NET_MAX_OPERATIONS
+
+endfunction myProfile
+
+
 function netServerStart()
 
 
    mn start NET_INSTANCES, NET_THREADS
-
+   NET_PROFILE_STANDARD = netServerCreateProfile()
    for i = 0 to (NET_INSTANCES - 1 )
-      mn Set Local i, NET_SERVER_NAME,NET_SERVER_PORT,NET_SERVER_NAME,NET_SERVER_PORT
-      retval = mn Start Server(i, NET_CLIENTS_PER_INSTANCE,NET_MAX_OPERATIONS,NET_UDP_MODE)
+   
+      retval = mn Start Server(i, NET_CLIENTS_PER_INSTANCE, NET_PROFILE_STANDARD)
       if retval = 0
-         debugWrite(DEBUGINFO,NET_SERVER_NAME + " listening on port " + str$(NET_SERVER_PORT) + " as instance " + str$(i))
+         debugWrite(DEBUGINFO,NET_SERVER_NAME + " listening on port " + str$(NET_SERVER_PORT) + " with profile " + str$(NET_PROFILE_STANDARD) + " as instance " + str$(i))
          debugWrite(DEBUGINFO,"Clients/Instance set to " + str$(NET_CLIENTS_PER_INSTANCE))
          debugWrite(DEBUGINFO,"UDP Max Operations set to " + str$(NET_MAX_OPERATIONS))
          debugWrite(DEBUGINFO,"UDP Mode set to " + str$(NET_UDP_MODE))
@@ -546,6 +556,7 @@ function netServerParseTCP(instance as integer, client as integer)
                   myavatarlist$ = systemSharedFieldAdd(myavatarlist$,myavatarname$,DATA_ARGSEP)
                endif
             endwhile
+            if myavatarlist$ = "" then myavatarlist$ = DATA_KEY_UNDEFINED
             netSharedAddHeader(NETS_AVATAR_LIST, NET_HEADER_BYTES + len(myavatarlist$))
             mn Add String SendPacket, myavatarlist$, 0, 1
             mn Send TCP instance,SendPacket,client,0,1
@@ -591,13 +602,20 @@ function netServerParseTCP(instance as integer, client as integer)
          myclass = mn Get Int(RecvPacket)
          mysource = mn Get Int(RecvPacket)
          myname$ = mn Get String(RecvPacket,0,1)
+         
          mymorphcount = mn Get Int(RecvPacket)
          for i = 1 to mymorphcount
             morphid = mn Get Int(RecvPacket)
             mymorphlist$ = systemSharedFieldAdd(mymorphlist$,str$(morphid),DATA_ARGSEP)
          next i
          
-         myretval = dataServerCreateAvatar(client, accountName$, myname$, myclass, mysource, mymorphlist$)
+         mymaterialcount = mn Get Int(RecvPacket)
+         for i = 1 to mymaterialcount
+            materialid = mn Get Int(RecvPacket)
+            mymateriallist$ = systemSharedFieldAdd(mymateriallist$,str$(materialid),DATA_ARGSEP)
+         next i
+         
+         myretval = dataServerCreateAvatar(client, accountName$, myname$, myclass, mysource, mymorphlist$, mymateriallist$)
          if myretval = DATA_FUNCTION_FAIL
             debugWrite(DEBUGWARN,"Avatar Creation failed: " + myname$ + " for " + accountName$)
             netServerSendOpCode(instance, client, NETS_CREATE_AVATAR_ERROR)    
@@ -658,6 +676,13 @@ function netServerParseTCP(instance as integer, client as integer)
                   mn Add Int SendPacket, mymorphcount
                   for i = 1 to mymorphcount
                      temp = intval(dataSharedGetFieldFast(myavatartableid,"morph"+str$(i)))
+                     mn Add Int SendPacket, temp
+                  next
+
+                  mymaterialcount = intval(dataSharedGetFieldFast(myavatartableid,"materialcount"))
+                  mn Add Int SendPacket, mymaterialcount
+                  for i = 1 to mymaterialcount
+                     temp = intval(dataSharedGetFieldFast(myavatartableid,"material"+str$(i)))
                      mn Add Int SendPacket, temp
                   next
                   

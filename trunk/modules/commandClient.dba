@@ -131,7 +131,24 @@ function commandRun(cmd$ as string)
          endif
          dataSharedUpdateField(DATA_TABLE_INPUT, "inputCreateAvatarMorphList", mymorphlist$)
       endcase
-      
+ 
+       case "/switchmaterial"
+         REM SWITCHMATERIAL IS ONLY USED IN AVATAR CREATION
+         REM SO WE'RE JUST GOING TO USE A STRING LIST FOR
+         REM THE MATERIALS, THESE WILL BE MADE INTO
+         REM PERMANENT ATTRIBUTES WHEN RECEIVED BACK
+         REM FROM THE SERVER
+         mytid = intval(get split word$(2))
+         mymatid = intval(get split word$(3))
+         mymatlist$ = dataSharedGetField(DATA_TABLE_INPUT, "inputCreateAvatarMaterialList", "", DATA_CREATE)
+         if instr(mymatlist$,str$(mymatid)) = 0
+            REM NOT APPLIED YET, ADD IT
+            materialClientApply(mytid, mymatid)
+            mymatlist$ = systemSharedFieldAdd(mymatlist$, str$(mymatid), DATA_ARGSEP)
+         endif
+         dataSharedUpdateField(DATA_TABLE_INPUT, "inputCreateAvatarMaterialList", mymatlist$)
+      endcase
+     
       case "/createlocalplayer"
          mymeshid = intval(dataSharedGetField(DATA_TABLE_LIBRARY + DATA_REVERSE_SUFFIX, MESH_AVATAR_PATH + PLAYER_DEFAULT_MESH, DATA_KEY_UNDEFINED, DATA_NO_CREATE))
          debugWrite(DEBUGINFO, "/createlocal player default meshid found: " + str$(mymeshid))
@@ -139,11 +156,13 @@ function commandRun(cmd$ as string)
          dataSharedRegisterNoSaveTable("1")
          debugWrite(DEBUGINFO, "/createlocalplayer tidPlayer set to " + str$(tidPlayer))
          mydbpid = intval(dataSharedGetFieldFast(tidPlayer,"dbpid"))
+         systemSharedGameModeAdd(SYSTEM_MODE_AV_SELECT)
          cameraClientPaperDoll(mydbpid)
       endcase
       
       case "/deletelocalplayer"
          playerClientDestroy(tidPlayer)
+         systemSharedGameModeRemove(SYSTEM_MODE_AV_SELECT)
          debugWrite(DEBUGINFO, "/deletelocalplayer called playerClientDestory for " + str$(tidPlayer))
       endcase
                  
@@ -158,7 +177,7 @@ function commandRun(cmd$ as string)
       case "/switchavatar"
             netClientSendAvatarDetailsSelf(get split word$(2))
       endcase
-      
+            
       case default
             REM NOT A CLIENT COMMAND, SEND TO SERVER
             netClientSendCommand(cmd$)
