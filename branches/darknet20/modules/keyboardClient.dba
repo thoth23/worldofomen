@@ -1,5 +1,44 @@
-REM *** Include File: modules\keyboardClient.dba ***
-REM Created: 7/4/2010 11:05:25 AM
-REM
-REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen\worldofomen.dbpro
-REM 
+keyboardClientSetup:
+
+   global keyboardKeyDown as boolean
+   global keyboardNextKeyRepeat as float
+   global keyboardRepeatDelay as float
+   keyboardRepeatDelay = 500
+
+   REM KEYBOARD INPUT MAP
+   global KEYBOARD_KEY_SEND_TEST as integer
+   KEYBOARD_KEY_SEND_TEST = 20
+
+return
+
+function keyboardClientPollTop()
+
+   if keyboardKeyDown = 1
+       if timer() > keyboardNextKeyRepeat
+            keyboardKeyDown = 0
+            keyboardNextKeyRepeat = timer() + keyboardRepeatDelay
+       endif
+   endif
+
+   if scanCode() = 0
+      keyboardKeyDown = 0
+   endif
+
+endfunction
+
+function keyboardClientPollBottom()
+
+   if keyboardKeyDown = 0
+
+      if scanCode() <> 0
+         keyboardKeyDown = 1
+         keyboardNextKeyRepeat = timer() + keyboardRepeatDelay
+      endif
+
+      if keyState(KEYBOARD_KEY_SEND_TEST) = 1
+         mediatorClient(MEDIATOR_KEYBOARD, MEDIATOR_NETWORK, KEYBOARD_KEY_SEND_TEST)
+      endif
+
+   endif
+
+endfunction

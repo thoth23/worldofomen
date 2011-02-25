@@ -5,7 +5,7 @@ project name=server
 
 ; **** source file information ****
 main=modules\server.dba
-LineMain=0
+LineMain=15
 include1=modules\debugShared.dba
 LineInclude1=0
 include2=modules\debugServer.dba
@@ -23,7 +23,7 @@ LineInclude7=0
 include8=modules\netShared.dba
 LineInclude8=12
 include9=modules\netServer.dba
-LineInclude9=50
+LineInclude9=148
 include10=modules\dataShared.dba
 LineInclude10=0
 include11=modules\dataServer.dba
@@ -70,7 +70,7 @@ window resolution=640x480
 
 ; **** Media ****
 ; Example entries: media1=graphics\*.jpg
-media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen2\darknet20\
+media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomenhour6branch\
 
 ; **** Icons ****
 

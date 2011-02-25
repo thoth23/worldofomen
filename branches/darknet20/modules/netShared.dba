@@ -52,3 +52,15 @@ netSharedSetup:
    
 return
 
+function netSharedAddHeader(msgID as integer,size as integer)
+
+    REM UTILITY FUNCTION TO INSURE
+    REM HEADER IS ALWAYS CORRECT
+    REM LENGTH IS UPDATED ON SEND
+    REM MINIMUM SIZE IS 12 BYTES
+    mn Clear Packet SendPacket
+    mn Add Int SendPacket, size
+    mn Add Int SendPacket, timer()
+    mn Add Int SendPacket, msgID
+
+endfunction

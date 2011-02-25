@@ -35,7 +35,7 @@ endfunction
 function netClientConnectStart()
 
    debugWrite(DEBUGINFO,"CONNECT START: " + NET_SERVER_NAME + ":" + str$(NET_SERVER_PORT) + ", Profile: " + str$(NET_PROFILE_STANDARD))
-   myConnect = mn Connect(0,NET_SERVER_NAME,NET_SERVER_PORT,NET_SERVER_NAME,NET_SERVER_PORT,(NET_TIMEOUT_SECONDS * 1000),1,NET_PROFILE_STANDARD)
+   myConnect = mn Connect(0,NET_SERVER_NAME,NET_SERVER_PORT,NET_SERVER_NAME,NET_SERVER_PORT,(NET_TIMEOUT_SECONDS * 1000),0,NET_PROFILE_STANDARD)
 
 endfunction
 
@@ -65,7 +65,22 @@ function netClientMaintain()
          debugWrite(DEBUGINFO,"Net Max UDP Clients set to " + str$(netMaxUDPClients))
          netMaxUDPOperations = mn Get Max Operations(0)
          debugWrite(DEBUGINFO,"Net Max UDP Operations set to " + str$(netMaxUDPOperations))
+         netClientConnected=1
       endif
    endif
+
+endfunction
+
+function netClientSendTestMessage()
+
+   REM FOR THE TEST MESSAGE, WE WILL SEND
+   REM THE CLIENT LOCATION AS TWO FLOATS
+   netSharedAddHeader(NETC_TEST_MESSAGE,20)
+   x# = object position x(5)
+   z# = object position z(5)
+   mn Add Float SendPacket, x#
+   mn Add Float SendPacket, z#
+   mn Send TCP 0,SendPacket,0,0,1
+   debugWrite(DEBUGINFO,"Sent NETC_TEST_MESSAGE with data " + str$(x#) + "," + str$(z#))
 
 endfunction
