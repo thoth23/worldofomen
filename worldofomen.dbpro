@@ -5,7 +5,7 @@ project name=World of OMEN
 
 ; **** source file information ****
 main=modules\worldofomen.dba
-LineMain=0
+LineMain=46
 include1=modules\debugShared.dba
 LineInclude1=0
 include2=modules\debugClient.dba
@@ -21,9 +21,9 @@ LineInclude6=0
 include7=modules\encryptShared.dba
 LineInclude7=0
 include8=modules\netShared.dba
-LineInclude8=11
+LineInclude8=66
 include9=modules\netClient.dba
-LineInclude9=40
+LineInclude9=86
 include10=modules\dataShared.dba
 LineInclude10=0
 include11=modules\dataClient.dba
@@ -31,7 +31,7 @@ LineInclude11=0
 include12=modules\mouseClient.dba
 LineInclude12=0
 include13=modules\keyboardClient.dba
-LineInclude13=0
+LineInclude13=44
 include14=modules\guiClient.dba
 LineInclude14=0
 include15=modules\cameraClient.dba
@@ -58,6 +58,8 @@ include25=modules\effectClient.dba
 LineInclude25=0
 include26=modules\soundClient.dba
 LineInclude26=0
+include27=modules\mediatorClient.dba
+LineInclude27=26
 
 ; **** Executable Information  ***
 ; build types: exe, media, installer, alone
@@ -90,7 +92,7 @@ window resolution=640x480
 
 ; **** Media ****
 ; Example entries: media1=graphics\*.jpg
-media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen2\darknet20\
+media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomenhour6branch\
 
 ; **** Icons ****
 

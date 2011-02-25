@@ -1,0 +1,26 @@
+Rem ***** Included Source File *****
+mediatorClientSetup:
+   #constant MEDIATOR_KEYBOARD      1
+   #constant MEDIATOR_NETWORK       2
+return
+
+function mediatorClient(fromClass as integer,toClass as integer,msgID as integer)
+
+   select fromClass
+      REM KEYBOARD MEDIATOR USES KEYBOARD INPUT
+      REM INPUT MAPPINGS AS THE MESSAGE ID
+      case MEDIATOR_KEYBOARD
+         select toClass
+            case MEDIATOR_NETWORK
+               if msgID = KEYBOARD_KEY_SEND_TEST
+                  netClientSendTestMessage()
+               endif
+            endcase
+         endselect
+      endcase
+
+      REM ADD ADDITIONAL MEDIATOR CONTROLLERS HERE
+
+   endselect
+
+endfunction
