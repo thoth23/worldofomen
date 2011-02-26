@@ -7,12 +7,18 @@ REM
 systemSharedSetup:
 
     global systemNextFileID as integer
-
-    REM RESERVED FILE ID MANAGEMENT
-    global SYSTEM_FILE_DATA_SERVERID as integer
-    SYSTEM_FILE_DATA_SERVERID = systemGetFreeFileID()
-    global SYSTEM_FILE_DATA_GUID as integer
-    SYSTEM_FILE_DATA_GUID = systemGetFreeFileID()
+    
+   REM SYSTEM MODES
+   global systemMode as integer
+   global systemModeLast as integer
+   #constant SYSTEM_MODE_CHAT_ACTIVE      %1
+   #constant SYSTEM_MODE_QUITTING         %10
+   #constant SYSTEM_MODE_NET_TCP          %100
+   REM RESERVED FILE ID MANAGEMENT
+   global SYSTEM_FILE_DATA_SERVERID as integer
+   SYSTEM_FILE_DATA_SERVERID = systemGetFreeFileID()
+   global SYSTEM_FILE_DATA_GUID as integer
+   SYSTEM_FILE_DATA_GUID = systemGetFreeFileID()
 
 return
 
@@ -38,3 +44,15 @@ function systemGetRealDateTime(dsep$,dtsep$,tsep$)
    datetime$=date$+dtsep$+time$
 
 endfunction datetime$
+
+function systemSharedGameModeAdd(mode as integer)
+    systemModeLast = systemMode
+    systemMode = systemMode || mode
+endfunction
+
+function systemSharedGameModeRemove(mode as integer)
+    systemModeLast = systemMode
+    if systemMode && mode
+        systemMode = systemMode - mode
+    endif
+endfunction

@@ -5,13 +5,13 @@ project name=World of OMEN
 
 ; **** source file information ****
 main=modules\worldofomen.dba
-LineMain=46
+LineMain=9
 include1=modules\debugShared.dba
-LineInclude1=0
+LineInclude1=34
 include2=modules\debugClient.dba
 LineInclude2=0
 include3=modules\systemShared.dba
-LineInclude3=0
+LineInclude3=20
 include4=modules\systemClient.dba
 LineInclude4=0
 include5=modules\commandShared.dba
@@ -21,9 +21,9 @@ LineInclude6=0
 include7=modules\encryptShared.dba
 LineInclude7=0
 include8=modules\netShared.dba
-LineInclude8=66
+LineInclude8=52
 include9=modules\netClient.dba
-LineInclude9=86
+LineInclude9=73
 include10=modules\dataShared.dba
 LineInclude10=0
 include11=modules\dataClient.dba
@@ -31,7 +31,7 @@ LineInclude11=0
 include12=modules\mouseClient.dba
 LineInclude12=0
 include13=modules\keyboardClient.dba
-LineInclude13=44
+LineInclude13=161
 include14=modules\guiClient.dba
 LineInclude14=0
 include15=modules\cameraClient.dba
@@ -60,6 +60,8 @@ include26=modules\soundClient.dba
 LineInclude26=0
 include27=modules\mediatorClient.dba
 LineInclude27=26
+include28=modules\keyboardShared.dba
+LineInclude28=34
 
 ; **** Executable Information  ***
 ; build types: exe, media, installer, alone
@@ -92,7 +94,7 @@ window resolution=640x480
 
 ; **** Media ****
 ; Example entries: media1=graphics\*.jpg
-media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomenhour6branch\
+media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen_hour7\
 
 ; **** Icons ****
 

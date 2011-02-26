@@ -5,7 +5,7 @@ project name=server
 
 ; **** source file information ****
 main=modules\server.dba
-LineMain=15
+LineMain=0
 include1=modules\debugShared.dba
 LineInclude1=0
 include2=modules\debugServer.dba
@@ -23,7 +23,7 @@ LineInclude7=0
 include8=modules\netShared.dba
 LineInclude8=12
 include9=modules\netServer.dba
-LineInclude9=148
+LineInclude9=194
 include10=modules\dataShared.dba
 LineInclude10=0
 include11=modules\dataServer.dba
@@ -38,6 +38,8 @@ include15=modules\inventoryShared.dba
 LineInclude15=0
 include16=modules\goalShared.dba
 LineInclude16=0
+include17=modules\keyboardShared.dba
+LineInclude17=0
 
 ; **** Executable Information  ***
 ; build types: exe, media, installer, alone
@@ -70,7 +72,7 @@ window resolution=640x480
 
 ; **** Media ****
 ; Example entries: media1=graphics\*.jpg
-media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomenhour6branch\
+media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\worldofomen_hour7\
 
 ; **** Icons ****
 
