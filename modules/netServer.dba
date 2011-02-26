@@ -179,13 +179,24 @@ function netServerParseTCP(instance, client)
 
    select msgID
 
-     case NETC_TEST_MESSAGE
-         x# = mn Get Float(RecvPacket)
-         z# = mn Get Float(RecvPacket)
-         debugWrite(DEBUGINFO,"Message " + str$(msgID) + " recevied from client " + str$(client) + ": loc: " + str$(x#)+","+str$(z#))
+     case NETC_CHAT
+         channel$ = mn Get String(RecvPacket,0,1)
+         message$ = mn Get String(RecvPacket,0,1)
+         debugWrite(DEBUGINFO,message$)
+         channel$ = keyboardSharedSanitize(channel$)
+         message$ = keyboardSharedSanitize(message$)
+         netServerChatBroadcast(instance, channel$, message$, 0)
      endcase
 
    endselect
 
 endfunction
 
+function netServerChatBroadcast(instance as integer, channel$ as string, message$ as string, excludeID as integer)
+
+   netSharedAddHeader(NETS_CHAT, NET_HEADER_BYTES + len(channel$) + len(message$))
+   mn Add string SendPacket, channel$, 0, 1
+   mn Add String SendPacket, message$, 0, 1
+   //mn Send TCP All instance, SendPacket, 0, 1, excludeID
+
+endfunction

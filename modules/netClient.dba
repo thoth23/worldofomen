@@ -8,6 +8,11 @@ netClientSetup:
 
    global netClientConnected as boolean
    NET_SERVER_NAME = "192.168.1.6"
+   global netClientCurrentChannel as string
+   netClientCurrentChannel = "BROADCAST"
+
+   global NET_LISTEN_CHANNELS as string
+   NET_LISTEN_CHANNELS = NET_LISTEN_CHANNELS_DEFAULT
 
 return
 
@@ -54,22 +59,33 @@ endfunction
 
 function netClientMaintain()
 
-   if netClientConnected = 0
+   if (systemMode && SYSTEM_MODE_NET_TCP) = 0
+
+      REM NOT CONNECTED YET
+
       pollStatus = mn poll connect(0)
       if pollStatus = 1
          REM SUCCESSFUL
-         `systemGameModeAdd(SYSTEM_MODE_NET_TCP)
-         rem not yet
+         systemSharedGameModeAdd(SYSTEM_MODE_NET_TCP)
          debugWrite(DEBUGINFO,"Net Connect Successful.  Mode TCP Added.")
          netMaxUDPClients = mn Get Max Clients(0)
          debugWrite(DEBUGINFO,"Net Max UDP Clients set to " + str$(netMaxUDPClients))
          netMaxUDPOperations = mn Get Max Operations(0)
          debugWrite(DEBUGINFO,"Net Max UDP Operations set to " + str$(netMaxUDPOperations))
-         netClientConnected=1
       endif
+   else
+
+      REM CONNECTED
+
+       TcpPackets = mn Recv TCP(0,RecvPacket,0)
+       if TcpPackets > 0
+         netClientParseTCP()
+       endif
+
    endif
 
 endfunction
+
 
 function netClientSendTestMessage()
 
@@ -82,5 +98,47 @@ function netClientSendTestMessage()
    mn Add Float SendPacket, z#
    mn Send TCP 0,SendPacket,0,0,1
    debugWrite(DEBUGINFO,"Sent NETC_TEST_MESSAGE with data " + str$(x#) + "," + str$(z#))
+
+endfunction
+function netClientSendChat(myChannel$,message$)
+
+   message$ = keyboardSharedSanitize(message$)
+
+   bytes = NET_HEADER_BYTES
+   inc bytes, len(myChannel$)
+   inc bytes, len(message$)
+
+   netSharedAddHeader(NETC_CHAT,bytes)
+   mn Add string SendPacket, myChannel$, 0, 1
+   mn Add String SendPacket, message$, 0, 1
+   mn Send TCP 0,SendPacket,0,0,1
+   debugWrite(DEBUGINFO,"Sent NETC_CHAT")
+
+endfunction
+
+function netClientParseTCP()
+
+    length = mn Get Int(RecvPacket)
+    time = mn Get Int(RecvPacket)
+    msgID = mn Get Int(RecvPacket)
+
+    REM SKIPPING THE SANITY CHECKS FOR NOW
+
+    select msgID
+
+       case NETS_CHAT
+          channel$ = mn Get String(RecvPacket,0,1)
+          message$ = mn Get String(RecvPacket,0,1)
+          if instr(NET_LISTEN_CHANNELS,channel$) <> 0
+             message$ = "[" + channel$ + "]" + message$
+             message$ = keyboardSharedSanitize(message$)
+             debugWrite(DEBUGINFO,message$)
+             keyboardUpdateChatReceive(message$)
+             `guiUpdateChatReceive(message$)
+             rem not yet
+          endif
+       endcase
+
+    endselect
 
 endfunction

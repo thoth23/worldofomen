@@ -8,6 +8,31 @@ keyboardClientSetup:
    REM KEYBOARD INPUT MAP
    global KEYBOARD_KEY_SEND_TEST as integer
    KEYBOARD_KEY_SEND_TEST = 20
+   
+   global keyboardCursorBlinkState as boolean
+   global keyboardCursorNextBlink as integer
+   global keyboardCursorBlinkDelay as float
+   keyboardCursorBlinkDelay = 333
+
+   global keyboardShowLines as integer
+   keyboardShowLines = int(screen height()/(text size() * 2.0))
+   global keyboardChatInput as string
+   global dim keyboardChatRecvd() as string
+   add to queue keyboardChatRecvd()
+
+   global KEYBOARD_KEY_OPEN_CHAT as integer
+   KEYBOARD_KEY_OPEN_CHAT = 53
+   global KEYBOARD_KEY_SEND_CHAT as integer
+   KEYBOARD_KEY_SEND_CHAT = 28
+   global KEYBOARD_KEY_DELETE as integer
+   KEYBOARD_KEY_DELETE = 14
+   global KEYBOARD_KEY_CLOSE_CHAT as integer
+   KEYBOARD_KEY_CLOSE_CHAT = 1
+   global KEYBOARD_KEY_QUIT_GAME as integer
+   KEYBOARD_KEY_QUIT_GAME = 1
+
+   disable escapekey
+
 
 return
 
@@ -35,10 +60,103 @@ function keyboardClientPollBottom()
          keyboardNextKeyRepeat = timer() + keyboardRepeatDelay
       endif
 
-      if keyState(KEYBOARD_KEY_SEND_TEST) = 1
-         mediatorClient(MEDIATOR_KEYBOARD, MEDIATOR_NETWORK, KEYBOARD_KEY_SEND_TEST)
+      if (systemMode && SYSTEM_MODE_CHAT_ACTIVE) = 0
+
+         REM CHAT MODE IS NOT ACTIVE
+
+         if keyState(KEYBOARD_KEY_OPEN_CHAT) = 1
+            systemSharedGameModeAdd(SYSTEM_MODE_CHAT_ACTIVE)
+            keyboardChatInput = ""
+            clear entry buffer
+         endif
+
+         if keyState(KEYBOARD_KEY_QUIT_GAME) = 1
+            systemSharedGameModeAdd(SYSTEM_MODE_QUITTING)
+         endif
+
+      else
+
+         REM CHAT MODE IS ACTIVE
+
+         keyboardAddBuffer = 1
+         if keyState(KEYBOARD_KEY_SEND_CHAT) = 1
+            if fast len(keyboardChatInput) > 0
+               netClientSendChat(netClientCurrentChannel,keyboardChatInput)
+            else
+               keyboardUpdateChatReceive("")
+            endif
+            keyboardAddBuffer = 0
+            keyboardChatInput = ""
+            clear entry buffer
+         endif
+
+         if keyState(KEYBOARD_KEY_CLOSE_CHAT) = 1
+            systemSharedGameModeRemove(SYSTEM_MODE_CHAT_ACTIVE)
+            keyboardAddBuffer = 0
+            keyboardChatInput = ""
+            clear entry buffer
+         endif
+
+         if keyState(KEYBOARD_KEY_DELETE) = 1
+            if len(keyboardChatInput) > 0
+               keyboardAddBuffer = 0
+               keyboardChatInput = fast left$(keyboardChatInput, len(keyboardChatInput) - 1)
+               clear entry buffer
+            endif
+         endif
+
+         if keyboardAddBuffer = 1
+            keyboardChatInput = keyboardChatInput + keyBoardSharedSanitizeCharacter(entry$())
+            clear entry buffer
+         endif
+
       endif
 
    endif
 
 endfunction
+function keyboardUpdateChatReceive(message$ as string)
+
+   add to queue keyboardChatRecvd()
+   keyboardChatRecvd() = message$
+
+endfunction
+
+function keyboardClientShowChat()
+
+   REM TEMPORARY FUNCTION TO SHOW CHAT
+   REM TEXT USING THE BUILT-IN 2D TEXT
+
+   local startLine as integer
+   local stopLine as integer
+   local currentLine as integer
+
+   if (systemMode && SYSTEM_MODE_CHAT_ACTIVE) <> 0
+      startLine = array count(keyboardChatRecvd())
+      stopLine = max(1,(startLine - keyboardShowLines))
+      currentLine = keyboardShowLines
+      for i = startLine to stopLine step -1
+         if keyboardChatRecvd(i) <> ""
+            text 5,(currentLine * text size()), keyboardChatRecvd(i)
+            dec currentLine
+         endif
+      next
+
+      text 5, ((keyboardShowLines+1) * text size()),"----------------"
+
+      if keyboardChatInput <> ""
+         text 5, ((keyboardShowLines+2) * text size()),keyboardChatInput
+      endif
+
+      if timer() > keyboardCursorNextBlink
+         keyboardCursorNextBlink = timer() + keyboardCursorBlinkDelay
+         keyboardCursorBlinkState = 1-keyboardCursorBlinkState
+      endif
+
+      if keyboardCursorBlinkState = 1
+         text 5 + text width(keyboardChatInput), ((keyboardShowLines+2) * text size()),"_"
+      endif
+   endif
+
+endfunction
+
