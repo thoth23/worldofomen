@@ -24,26 +24,26 @@ meshClientSetup:
    
 return
 
-function meshClientLoad(myPath$, mydbpid)
+function meshClientLoad(mypath$, mydbpid)
 
    REM LOADS AN ASSET FOR LATER INSTANTIATION
 
-   if file exist(myPath$) = 0 then exitfunction MESH_FUNCTION_FAIL
-   load object myPath$, mydbpid, 1
+   if file exist(mypath$) = 0 then exitfunction MESH_FUNCTION_FAIL
+   load object mypath$, mydbpid, 1
    hide object mydbpid
    exclude object on mydbpid
 
 endfunction MESH_FUNCTION_OK
 
-function meshClientLoadMorph(myPath$,mybnkid)
+function meshClientLoadMorph(mypath$,mybnkid)
 
    REM LOADS A MORPH TARGET INTO A BANK FOR LATER APPLICATION
    
-   if file exist(myPath$) = 0 then exitfunction MESH_FUNCTION_FAIL
+   if file exist(mypath$) = 0 then exitfunction MESH_FUNCTION_FAIL
    if bank exist(mybnkid)
       delete bank mybnkid
    endif
-   make bank from file mybnkid, myPath$
+   make bank from file mybnkid, mypath$
    
 endfunction MESH_FUNCTION_OK
 
@@ -54,6 +54,7 @@ function meshClientDestroy(mytid as integer)
    if object exist(mydbpid) = 0 then exitfunction
    
    delete object mydbpid
+   collisionClientDelete(mydbpid)
    
    dataSharedUpdateFieldFast(mytid, "dbpid", DATA_KEY_UNDEFINED)
 
@@ -63,7 +64,7 @@ function meshClientCreate(mytid as integer)
 
    REM INSTANTIATE A MESH INTO THE WORLD
    REM ASSUMES THE TABLE HAS BEEN
-   REM PRE-POPULATED WITH dbpid, meshid, effectid,
+   REM PRE-POPULATED WITH meshid, effectid,
    REM transforms, and collision data.  ALL MESHES GET
    REM TRANSFORMS, A SHADER, AND COLLISION
    REM SO WE PERFORM ALL THESE APPLICATIONS
@@ -85,10 +86,10 @@ function meshClientCreate(mytid as integer)
    scale object mydbpid, 100, 5000, 100
    color object mydbpid, rgb(255,0,128)
 
-   myPath$ = dataSharedGetLibraryPath(mymeshid)
+   mypath$ = dataSharedGetLibraryPath(mymeshid)
    mysourcedbpid = dataSharedGetAssetID(mymeshid)
-   debugWrite(DEBUGINFO,"meshClientCreate: target dbpid found for cloning " + str$(mydbpid))
-   debugWrite(DEBUGINFO,"meshClientCreate: source dbpid found for cloning " + str$(mysourcedbpid))
+   `debugWrite(DEBUGINFO,"meshClientCreate: target dbpid found for cloning " + str$(mydbpid))
+   `debugWrite(DEBUGINFO,"meshClientCreate: source dbpid found for cloning " + str$(mysourcedbpid))
 
    if mysourcedbpid < 1 then exitfunction MESH_FUNCTION_FAIL
    if object exist(mysourcedbpid) = 0 then exitfunction MESH_FUNCTION_FAIL
@@ -145,6 +146,11 @@ function meshClientApplyMorphTarget(mytid as integer, morphid as integer, operat
       mymeshlimb = intval(dataSharedGetFieldFast(mytid,"meshlimb"))
       mybankid = dataSharedGetAssetID(morphid)
       
+      sclx# = val(dataSharedGetFieldFast(mytid,"sclx"))
+      scly# = val(dataSharedGetFieldFast(mytid,"scly"))
+      sclz# = val(dataSharedGetFieldFast(mytid,"sclz"))
+
+      
       debugWrite(DEBUGINFO, "meshClientApplyMorphTarget applying " + str$(mybankid) + " to " + str$(mydbpid))
       
       lock vertexdata for limb mydbpid, mymeshlimb, 2
@@ -165,7 +171,7 @@ function meshClientApplyMorphTarget(mytid as integer, morphid as integer, operat
          nx#=get vertexdata normals x(v)
          ny#=get vertexdata normals y(v)
          nz#=get vertexdata normals z(v)
-         set vertexdata position v, x# + (posx# * operation), y# + (posy# * operation), z# + (posz# * operation)
+         set vertexdata position v, x# + (posx# * operation + sclx#), y# + (posy# * operation * scly#), z# + (posz# * operation * sclz#)
          set vertexdata normals v, nx# + (norx# * operation), ny# + (nory# * operation), nz# + (norz# * operation)
       endwhile
       unlock vertexdata

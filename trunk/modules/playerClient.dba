@@ -38,22 +38,28 @@ playerClientSetup:
 return
 
 
-function playerClientCreate(rpgid as integer, meshid as integer)
+function playerClientCreate(myrpgid as integer, mymeshid as integer)
 
-   tid = dataSharedUpdateField(str$(rpgid),"rpgid",str$(rpgid))
-   dataSharedUpdateFieldFast(tid,"meshid",str$(meshid))
-   dataSharedUpdateFieldFast(DATA_CLIENT_RTABLEID,str$(rpgid),str$(tid))
-   meshClientCreate(tid)   
+   REM PREP TABLE FOR MESHCREATE
+   mytid = dataSharedMakeTable(str$(myrpgid),0,DATA_NO_REVERSE)
+   dataSharedUpdateFieldFast(mytid,"meshid",str$(mymeshid))
    
-endfunction tid
+   REM CREATE THE MESH
+   meshClientCreate(mytid)
+   
+   REM UPDATE THE DBPID-->RPGID LOOKUP TABLE
+   mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+   dataSharedUpdateFieldFast(DATA_CLIENT_RTABLEID,str$(mydbpid),str$(myrpgid))
+   
+endfunction mytid
 
-function playerClientDestroy(tid as integer)
+function playerClientDestroy(mytid as integer)
 
-   local rpgid$ as string
-   rpgid$ = dataSharedGetFieldFast(tid, "rpgid")
+   
+   mydbpid = intval(dataSharedGetFieldFast(mytid, "dbpid"))
       
-   REM REMOVE THE REVERSE LOOKUP
-   dataSharedDeleteRecord(DATA_CLIENT_RTABLEID,rpgid$)
+   REM REMOVE THE DBPID --> RPGID LOOKUP
+   dataSharedDeleteRecord(DATA_CLIENT_RTABLEID,str$(mydbpid))
    
    REM BECAUSE PLAYER IS CURRENTLY THE HIGHEST
    REM LEVEL OF ABSTRACTION, WE DELETE THE 
@@ -86,9 +92,9 @@ function playerClientControl()
       FIRST LOOKUP mytableid
       while lookup is valid(mytableid)
          if LOOKUP CURRENT KEY$(mytableid) <> "" AND LOOKUP CURRENT KEY$(mytableid) <> DATA_KEY_DIRTY AND LOOKUP CURRENT KEY$(mytableid) <> DATA_KEY_UNDEFINED
-            myrpgid = intval(LOOKUP CURRENT KEY$(mytableid))
-            mytid = intval(LOOKUP CURRENT VALUE$(mytableid))
-            mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
+            mydbpid = intval(LOOKUP CURRENT KEY$(mytableid))
+            myrpgid = intval(LOOKUP CURRENT VALUE$(mytableid))
+            mytid = dataSharedTableExist(str$(myrpgid))
             
             if mydbpid <> 0 
                
@@ -307,8 +313,17 @@ function playerClientRotateY(mydbpid as integer, angle# as float)
 
 endfunction
 
-function playerClientTeleport(idx as integer)
+function playerClientTeleport(mytid as integer)
+
    REM WLL TELEPORT A PLAYER TO THEIR
    REM PRE-ESTABLISHED TEL COORDINATES
-
+   mytelx = intval(dataSharedGetFieldFast(mytid, "telx"))
+   mytely = intval(dataSharedGetFieldFast(mytid, "tely"))
+   mytelz = intval(dataSharedGetFieldFast(mytid, "telz"))
+   mydbpid = intval(dataSharedGetFieldFast(mytid, "dbpid"))
+   if mydbpid > 0
+      if object exist(mydbpid)
+         position object mydbpid, mytelx, mytely, mytelz
+      endif
+   endif
 endfunction
