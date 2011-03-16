@@ -42,6 +42,7 @@ function netClientCreateProfile()
 
    REM DARKNET 2.0
    myProfile = mn create instance profile()
+   mn Set Profile Mode UDP myProfile, NET_UDP_MODE
 
 endfunction myProfile
 
@@ -517,7 +518,7 @@ function netClientParseTCP()
             assetID = mn Get Int(RecvPacket)
             assetPath$ = mn Get String(RecvPacket,0,1)
             dataSharedUpdateField(DATA_TABLE_LIBRARY, str$(assetID), assetPath$)
-            debugWrite(DEBUGINFO,"Asset RPGID for received for " + assetPath$ + " : " + str$(assetID))
+            debugWrite(DEBUGINFO,"Asset RPGID received for " + assetPath$ + " : " + str$(assetID))
        endcase
        
        case NETS_SWITCH_WINDOW
@@ -543,17 +544,25 @@ function netClientParseTCP()
             mypowersource = mn Get Int(RecvPacket)
             mymeshid = mn Get Int(RecvPacket)
             
-            
-            
+            myterrainName$ = mn Get String(RecvPacket,0,1)
+            myposx = mn Get Int(RecvPacket)
+            myposy = mn Get Int(RecvPacket)
+            myposz = mn Get Int(RecvPacket)
             
             mytid = playerClientCreate(myavatarid, mymeshid)
             
             tidPlayer = mytid
+            debugWrite(DEBUGINFO,"netClientParseTCP: tidPlayer set to " + str$(tidPlayer))
+            
             dataSharedUpdateFieldFast(mytid,"avatarid",str$(myavatarid))
             dataSharedUpdateFieldFast(mytid,"avatarname",myavatarName$)
             dataSharedUpdateFieldFast(mytid,"class",str$(myclass))
             dataSharedUpdateFieldFast(mytid,"powersource",str$(mypowersource))
             dataSharedUpdateFieldFast(mytid,"meshid",str$(mymeshid))
+            dataSharedUpdateFieldFast(mytid,"terrainname",myterrainName$)
+            dataSharedUpdateFieldFast(mytid,"telx",str$(myposx))
+            dataSharedUpdateFieldFast(mytid,"tely",str$(myposy))
+            dataSharedUpdateFieldFast(mytid,"telz",str$(myposz))
             
             mydbpid = intval(dataSharedGetFieldFast(mytid,"dbpid"))
             cameraClientPaperDoll(mydbpid)
@@ -668,13 +677,13 @@ function netClientMove()
       if object exist(mydbpid) = 0 then exitfunction
 
       mn Clear Packet SendPacket
-      mn Add Int SendPacket, NETC_MOVE
+      mn Add SizeT SendPacket, NETC_MOVE
       mn Add Int SendPacket, intval(dataSharedGetFieldFast(tidPlayer,"rpgid"))
       mn Add Float SendPacket, object position x(mydbpid)
       mn Add Float SendPacket, object position y(mydbpid)
       mn Add Float SendPacket, object position z(mydbpid)
       mn Add Float SendPacket, object angle y(mydbpid)
-      mn Send UDP 0, SendPacket, NULL, 0, 1
+      mn Send UDP 0, SendPacket, 0, 0, 1
       `debugWrite(DEBUGINFO,"Sent Movement Update")
 
 endfunction

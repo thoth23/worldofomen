@@ -9,6 +9,7 @@ dataClientSetup:
    #constant DATA_PATH "data/"
    global dataClientNextTableID as integer
    
+   REM CREATE A WAY TO GET THE RPGID FROM THE DBPID
    #constant DATA_CLIENT_RPGID "RPGIDLookup"
    global DATA_CLIENT_RTABLEID as integer
       
@@ -16,9 +17,8 @@ return
 
 function dataClientCreateRPGIDLookup()
     
-   dataSharedUpdateField(DATA_CLIENT_RPGID, DATA_KEY_UNDEFINED, DATA_KEY_UNDEFINED)
+   DATA_CLIENT_RTABLEID = dataSharedMakeTable(DATA_CLIENT_RPGID, 0, DATA_REVERSE) 
    DATA_NOSAVE_TABLES = systemSharedFieldAdd(DATA_NOSAVE_TABLES,DATA_CLIENT_RPGID,DATA_ARGSEP)   
-   DATA_CLIENT_RTABLEID = dataSharedTableExist(DATA_CLIENT_RPGID)
    debugWrite(DEBUGINFO,"RPGID table is " + DATA_CLIENT_RPGID + " with tableid: " + str$(DATA_CLIENT_RTABLEID))
    
 endfunction

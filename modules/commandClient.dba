@@ -177,6 +177,22 @@ function commandRun(cmd$ as string)
       case "/switchavatar"
             netClientSendAvatarDetailsSelf(get split word$(2))
       endcase
+      
+      case "/enterworld"
+         REM FOR NOW, JUST LOADING A DEFAULT WORLD
+         REM CLIENT-SIDE, NEXT STEP IS TO MAKE A 
+         REM ENTER WORLD REQUEST TO SERVER
+         terrainClientLoad("Piston Ridge")
+         debugWrite(DEBUGINFO,"/enterworld tidPlayer is currently " + str$(tidPlayer))
+         playerClientTeleport(tidPlayer)
+         systemSharedGameModeRemove(SYSTEM_MODE_AV_SELECT)
+         systemSharedGameModeAdd(SYSTEM_MODE_LOGON_COMPLETE)
+         
+         REM WE USE SwitchToWindow SPECIFICALLY TO REMOVE
+         REM ALL EXISTING WINDOWS
+         guiClientSwitchToWindow("windowMain")
+         guiClientShowWindow("windowChat")
+      endcase
             
       case default
             REM NOT A CLIENT COMMAND, SEND TO SERVER

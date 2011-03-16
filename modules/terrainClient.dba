@@ -6,84 +6,139 @@ REM
 
 terrainClientSetup:
 
-   global dbpidTerrain as integer
-   global idTerrainTex as integer
-   global idTerrainDet as integer
-   
+   #constant TERRAIN_DATA_PATH "data/terrain/"
    #constant TERRAIN_PATH "media/terrain/"
    mediaClientRegisterPath(TERRAIN_PATH)
    
+   #constant TERRAIN_EXT ".ter"
+
+
 return
-
-function terrainClientLoad(terrainID, detailID)
-
-   if terrainID = 0 or detailID = 0 then exitfunction -1
-
-   if idTerrainTex = 0 then idTerrainTex = systemSharedGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
-   if idTerrainDet = 0 then idTerrainDet = systemSharedGetFree(SYSTEM_TYPE_IMAGE, SYSTEM_SEARCH_FAST)
-
-   if dbpidTerrain = 0
-      dbpidTerrain = systemSharedGetFree(SYSTEM_TYPE_OBJECT,DATA_SEARCH_REUSE)
-      debugWrite(DEBUGINFO,"terrainLoad: dbpidTerrain set to " + str$(dbpidTerrain))
-   endif
-
-   if object exist(dbpidTerrain)
-      delete object dbpidTerrain
-   endif
-   
-   texFileName$ = TERRAIN_PATH + str$(terrainID) + "_TX.jpg"
-   mapFileName$ = TERRAIN_PATH + str$(terrainID) + "_HF.bmp"
-   detFileName$ = TERRAIN_PATH + str$(detailID) + "_DT.tga"
-
-   load image texFileName$, idTerrainTex
-   load image detFileName$, idTerrainDet
-
-   make object terrain dbpidTerrain
-   set terrain heightmap dbpidTerrain, mapFileName$
-   set terrain scale dbpidTerrain, 3, 0.6, 3
-   set terrain split dbpidTerrain, 4
-   set terrain tiling dbpidTerrain, 4
-   set terrain light dbpidTerrain, -0.5, -0.5, 0.5, 1, 1, 1, .25
-   set terrain texture dbpidTerrain, idTerrainTex, idTerrainDet
-   build terrain dbpidTerrain
-
-   collisionClientSet(dbpidTerrain, COLLISION_TYPE_COMPLEX, COLLISION_GROUP_WORLD)
-
-   systemSharedGameModeAdd(SYSTEM_MODE_TERRAIN)
-
-endfunction dbpidTerrain
-
-function terrainClientUpdate()
-
-   update terrain
-
-endfunction
 
 function terrainClientUnload()
 
-   if idTerrainTex > 0
-      if image exist(idTerrainTex)
-         delete image idTerrainTex
+   local myTable as integer
+   local mydbpid as integer
+   local myrpgid as integer
+   
+   myTable = DATA_TERRAIN_TABLEID
+   FIRST LOOKUP myTable
+   while lookup is valid(myTable)
+      if LOOKUP CURRENT KEY$(myTable) <> "" AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_DIRTY  AND LOOKUP CURRENT KEY$(myTable) <> DATA_KEY_UNDEFINED
+         mydbpid = intval(LOOKUP CURRENT KEY$(myTable))
+         if mydbpid > 0
+            REM CHECK TO SEE IF THE DBPID
+            REM IS IN THE PLAYER RPGID TABLE
+            myrpgid = intval(dataSharedGetFieldFast(DATA_CLIENT_RTABLEID,str$(mydbpid)))
+            if myrpgid <> 0
+               REM PLAYERCLIENTDESTROY TAKES CARE OF ALL TABLE UPDATES
+               REM MESH DELETION, COLLISION DELETION
+               playerClientDestroy(myrpgid)
+            else
+               REM FOR STATIC OBJECTS, JUST DELETE COLLISION AND MESH
+               if object exist(mydbpid)
+                  collisionClientDelete(mydbpid)
+                  delete object mydbpid
+               endif
+            endif
+         endif
       endif
-   endif
+      next lookup myTable
+   endwhile
 
-   if idTerrainDet > 0
-      if image exist(idTerrainDet)
-         delete image idTerrainDet
-      endif
-   endif
-
-   if dbpidTerrain > 0
-      if object exist(dbpidTerrain)
-         collisionClientDelete(dbpidTerrain)
-         destroy terrain dbpidTerrain
-      endif
-   endif
-
-   systemSharedGameModeRemove(SYSTEM_MODE_TERRAIN)
-
+   dataSharedResetTable(myTable)
+   
 endfunction
 
+function terrainClientLoad(filename$ as string)
+   
+   REM INSTANTIATES ALL ASSETS
+   REM DEFINED BY A TERRAIN FILE
 
+   local mymeshid as integer
+   local mypath$ as string
+   local myloadrow as boolean
+   
+   filename$ = TERRAIN_DATA_PATH + filename$ + TERRAIN_EXT
+   
+   if file exist(filename$)
+      debugWrite(DEBUGINFO,"Loading terrain " + filename$)
+      open to read SYSTEM_FILE_TERRAIN, filename$
+      while not file end(SYSTEM_FILE_TERRAIN)
+         read string SYSTEM_FILE_TERRAIN, dat$
+         myloadrow = 1
+                  
+         REM INSTEAD OF RESETTING THE TABLE EVERY TIME
+         REM WE'RE JUST GOING TO RESET CRITICAL VALUES
+         REM THESE WILL BE OVERRIDDEN BY THE PARSE IF
+         REM THEY EXIST IN THE ROW
+         dataSharedUpdateFieldFast(DATA_LOADER_TABLEID,"command",DATA_KEY_UNDEFINED)
+         dataSharedUpdateFieldFast(DATA_LOADER_TABLEID,"meshid",DATA_KEY_UNDEFINED)
+         dataSharedUpdateFieldFast(DATA_LOADER_TABLEID,"dbpid",DATA_KEY_UNDEFINED)
+         dataSharedUpdateFieldFast(DATA_LOADER_TABLEID,"gravity","0")
+         dataSharedUpdateFieldFast(DATA_LOADER_TABLEID,"collisiontype",str$(COLLISION_TYPE_POLY))
+         dataSharedUpdateFieldFast(DATA_LOADER_TABLEID,"collisiongroup",str$(COLLISION_GROUP_WORLD))
+         
+         REM NOW LOAD THE ROW INTO THE LOADER TABLE 
+         dataSharedParse(DATA_LOADER_TABLEID, dat$)
+         
+         REM NOW GET THE MESHID OF THE MESH
+         REM FOR CONVENIENCE, THIS CAN BE DEFINED BY
+         REM EITHER THE MESHID OR THE MESHPATH, SO WE
+         REM NEED TO CHECK BOTH
+         mymeshid = intval(dataSharedGetFieldFast(DATA_LOADER_TABLEID,"meshid"))
+         mypath$ = dataSharedGetFieldFast(DATA_LOADER_TABLEID,"meshpath")
+         myrpgid = intval(dataSharedGetField(DATA_TABLE_LIBRARY + DATA_REVERSE_SUFFIX,mypath$,DATA_KEY_UNDEFINED,DATA_NO_CREATE))
+         
+         if mymeshid = 0
+            if mypath$ <> DATA_KEY_UNDEFINED
+               if myrpgid <> 0
+                  debugWrite(DEBUGWARN,"terrainClientLoad Optimization: meshpath=" + mypath$ + " should be changed to " + "meshid=" + str$(myrpgid))
+                  dataSharedUpdateFieldFast(DATA_LOADER_TABLEID,"meshid",str$(myrpgid))
+               else
+                  debugWrite(DEBUGWARN, "terrainClientLoad: path not found in library for " + mypath$)
+                  myloadrow = 0
+               endif
+            else
+               debugWrite(DEBUWARN,"terrainClientLoad: no meshid or meshpath defined in row - skipping row")
+               myloadrow = 0
+            endif
+         endif
+         
+         REM NOW INSTANTIATE THE MESH
+         if myloadrow = 1
+            mycommand$ = dataSharedGetFieldFast(DATA_LOADER_TABLEID,"command")
+            
+            if mycommand$ = DATA_KEY_UNDEFINED
+               REM STATIC OBJECTS JUST GET THEIR MESHES LOADED
+               meshClientCreate(DATA_LOADER_TABLEID)   
+            else
+               REM INTERACTIVE OBJECT ARE LOADED LIKE PLAYERS
+               REM WITH THEIR OWN RPGID-NAMED TABLE AND AN ENTRY
+               REM INTO THE RPGID REVERSE LOOKUP
+               playerClientCreate(myrpgid, mymeshid)   
+            endif
+            
+            REM NOW LETS ADD THE TERRAIN INSTANCE INTO THE TERRAIN
+            REM TABLE SO THAT WE CAN UNLOAD THE AREA LATER
+            REM THE DBPID WAS SET BY THE INSTANTIATION
+            REM FOR NOW WE'RE NOT GOING TO CHECK FOR A 
+            REM UNIQUE INSTANCE ID FOR INSTANTIATED ASSETS
+            REM BUT WE'LL NEED IT LATER FOR THE MUSE SYSTEM
+            REM FOR NOW JUST REGISTER THE DBPID INTO THE
+            REM TERRAIN TABLE WITHOUT AN RPGID
+            mydbpid$ = dataSharedGetFieldFast(DATA_LOADER_TABLEID, "dbpid")
+            dataSharedUpdateFieldFast(DATA_TERRAIN_TABLEID, mydbpid$, mydbpid$)
 
+         endif
 
+      endwhile
+      close file SYSTEM_FILE_TERRAIN
+   else
+      DebugWrite(DEBUGWARN,"terrainClientLoad: terrain file does not exist "+filename$)
+   endif
+   
+endfunction
+
+function terrainClientUpdate()
+endfunction

@@ -185,6 +185,12 @@ function netServerMaintain()
                dataSharedResetTable(temp)
          endif
          
+         REM REMOVE THE ENTRY FROM THE CLIENT AVATAR
+         REM TABLE IN CASE OF TEMP OR REAL AVATARID
+         dataSharedDeleteRecord(tidClient, str$(-leftID))
+         myavatarid$ = dataSharedGetFieldFast(rTidClient,str$(leftID))
+         dataSharedDeleteRecord(tidClient, myavatarid$)
+         
          REM ANY OTHER CHILD TABLES DROP HERE
          
          REM ALWAYS DROP THE PARENT TABLE LAST
@@ -322,8 +328,8 @@ function netServerParseUDP(instance as integer, client as integer, operationID a
       endif
       
       mn Clear Packet SendPacket
-      mn Add Int SendPacket, client
-      mn Add Int SendPacket, operationID
+      mn Add SizeT SendPacket, client
+      mn Add SizeT SendPacket, operationID
       mn Add Int SendPacket, rpgid
       mn Add Float SendPacket, posx
       mn Add Float SendPacket, posy
@@ -670,6 +676,15 @@ function netServerParseTCP(instance as integer, client as integer)
                   temp = intval(dataSharedGetFieldFast(myavatartableid,"powersource"))
                   mn Add Int SendPacket, temp
                   temp = intval(dataSharedGetFieldFast(myavatartableid,"meshid"))
+                  mn Add Int SendPacket, temp
+                  
+                  temp$ = dataSharedGetFieldFast(myavatartableid,"terrainname")
+                  mn Add String SendPacket, temp$, 0, 1
+                  temp = intval(dataSharedGetFieldFast(myavatartableid,"posx"))
+                  mn Add Int SendPacket, temp
+                  temp = intval(dataSharedGetFieldFast(myavatartableid,"posy"))
+                  mn Add Int SendPacket, temp
+                  temp = intval(dataSharedGetFieldFast(myavatartableid,"posz"))
                   mn Add Int SendPacket, temp
                   
                   mymorphcount = intval(dataSharedGetFieldFast(myavatartableid,"morphcount"))

@@ -72,6 +72,18 @@ dataSharedSetup:
    dataSharedMakeTable(DATA_TABLE_ASSETS,0,DATA_NO_REVERSE)   
    dataSharedRegisterNoSaveTable(DATA_TABLE_ASSETS)
    
+   REM PRE-BUILD THE LOADER TABLE
+   #constant DATA_TABLE_LOADER "loader"
+   global DATA_LOADER_TABLEID as integer
+   DATA_LOADER_TABLEID = dataSharedMakeTable(DATA_TABLE_LOADER,0,DATA_NO_REVERSE)   
+   dataSharedRegisterNoSaveTable(DATA_TABLE_LOADER)
+
+   REM PRE-BUILD THE TERRAIN TABLE FOR INSTANTIATED ASSETS
+   #constant DATA_TABLE_TERRAIN "terrain"
+   global DATA_TERRAIN_TABLEID as integer
+   DATA_TERRAIN_TABLEID = dataSharedMakeTable(DATA_TABLE_TERRAIN,0,DATA_REVERSE)   
+   dataSharedRegisterNoSaveTable(DATA_TABLE_TERRAIN)
+   
 return
 
 function dataSharedRegisterNoSaveTable(tableName$ as string)
@@ -218,24 +230,24 @@ function dataSharedGetAssetID(rpgid as integer)
 
 endfunction retval
 
-function dataSharedParse(tableName$ as string, attributes$ as string)
+function dataSharedParse(tableid as integer, attributes$ as string)
 
-      REM PARSE A SPACE-DELIMITED ATTRIBUTE LIST
+      REM PARSE A DELIMITED ATTRIBUTE LIST
       REM AND APPY IT TO A TABLE
 
-      split string attributes$, " "
+      split string attributes$, DATA_ARGSEP
       local dim dat$(split count())
       for i = 1 to split count()
          dat$(i) = get split word$(i)
       next
       for i = 1 to array count(dat$())
-         split string dat$(i), "="
+         split string dat$(i), DATA_NAMEVALSEP
          key$ = get split word$(1)
          value$ = get split word$(2)
-         dataSharedUpdateField(tableName$, key$, value$)
+         dataSharedUpdateFieldFast(tableid, key$, value$)
       next
       
-      dataSharedUpdateField(tableName$, DATA_KEY_DIRTY, str$(DATA_DIRTY))
+      dataSharedUpdateFieldFast(tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY))
       
       undim dat$()
 
