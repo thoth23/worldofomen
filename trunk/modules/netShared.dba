@@ -66,6 +66,7 @@ netSharedSetup:
    #constant NETC_ASSETID 12
    #constant NETC_AVATAR_DETAILS_SELF 13
    #constant NETC_ENTER_WORLD 14
+   #constant NETC_LOGOFF 15
    
    REM SERVER TCP OPERATIONS
    #constant NETS_CHAT              1001
@@ -82,6 +83,7 @@ netSharedSetup:
    #constant NETS_ASSETID 1012
    #constant NETS_AVATAR_DETAILS_SELF 1013
    #constant NETS_ENTER_WORLD 1014
+   #constant NETS_LOGOFF 1015
    
    REM SERVER TCP COMMANDS
    #constant NETS_SWITCH_WINDOW 5001
@@ -101,6 +103,7 @@ netSharedSetup:
    #constant NETS_ASSETID_ERROR -1012
    #constant NETS_AVATAR_DETAILS_SELF_ERROR -1013
    #constant NETS_ENTER_WORLD_ERROR -1014
+   #constant NETS_LOGOFF_ERROR -1015
    
    
  

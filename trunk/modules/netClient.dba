@@ -404,7 +404,7 @@ function netClientSendCreateAvatarRequest()
    
    REM LOCAL NAME VALIDATION
    if myname$ = DATA_KEY_UNDEFINED OR myname$="" or len(myname$) < 6
-      guiClientMessageBoxShow("Avatar creation failed.  Avatar names must be at least 6 characters long.",2,"","OK","","","/hidewindow\windowMessageBox","")
+      guiClientMessageBoxShow("Avatar creation failed.  Avatar names must be at least 6 characters long.",2,"","OK","","","/hidewindow\windowMessageBox;/showwindow\windowCreateAvatarChasis","")
       sendrequest = 0
    endif
    
@@ -432,6 +432,16 @@ function netClientSendCreateAvatarRequest()
    endif
       
 endfunction sendrequest
+
+function netClientSendLogoff()
+
+   REM TELL THE SERVER WE ARE LOGGING OFF
+   bytes = NET_HEADER_BYTES
+   netSharedAddHeader(NETC_LOGOFF, bytes)
+   mn Send TCP 0,SendPacket,0,0,1
+   debugWrite(DEBUGINFO,"Sent NETC_LOGOFF")
+
+endfunction
 
 function netClientParseTCP()
 

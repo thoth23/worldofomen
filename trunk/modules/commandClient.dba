@@ -61,7 +61,7 @@ function commandRun(cmd$ as string)
       
       case "/logoff"
          guiClientSwitchToWindow("windowLogon")
-         REM MORE STATE MANAGEMENT WILL BE DONE HERE
+         netClientSendLogoff()
       endcase
       
       case "/switchtowindow"

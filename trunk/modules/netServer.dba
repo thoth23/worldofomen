@@ -536,6 +536,11 @@ function netServerParseTCP(instance as integer, client as integer)
          else
             netServerSendOpCode(instance, client, NETS_LOGON_BETA_ERROR)
             temp$ = "" : debugWrite(DEBUGINFO,"Login FAILED  for " + accountName$)
+            
+            REM CLEAR OUT THE CLIENT --> ACCOUNT DATA SO THAT
+            REM ADDITIONAL LOGON ATTEMPTS CAN BE MADE
+            dataSharedResetTable(myaccounttableid)
+            dataSharedDeleteRecord(client,"accounttableid")
          endif
    
       endcase
@@ -715,6 +720,22 @@ function netServerParseTCP(instance as integer, client as integer)
          else
             debugWrite(DEBUGHACK,"Received NETC_AVATAR_DETAILS_SELF on unowned avatar: " + accountName$ + " for avatar " + avatarName$)
          endif
+     endcase
+     
+     case NETC_LOGOFF
+     
+        REM CLEAR OUT THE CLIENT --> ACCOUNT DATA SO THAT
+        REM ADDITIONAL LOGON ATTEMPTS CAN BE MADE
+        myaccounttableid = intval(dataSharedGetFieldFast(client,"accounttableid"))
+        dataSharedResetTable(myaccounttableid)
+        dataSharedDeleteRecord(client,"accounttableid")
+        
+        REM IF A CLIENT --> AVATAR CONNECTION ALSO EXISTS
+        REM THEN CLEAR THAT OUT AS WELL
+        myavatartableid = intval(dataSharedGetFieldFast(client,"avatartableid"))
+        dataSharedResetTable(myavatartableid)
+        dataSharedDeleteRecord(client,"avatartableid")
+        
      endcase
      
   endselect
