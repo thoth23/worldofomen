@@ -941,10 +941,7 @@ function guiClientBuildWindow(skinName$ as string, windowName$ as string)
          guiClientPressButtonNoCommand("inputCreateAccountName")
       endcase
 
-      case "windowSelectAvatar"
-         guiClientPressButton("buttonSelectAvatar1")
-      endcase
-      
+ 
       case "windowCreateAvatarClass"
          guiClientPressButtonNoCommand("buttonSelectClass1")
          guiClientPressButtonNoCommand("buttonSelectPowerSource0")

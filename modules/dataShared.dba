@@ -388,8 +388,10 @@ function dataSharedUpdateFieldFast(tableid as integer, key$, value$)
       tableid = dataSharedMakeTable(str$(tableid), tableid, DATA_NO_REVERSE)
    endif
    
-   set lookup tableid, key$, value$
-   set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
+   if key$ <> ""
+      set lookup tableid, key$, value$
+      set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
+   endif
       
 endfunction
 
@@ -411,15 +413,19 @@ function dataSharedUpdateField(tableName$, key$, value$)
    endif      
    
    rem now set the key/value pair in the table
-   set lookup tableid, key$, value$
-   set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
+   if key$ <> ""
+      set lookup tableid, key$, value$
+      set lookup tableid, DATA_KEY_DIRTY, str$(DATA_DIRTY)
+   endif
    
    rem now set the VALUE/KEY pair in the reverse table
    rtableid = dataSharedTableExist(tableName$ + DATA_REVERSE_SUFFIX)
    if rtableid <> DATA_FUNCTION_FAIL
-      set lookup rtableid, value$, key$
-      rem reverse lookups are never saved, so no need to set the DATA_KEY_DIRTY flag
-      rem reverse lookups are never automatically created, must be created using the DATA_REVERSE flag when building a table
+      if key$ <> ""
+         set lookup rtableid, value$, key$
+         rem reverse lookups are never saved, so no need to set the DATA_KEY_DIRTY flag
+         rem reverse lookups are never automatically created, must be created using the DATA_REVERSE flag when building a table
+    endif
    endif
 
 endfunction tableid
@@ -477,27 +483,32 @@ function dataSharedLoadTable(filename$, table$)
             open to read SYSTEM_FILE_DATA, filename$
             while not file end(SYSTEM_FILE_DATA)
                read string SYSTEM_FILE_DATA, dat$
-               split string dat$,DATA_NAMEVALSEP
-               key$ = get split word$(1)
-               value$ = get split word$(2)
-               retval = DATA_FUNCTION_OK
+               if dat$ <> ""
                
-               if key$ = DATA_TEMPLATE_KEY then filesToLoad$ = systemSharedFieldAdd(filesToLoad$, DATA_PATH + value$ + DATA_FILE_EXT, DATA_ARGSEP)
-                  
-               if filename$ = originalFilename$
-                  dataSharedUpdateField(table$, key$, value$)
-               else
-                  REM ONLY SET THE VALUE IF ITS NOT ALREADY SET
-                  REM THIS ALLOWS THE ORIGINAL FILE INSTANCE
-                  REM TO MAINTAIN THE HIGHEST PRIORITY
-                  current$ = dataSharedGetField(table$, key$, value$, DATA_CREATE)
+                   split string dat$,DATA_NAMEVALSEP
+                   key$ = get split word$(1)
+                   value$ = get split word$(2)
+                   retval = DATA_FUNCTION_OK
+                   
+                   if key$ = DATA_TEMPLATE_KEY then filesToLoad$ = systemSharedFieldAdd(filesToLoad$, DATA_PATH + value$ + DATA_FILE_EXT, DATA_ARGSEP)
+                      
+                   if filename$ = originalFilename$
+                      dataSharedUpdateField(table$, key$, value$)
+                   else
+                      REM ONLY SET THE VALUE IF ITS NOT ALREADY SET
+                      REM THIS ALLOWS THE ORIGINAL FILE INSTANCE
+                      REM TO MAINTAIN THE HIGHEST PRIORITY
+                      current$ = dataSharedGetField(table$, key$, value$, DATA_CREATE)
+                   endif
+               
                endif
                
             endwhile
             close file SYSTEM_FILE_DATA
             
       else
-         debugWrite(DEBUGWARN,"dataSharedLoadTable: File not found " + filename$)  
+         debugWrite(DEBUGWARN,"dataSharedLoadTable: File not found " + filename$)
+         dataSharedUpdateField(table$, "tablename",table$)  
       endif
       
       filesToLoad$ = systemSharedFieldRemove(filesToLoad$,filename$,DATA_ARGSEP)
